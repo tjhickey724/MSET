@@ -1,0 +1,13 @@
+extends layout
+
+block content
+  h1= title
+  p Welcome to #{title}
+  This is a test!
+  ul#messages
+  input#m(autocomplete="off")
+  button#send Send
+  
+  script(src="https://code.jquery.com/jquery-1.11.1.js")
+  script(src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.0/socket.io.js")
+  script(src="javascripts/test.js")
