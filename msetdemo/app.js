@@ -1,8 +1,13 @@
+// Start with
+//   DEBUG=msetdemo:* npm start
+//
+
 var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
+
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -17,8 +22,7 @@ var io = require('socket.io')(http);
 //	res.sendFile(__dirname + '/index.html');
 //    });
 
-
-
+let msetId=1
 
 
 // view engine setup
@@ -30,6 +34,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
@@ -62,9 +67,15 @@ io.on('connection', function(socket){
     console.log('message: ' + msg);
     io.emit('chat message', msg);
   });
+  socket.on('operation',function(msg){
+    console.log('operation: '+msg);
+    console.dir(msg);
+    io.emit('remoteOperation',msg);
+  })
   socket.on('disconnect', function(){
     console.log('user disconnected');
   });
+  socket.emit('msetId',msetId++);
 });
 
 

@@ -2,11 +2,14 @@ extends layout
 
 block content
   h1= title
-  p Welcome to #{title}
+  p Welcome back #{userId}
+  div#msetId
 
   ul#messages
+  h1 Edit below
   textarea#ta
-  button#send Send
+  hr
+  h1 View state below, but don't edit!
   hr
   textarea#ta2
   hr
@@ -23,5 +26,6 @@ block content
 
   script(src="https://code.jquery.com/jquery-1.11.1.js")
   script(src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.0/socket.io.js")
+  script(src="/mset/networking.js")
   script(src="/mset/mset3a.js")
   script(src="/mset/edit.js")
