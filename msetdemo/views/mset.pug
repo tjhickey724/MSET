@@ -1,0 +1,27 @@
+extends layout
+
+block content
+  h1= title
+  p Welcome to #{title}
+
+  ul#messages
+  textarea#ta
+  button#send Send
+  hr
+  textarea#ta2
+  hr
+  textarea#rstring1
+  hr
+  textarea#estring1
+  hr
+  textarea#sstring1
+  hr
+  div#operations
+  hr
+  div#status
+  hr
+
+  script(src="https://code.jquery.com/jquery-1.11.1.js")
+  script(src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.0/socket.io.js")
+  script(src="/mset/mset3a.js")
+  script(src="/mset/edit.js")
