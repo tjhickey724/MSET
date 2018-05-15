@@ -307,17 +307,48 @@ function DLL() {
         }
         this.toString = this.printList;
 
-        this.nth = function(n,vis) {
-      // this can be implemented as O(log(N)) but here is O(N)
+    
+    this.nthSTD = function(n){
       var k=this.first.next;
       while ((n>0 || !k.val.vis)  && (k!= this.last) ) {
-          if ( ((vis=="std") && k.val.vis) ||
-       ((vis=="rev") && !(k.val.marker)) ||
-       (vis=="edit") || (vis==undefined) )
-      n = n-1;
-          k=k.next;}
+          if ( k.val.vis)  {
+            n = n-1;
+          }
+          k=k.next;
+        }
       return k;
     }
+
+    this.nthREV = function(n){
+      var k=this.first.next;
+      while ((n>0 || !k.val.marker)  && (k!= this.last) ) {
+          if ( !k.val.marker)  {
+            n = n-1;
+          }
+          k=k.next;
+        }
+      return k;
+    }
+
+    this.nthEDIT = function(n){
+      var k=this.first.next;
+      while ((n>0)  && (k!= this.last) ) {
+          n = n-1;
+          k=k.next;
+      }
+      return k;
+    }
+
+    this.nth = function(n,vis){
+      switch(vis){
+        case 'std': return this.nthSTD(n);
+        case 'rev': return this.nthREV(n);
+        case 'edit': return this.nthEDIT(n);
+        default: return undefined;
+      }
+    }
+
+
 
     this.nextNonMarker = function(e) {
       // this can be implemented as O(log(N)) but here is O(N)
@@ -346,7 +377,7 @@ function treeinsert(M,vm,q,un,c){
     console.dir(M);
     var n = M.nodes[vm]; // O(log(N))
 
-
+    console.log(JSON.stringify(['IN treeinsert',vm,q,un,c]))
     var s = n.iset[q];
     var m = createCharNode(un,c);  // O(1)
     var e = m.elt[0];
@@ -443,10 +474,14 @@ function stringinsert(M,k,c) {
 
       //  strategy - insert before the first non-marker character
       un = [M.user,M.count++];
-      var e = M.strings.nth(0,"rev").val; //O(log(N))
 
+      var e = M.strings.nth(0,"rev").val; //O(log(N))
+      console.dir(M)
 
       M.network.insert(e.nodeid,0,un,c);
+      console.log("k=0 case "+JSON.stringify(e.nodeid))
+      console.log(M.strings.printList('rev'))
+      console.dir(M)
       treeinsert(M,e.nodeid,0,un,c);
 
     } else { // k>0
