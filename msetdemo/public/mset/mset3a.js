@@ -333,12 +333,14 @@ function Network() {
 /********************************************************
  * Here is an implementation of linked list nodes
  */
-function ListNode(v){
+class ListNode{
+  constructor(v){
     this.prev = null,
     this.next =null,
     this.val = v;
+  }
 
-    this.insertBefore = function(a){
+  insertBefore(a){
       var x = new ListNode(a);
       a.listNode = x;
       var tmp = this.prev;
@@ -349,7 +351,7 @@ function ListNode(v){
       return x;
     }
 
-    this.insertAfter = function(a){
+    insertAfter(a){
       var x = new ListNode(a);
       var tmp = this.next;
       this.next=x;
@@ -366,8 +368,8 @@ function ListNode(v){
  * Here is an implementation of a doubly linked list of elements
  * which has three views std, rev, and edit.
  */
-
-function DLL() {
+class DLL {
+  constructor(){
     this.first = new ListNode("startmarker");
     this.last = new ListNode("endmarker");
     this.first.nodeid=-1;
@@ -394,9 +396,10 @@ function DLL() {
       else return ("[\n "+s+" \n]");
         }
         this.toString = this.printList;
+  }
 
 
-    this.nthSTD = function(n){
+  nthSTD(n){
       var k=this.first.next;
       while ((n>0 || !k.val.vis)  && (k!= this.last) ) {
           if ( k.val.vis)  {
@@ -407,7 +410,7 @@ function DLL() {
       return k;
     }
 
-    this.nthREV = function(n){
+  nthREV(n){
       var k=this.first.next;
       while ((n>0 || !k.val.marker)  && (k!= this.last) ) {
           if ( !k.val.marker)  {
@@ -418,7 +421,7 @@ function DLL() {
       return k;
     }
 
-    this.nthEDIT = function(n){
+  nthEDIT(n){
       var k=this.first.next;
       while ((n>0)  && (k!= this.last) ) {
           n = n-1;
@@ -427,7 +430,7 @@ function DLL() {
       return k;
     }
 
-    this.nth = function(n,vis){
+  nth(n,vis){
       switch(vis){
         case 'std': return this.nthSTD(n);
         case 'rev': return this.nthREV(n);
@@ -438,7 +441,7 @@ function DLL() {
 
 
 
-    this.nextNonMarker = function(e) {
+  nextNonMarker(e) {
       // this can be implemented as O(log(N)) but here is O(N)
       while ((e!== null) && e.val.marker){
           console.log("nextnonmarker e.val.sym="+e.val.sym);
