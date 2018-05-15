@@ -174,11 +174,12 @@ class MSET{
 
       console.log(JSON.stringify(['IN treeinsert',vm,q,un,c]))
       var s = n.iset[q];
-      var m = createCharNode(un,c);  // O(1)
+      var m = MSET.createCharNode(un,c);  // O(1)
       var e = m.elt[0];
       var f = n.start;
-      var k = insertNode(m,s);  // O(log(N))
-      console.log("k=");console.dir(k);
+      var k = MSET.insertNode(m,s);  // O(log(N))
+      console.log('after 1st insertNode'); console.dir(m);console.dir(s);
+      //console.log("k=");console.dir(k);
 
       // now we sew m into the doubly linked lists!!!
       if (k==0){
@@ -197,7 +198,6 @@ class MSET{
       this.nodes[un]=m;
       this.size++;
       //alert("treeinsert q="+q+" c="+c);
-      insertNode(m,s); //O(log(N))
       return m;
   }
 
@@ -232,6 +232,42 @@ class MSET{
   }
 
 
+  /* Create a node to in inserted in the mset tree given the nodeid and the character
+   * this requires creating the 3 corresponding elements and settingup the node.
+   */
+  static createCharNode(nodeid,c){
+      var n = new Node(nodeid[0],nodeid[1]);
+      var e1 = Element.createStart(n);
+      var e2 = Element.createChar(c,n);
+      var e3 = Element.createEnd(n);
+      n.start   = e1;
+      n.elt[0] = e2;
+      n.end     = e3;
+      n.iset[0] = [];
+      n.iset[1] = [];
+      return n;
+  }
+
+  /* insertNode(m,s) inserts the node m into an ordered set s of nodes
+   * (ordered by userid). This is called to create a child object of a node
+   * and we insert the new node in the appropriate iset.
+   * This needs to be reimplemented as a O(log(N)) operation ...
+   */
+  static insertNode(m,s) {
+      var i=0, n=s.length, k=-1;
+      var u = m.user;
+      while(i<n) {
+    if (u< s[i].user) {
+        s.splice(i,0,m);
+        k=i;
+        break;
+    }
+    else i = i+1;
+      }
+      if (i==n) {s[n]=m; k=n;}
+      //alert("insertnode:  k="+k+" s="+s+ " n="+n+" c="+m.elt[0].sym);
+      return k;
+  }
 
 
 
@@ -293,42 +329,6 @@ function Network() {
 
 
 
-/* Create a node to in inserted in the mset tree given the nodeid and the character
- * this requires creating the 3 corresponding elements and settingup the node.
- */
-function createCharNode(nodeid,c){
-    var n = new Node(nodeid[0],nodeid[1]);
-    var e1 = Element.createStart(n);
-    var e2 = Element.createChar(c,n);
-    var e3 = Element.createEnd(n);
-    n.start   = e1;
-    n.elt[0] = e2;
-    n.end     = e3;
-    n.iset[0] = [];
-    n.iset[1] = [];
-    return n;
-}
-
-/* insertNode(m,s) inserts the node m into an ordered set s of nodes
- * (ordered by userid). This is called to create a child object of a node
- * and we insert the new node in the appropriate iset.
- * This needs to be reimplemented as a O(log(N)) operation ...
- */
-function insertNode(m,s) {
-    var i=0, n=s.length, k=-1;
-    var u = m.user;
-    while(i<n) {
-  if (u< s[i].user) {
-      s.splice(i,0,m);
-      k=i;
-      break;
-  }
-  else i = i+1;
-    }
-    if (i==n) {s[n]=m; k=n;}
-    //alert("insertnode:  k="+k+" s="+s+ " n="+n+" c="+m.elt[0].sym);
-    return k;
-}
 
 /********************************************************
  * Here is an implementation of linked list nodes
