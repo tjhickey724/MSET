@@ -8,7 +8,7 @@ function insert2(offset,text){
     const v = ta2.value;
     ta2.value = v.substring(0,offset)+text+v.substring(offset)
     for(let i=0; i<text.length; i++){
-       stringinsert(mset1,offset+i,text[i])
+       mset1.stringinsert(offset+i,text[i])
     }
     console.dir(mset1)
     document.getElementById('estring1').value = mset1.strings.printList('edit');
@@ -21,7 +21,7 @@ function delete2(offset,text){
     const v = ta2.value;
     ta2.value = v.substring(0,offset)+v.substring(offset+text.length);
     for(let i=0; i<text.length; i++){
-      stringdelete(mset1,offset);
+      mset1.stringdelete(offset);
     }
     document.getElementById('estring1').value = mset1.strings.printList('edit');
     document.getElementById('rstring1').value = mset1.strings.printList('rev');

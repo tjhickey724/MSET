@@ -271,6 +271,91 @@ class MSET{
 
 
 
+  /********************************************************
+   * String Operations
+   * Here is where we convert string operations (insert, delete) into tree ops
+   * following the algorithm in the paper
+   */
+
+  stringdelete(k) {
+      var e = this.strings.nth(k,"std").val;  // O(log(N))
+
+      console.log("stringdelete: e="+e.toString());
+      e.vis=false;
+      e.sym = "["+e.sym+"]";
+      var un = [this.user,0];
+      this.network.hide(e.nodeid,e.offset,un); // un is used to prevent broadcast from going back to user
+  }
+
+  stringinsert(k,c) {
+      var un;
+      console.log("inserting "+k+","+c)
+      if (this.size==0) {
+        un = [this.user,this.count++];
+        // CASE 0:  no-nonmarkers in the list, so tree must be empty
+
+        // insert new node into the root of the empty tree
+        this.treeinsert([0,0],0,un,c);
+        this.network.insert([0,0],0,un,c);
+      }
+      else if (k==0) {
+
+        // CASE 1: inserting at the beginning of the string
+
+        //  strategy - insert before the first non-marker character
+        un = [this.user,this.count++];
+        var e = this.strings.nth(0,"rev").val; //O(log(N))
+        this.network.insert(e.nodeid,0,un,c);
+        this.treeinsert(e.nodeid,0,un,c);
+
+      } else { // k>0
+          // in the remaining cases we're inserting after a visible character
+          // so, get the visible, non-marker elt e at position k-1
+
+          var ecell=this.strings.nth(k-1,"std"); //O(log(N))
+          // and get the element after the ecell
+          var fcell=ecell.next;
+          if (!fcell.val.marker) {
+
+              // CASE 2: inserting between two non-marker elements
+
+              // if the next elt is a non-marker insert there
+              var un = [this.user,this.count++];
+
+              this.network.insert(fcell.val.nodeid, fcell.val.offset,un,c);
+              this.treeinsert(fcell.val.nodeid,fcell.val.offset,un,c);
+
+          } else if (fcell.val.marker && (fcell.val == fcell.val.treeNode.end)) {
+
+              // CASE 3: the next element is an end marker
+
+              if (fcell.val.treeNode.user==this.user) {
+                  // case 3a: it the user owns the node then extend
+                  this.network.extend(fcell.val.nodeid, c);
+                  this.treeextend(fcell.val.nodeid,c);
+              }
+              else {
+                un = [this.user, this.count++];
+                // case 3b: otherwise insert a new node here
+                // console.log("string insert case 3b: at end, fcell.val.user="+fcell.val.user+" M.user="+M.user);
+
+                this.network.insert(fcell.val.nodeid, fcell.val.treeNode.elt.length, un, c);
+                this.treeinsert(fcell.val.nodeid,fcell.val.treeNode.elt.length,un,c);
+              }
+          } else {
+
+                // CASE 4: the cell must be a start marker
+
+                // in this case, find the next non-marker f (which must exist) and insert before f
+                un = [this.user,this.count++];
+                fcell = this.strings.nextNonMarker(fcell); // O(log(N))
+
+                this.network.insert(fcell.val.nodeid,0,un,c);
+                this.treeinsert(fcell.val.nodeid,0,un,c);
+          }
+      }
+  }
+
 }
 
 
@@ -451,216 +536,3 @@ class DLL {
     }
 
 }
-
-
-
-
-
-
-/********************************************************
- * String Operations
- * Here is where we convert string operations (insert, delete) into tree ops
- * following the algorithm in the paper
- */
-
-function stringdelete(M,k) {
-    var e = M.strings.nth(k,"std").val;  // O(log(N))
-
-    console.log("stringdelete: e="+e.toString());
-    e.vis=false;
-    e.sym = "["+e.sym+"]";
-    var un = [M.user,0];
-    M.network.hide(e.nodeid,e.offset,un); // un is used to prevent broadcast from going back to user
-}
-
-function stringinsert(M,k,c) {
-    var un;
-    console.log("inserting "+k+","+c)
-    if (M.size==0) {
-      un = [M.user,M.count++];
-      // CASE 0:  no-nonmarkers in the list, so tree must be empty
-
-      // insert new node into the root of the empty tree
-      M.treeinsert([0,0],0,un,c);
-      M.network.insert([0,0],0,un,c);
-    }
-    else if (k==0) {
-
-      // CASE 1: inserting at the beginning of the string
-
-      //  strategy - insert before the first non-marker character
-      un = [M.user,M.count++];
-
-      var e = M.strings.nth(0,"rev").val; //O(log(N))
-      console.dir(M)
-
-      M.network.insert(e.nodeid,0,un,c);
-      console.log("k=0 case "+JSON.stringify(e.nodeid))
-      console.log(M.strings.printList('rev'))
-      console.dir(M)
-      M.treeinsert(e.nodeid,0,un,c);
-
-    } else { // k>0
-        // in the remaining cases we're inserting after a visible character
-        // so, get the visible, non-marker elt e at position k-1
-
-        var ecell=M.strings.nth(k-1,"std"); //O(log(N))
-        // and get the element after the ecell
-        var fcell=ecell.next;
-        if (!fcell.val.marker) {
-
-            // CASE 2: inserting between two non-marker elements
-
-            // if the next elt is a non-marker insert there
-            var un = [M.user,M.count++];
-
-            M.network.insert(fcell.val.nodeid, fcell.val.offset,un,c);
-            M.treeinsert(fcell.val.nodeid,fcell.val.offset,un,c);
-
-        } else if (fcell.val.marker && (fcell.val == fcell.val.treeNode.end)) {
-
-            // CASE 3: the next element is an end marker
-
-            if (fcell.val.treeNode.user==M.user) {
-                // case 3a: it the user owns the node then extend
-                M.network.extend(fcell.val.nodeid, c);
-                M.treeextend(fcell.val.nodeid,c);
-            }
-            else {
-              un = [M.user, M.count++];
-              // case 3b: otherwise insert a new node here
-              // console.log("string insert case 3b: at end, fcell.val.user="+fcell.val.user+" M.user="+M.user);
-
-              M.network.insert(fcell.val.nodeid, fcell.val.treeNode.elt.length, un, c);
-              M.treeinsert(fcell.val.nodeid,fcell.val.treeNode.elt.length,un,c);
-            }
-        } else {
-
-              // CASE 4: the cell must be a start marker
-
-              // in this case, find the next non-marker f (which must exist) and insert before f
-              un = [M.user,M.count++];
-              fcell = M.strings.nextNonMarker(fcell); // O(log(N))
-
-              M.network.insert(fcell.val.nodeid,0,un,c);
-              M.treeinsert(fcell.val.nodeid,0,un,c);
-        }
-    }
-}
-
-
-
-
-
-/* *****************************************************************
-  TEST CODE FOR THE MSET ALGORITHMS
-*/
-
-var mset;
-var network;
-
-/*
-  this is called when the body of the HTML page is loaded ..
-*/
-function initMSET(){
-
-    mset1 = new MSET(1);
-    mset2 = new MSET(2);
-    mset3 = new MSET(3);
-    network = new Network();
-    network.addClient(mset1);
-    network.addClient(mset2);
-    network.addClient(mset3);
-
-}
-
-
-/* This is called when the "go" button is pushed in the MSET3.html page
- */
-
-function applyops(){
-
-    applyops1();
-    applyops2();
-    applyops3();
-    network.processAllOps();
-    showops1();
-    showops2();
-    showops3();
-
-}
-
-/* We could do some refactoring for the next three, but it was easier to just copy/modify for now
- */
-
-function applyops1(){
-  var
-      op = document.getElementById('op1').value,
-      q = document.getElementById('offset1').value,
-      c = document.getElementById('char1').value,
-      mset = mset1;
-
-  if (op=="insert")
-      stringinsert(mset,q,c);
-  else if (op == "delete")
-      stringdelete(mset,q);
-}
-
-function showops1(){
-    var mset = mset1;
-
-    document.getElementById('estring1').innerHTML = mset.strings.printList('edit');
-    document.getElementById('rstring1').innerHTML = mset.strings.printList('rev');
-    document.getElementById('sstring1').innerHTML = mset.strings.printList('std');
-    document.getElementById('status1').innerHTML = JSON.stringify(mset.waitqueue);
-}
-
-function applyops2(){
-  var
-      op = document.getElementById('op2').value,
-      q = document.getElementById('offset2').value,
-      c = document.getElementById('char2').value,
-      mset=mset2;
-
-  if (op=="insert")
-      stringinsert(mset,q,c);
-  else if (op == "delete")
-      stringdelete(mset,q);
-
-}
-
-function showops2(){
-    var mset = mset2;
-
-    document.getElementById('estring2').innerHTML = mset.strings.printList('edit');
-    document.getElementById('rstring2').innerHTML = mset.strings.printList('rev');
-    document.getElementById('sstring2').innerHTML = mset.strings.printList('std');
-    document.getElementById('status2').innerHTML = JSON.stringify(mset.waitqueue);
-}
-
-function applyops3(){
-  var
-      op = document.getElementById('op3').value,
-      q = document.getElementById('offset3').value,
-      c = document.getElementById('char3').value,
-      mset = mset3;
-
-  if (op=="insert")
-      stringinsert(mset,q,c);
-  else if (op == "delete")
-      stringdelete(mset,q);
-
-
-}
-
-function showops3(){
-    var mset = mset3;
-
-    document.getElementById('estring3').innerHTML = mset.strings.printList('edit');
-    document.getElementById('rstring3').innerHTML = mset.strings.printList('rev');
-    document.getElementById('sstring3').innerHTML = mset.strings.printList('std');
-    document.getElementById('status3').innerHTML = JSON.stringify(mset.waitqueue);
-}
-
-initMSET();
-//applyops();
