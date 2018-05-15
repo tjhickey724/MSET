@@ -14,7 +14,9 @@
  * Here is an implementation of Elements for the MSET data type
  */
 
-function Element(sym,vis,marker) {
+class Element{
+
+ constructor (sym,vis,marker) {
     this.sym = sym;
     this.vis=vis;
     this.marker=marker;
@@ -22,38 +24,43 @@ function Element(sym,vis,marker) {
     this.nodeid=null;
     this.offset=null;
     this.listNode=null;
-    this.toString = function toString() {
-  return "{"+this.sym+","+this.vis+","+this.marker+","+this.nodeid+","+this.offset+"}";
-    }
-}
+  }
+
+  toString() {
+    return "{"+this.sym+","+this.vis+","+this.marker+","+this.nodeid+","+this.offset+"}";
+  }
+
+  static createChar(c,n){
+      var e = new Element(c,true,false);
+      e.treeNode=n;
+      e.nodeid=[n.user, n.count];
+      e.offset = 0;
+      return e;
+  }
+
+  static createStart(n){
+      var startsym = "<"+n.user+":"+n.count;
+
+      var e = new Element(startsym,false,true);
+      e.treeNode = n;
+      e.nodeid = [n.user, n.count];
+      e.offset = "start";
+      return e;
+  }
+
+  static createEnd(n){
+      var endsym = n.user+":"+n.count+">";
+      var e = new Element(endsym,false,true);
+      e.treeNode = n;
+      e.nodeid = [n.user, n.count];
+      e.offset = "end";
+      return e;
+  }
+
+} // end of Element class
 
 
-function createChar(c,n){
-    var e = new Element(c,true,false);
-    e.treeNode=n;
-    e.nodeid=[n.user, n.count];
-    e.offset = 0;
-    return e;
-}
 
-function createStart(n){
-    var startsym = "<"+n.user+":"+n.count;
-
-    var e = new Element(startsym,false,true);
-    e.treeNode = n;
-    e.nodeid = [n.user, n.count];
-    e.offset = "start";
-    return e;
-}
-
-function createEnd(n){
-    var endsym = n.user+":"+n.count+">";
-    var e = new Element(endsym,false,true);
-    e.treeNode = n;
-    e.nodeid = [n.user, n.count];
-    e.offset = "end";
-    return e;
-}
 
 
 
@@ -141,8 +148,8 @@ function MSET(u){
     // instance variables defined above ...
     var n = this.strings.first;
     var e1,e2;
-    e1 = createStart(this.root);
-    e2 = createEnd(this.root);
+    e1 = Element.createStart(this.root);
+    e2 = Element.createEnd(this.root);
     n = n.insertAfter(e1);
     n = n.insertAfter(e2);
     this.root.start = e1;
@@ -210,9 +217,9 @@ function Network() {
  */
 function createCharNode(nodeid,c){
     var n = new Node(nodeid[0],nodeid[1]);
-    var e1 = createStart(n);
-    var e2 = createChar(c,n);
-    var e3 = createEnd(n);
+    var e1 = Element.createStart(n);
+    var e2 = Element.createChar(c,n);
+    var e3 = Element.createEnd(n);
     n.start   = e1;
     n.elt[0] = e2;
     n.end     = e3;
@@ -307,7 +314,7 @@ function DLL() {
         }
         this.toString = this.printList;
 
-    
+
     this.nthSTD = function(n){
       var k=this.first.next;
       while ((n>0 || !k.val.vis)  && (k!= this.last) ) {
@@ -413,7 +420,7 @@ function treeinsert(M,vm,q,un,c){
  */
 function treeextend(M,nodeid,c){
     var n = M.nodes[nodeid];  // O(log(N))
-    var e = createChar(c,n);  // O(1)
+    var e = Element.createChar(c,n);  // O(1)
     var d = n.elt.length;
     var f = n.end;
     e.offset = d;
