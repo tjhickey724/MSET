@@ -366,46 +366,47 @@ class MSET{
  * This simulates a network with a queue of treeedit operations
  * that can be performed by the clients ....
  */
-
-function Network() {
+class Network{
+  constructor() {
     this.clients = [];
+  }
 
-    this.addClient = function addClient(M){
+  addClient(M){
   this.clients.push(M);
   M.network = this;
   console.log('added client'); console.dir(this);
     }
 
-    this.broadcast = function broadcast(op,un){
+  broadcast(op,un){
   var i;
   console.log("broadcast: "+JSON.stringify(op) +", "+un[0]);
   sendOperationToServer(op);
   for (i=0; i<this.clients.length; i++) {
-      M = this.clients[i];
+      const M = this.clients[i];
       if (M.user != un[0])
       M.enqueue(op);
   }
     }
 
-    this.insert = function insert(vm,q,un,c) {
+  insert(vm,q,un,c) {
   var op = {op:"insert", nodeid:vm, q:q, un:un, c:c};
   this.broadcast(op,un);
     }
 
-    this.extend = function extend(un,c) {
+  extend(un,c) {
   var op = {op:"extend", nodeid:un, c:c};
   this.broadcast(op,un);
     }
 
-    this.hide = function hide(vm,q,un) {
+  hide(vm,q,un) {
   var op = {op:"delete", nodeid:vm, q:q};
   this.broadcast(op,un);
     }
 
-    this.processAllOps = function processAllOps(){
+  processAllOps(){
   var i;
   for (i=0; i<this.clients.length; i++) {
-      M = this.clients[i];
+      const M = this.clients[i];
       while (M.processNetOp()) ;
   }
     }
