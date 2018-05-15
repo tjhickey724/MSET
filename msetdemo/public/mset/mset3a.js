@@ -68,12 +68,14 @@ class Element{
  * Here is an implementation of a Node in the MSET tree
  */
 
-function Node(u,n) {
+class Node{
+  constructor(u,n) {
     this.user=u;
     this.count=n;
     this.elt=[];
     this.iset=[];
     this.iset[0]=[];
+  }
 }
 
 
@@ -82,8 +84,8 @@ function Node(u,n) {
  * Here is an implementation of MSET
  */
 
-
-function MSET(u){
+class MSET{
+  constructor(u){
     this.user = u;
     this.count = 0;
     this.size=0;
@@ -94,57 +96,7 @@ function MSET(u){
     this.opqueue = [];  // dequeue of ops that haven't been applied
     this.waitqueue=[];  // hashtable from targets to list of ops
 
-    this.enqueue = function(op) {
-  this.opqueue.push(op);
-    }
-
-
-    /*
-     * This method takes a tree op from the queue, checks to see if it can be applied
-     * If its target is not there, it adds it to a wait queue on that target
-     * If the target is in the tree, it applies to tree op, which generates a new node n
-     * and the editops waiting on n are then added to the opqueue. It returns true if an operator
-     * was processed, false otherwise.
-     */
-    this.processNetOp = function processNetOp(){
-  if (this.opqueue.length == 0) // check to see that the queue is not empty, return else
-      return false;
-
-  var op=this.opqueue.shift(); // take from the head of the queue!
-  var target=this.nodes[op.nodeid]; // make sure the target is in the tree
-
-  if (target===undefined) {  // if not, the push onto the wait queue
-      this.waitqueue[op.nodeid] = this.waitqueue[op.nodeid] || []; // make waitqueue empty if undefined
-      this.waitqueue[op.nodeid].push(op);
-  }else {                    // if so, then apply, and enqueue ops waiting for the created result
-
-      var result = this.applyTreeOp(op); // returns new node it creates or extends
-      var waiting = this.waitqueue[result.nodeid];
-      this.waitqueue[result.nodeid]=null;
-      if ((waiting !==undefined) && (waiting !== null)) {  // if something is waiting, add it to front of the opqueue
-  this.opqueue = waiting.concat(this.opqueue);
-      }
-  }
-  return true;
-    }
-
-    /* this method take a tree edit operation object
-     which it obtains from the network and applies it to the tree
-     returning the result. We assume that the target is in the tree!
-    */
-    this.applyTreeOp = function applyTreeOp(treeOp){
-  var n;
-  if (treeOp.op == "insert") {
-      n = treeinsert(this,treeOp.nodeid, treeOp.q, treeOp.un, treeOp.c);
-  } else if (treeOp.op == "extend") {
-      n = treeextend(this,treeOp.nodeid, treeOp.c);
-  } else if (treeOp.op == "delete") {
-      n = treehide(this,treeOp.nodeid, treeOp.q);
-  }
-  return n; // this has yet to be written ...
-    }
-
-    // the rest of this function initializes the
+    // the rest of this constructor initializes the
     // instance variables defined above ...
     var n = this.strings.first;
     var e1,e2;
@@ -154,6 +106,58 @@ function MSET(u){
     n = n.insertAfter(e2);
     this.root.start = e1;
     this.root.end = e2;
+  }
+
+  enqueue(op) {
+    this.opqueue.push(op);
+  }
+
+    /*
+     * This method takes a tree op from the queue, checks to see if it can be applied
+     * If its target is not there, it adds it to a wait queue on that target
+     * If the target is in the tree, it applies to tree op, which generates a new node n
+     * and the editops waiting on n are then added to the opqueue. It returns true if an operator
+     * was processed, false otherwise.
+     */
+  processNetOp(){
+      if (this.opqueue.length == 0) // check to see that the queue is not empty, return else
+          return false;
+
+      var op=this.opqueue.shift(); // take from the head of the queue!
+      var target=this.nodes[op.nodeid]; // make sure the target is in the tree
+
+      if (target===undefined) {  // if not, the push onto the wait queue
+          this.waitqueue[op.nodeid] = this.waitqueue[op.nodeid] || []; // make waitqueue empty if undefined
+          this.waitqueue[op.nodeid].push(op);
+      }else {                    // if so, then apply, and enqueue ops waiting for the created result
+
+          var result = this.applyTreeOp(op); // returns new node it creates or extends
+          var waiting = this.waitqueue[result.nodeid];
+          this.waitqueue[result.nodeid]=null;
+          if ((waiting !==undefined) && (waiting !== null)) {  // if something is waiting, add it to front of the opqueue
+      this.opqueue = waiting.concat(this.opqueue);
+          }
+      }
+      return true;
+  }
+
+    /* this method take a tree edit operation object
+     which it obtains from the network and applies it to the tree
+     returning the result. We assume that the target is in the tree!
+    */
+  applyTreeOp(treeOp){
+      var n;
+      if (treeOp.op == "insert") {
+          n = treeinsert(this,treeOp.nodeid, treeOp.q, treeOp.un, treeOp.c);
+      } else if (treeOp.op == "extend") {
+          n = treeextend(this,treeOp.nodeid, treeOp.c);
+      } else if (treeOp.op == "delete") {
+          n = treehide(this,treeOp.nodeid, treeOp.q);
+      }
+      return n; // this has yet to be written ...
+  }
+
+
 }
 
 
