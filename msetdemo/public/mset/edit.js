@@ -32,9 +32,9 @@ function delete2(offset,text){
 ta.addEventListener('input',function(e){
     if (remoteOp) return;
     console.dir(e)
-    start = e.srcElement.selectionStart
-    finish = e.srcElement.selectionEnd
-    result = e.srcElement.value
+    start = e.target.selectionStart
+    finish = e.target.selectionEnd
+    result = e.target.value
     lenDif = (result.length-lastValue.length)
 
   //    console.log("<"+e.data+"> "+start+","+finish+","+lenDif)
@@ -87,19 +87,19 @@ ta.addEventListener('input',function(e){
          break;
      default:
          console.log('UNKNOWN OP -- just id '+e.inputType)
-         console.log("<"+e.srcElement.value.substring(0,e.srcElement.selectionStart)+">")
+         console.log("<"+e.target.value.substring(0,e.target.selectionStart)+">")
 
     }
     //    console.log("\n\n")
-    lastValue = e.srcElement.value
+    lastValue = e.target.value
 
   })
 
  ta.addEventListener('change',function(e){
      console.log("Change Event")
      console.dir(e)
-     //console.log("defaultvalue = '"+e.srcElement.defaultValue+"'")
-     //console.log("value = '"+e.srcElement.value+"'")
+     //console.log("defaultvalue = '"+e.target.defaultValue+"'")
+     //console.log("value = '"+e.target.value+"'")
   })
  ta.addEventListener('cut', function(e){
 
