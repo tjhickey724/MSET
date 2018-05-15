@@ -1,13 +1,8 @@
 /* ***********************************************************************
  * MSET Demo Implementation in JavaScript
  *
- * We define the Element, ListNode, Node, DLL, and MSET types
- * and then define Network to simulate three users inserting locally and processing remote ops
- * The purpose of this demo is to allow us to try out different cases of the
- * algorithm to illustrate how the MSET algorithm works...
- *
- * In this demo we allow the user to type into a textfield and
- * we construct the MSET tree in real time .
+ * We define the following classes:
+ *   Element, Node, MSET, Network, ListNode, DLL
  */
 
 /* ***********************************************************************

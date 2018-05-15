@@ -43,54 +43,62 @@ ta.addEventListener('input',function(e){
 
     switch (e.inputType){
      case "insertText":
-         console.log('just inserted '+"<"+result.substring(start-lenDif,start)+">")
-         operations.innerHTML +=
-           "<br>insert("+(start-lenDif)+","+result.substring(start-lenDif,start)+")"
+            console.log('just inserted '+"<"+result.substring(start-lenDif,start)+">")
+              operations.innerHTML +=
+                "<br>insert("+(start-lenDif)+","+result.substring(start-lenDif,start)+")"
          insert2(start-lenDif,result.substring(start-lenDif,start))
          break;
+
      case "insertLineBreak":
-         console.log('just inserted '+"<"+result.substring(start-lenDif,start)+">")
-         operations.innerHTML +=
-           "<br>insert("+(start-lenDif)+",\n)"
+            console.log('just inserted '+"<"+result.substring(start-lenDif,start)+">")
+            operations.innerHTML +=
+              "<br>insert("+(start-lenDif)+",\n)"
+
          insert2(start-lenDif,result.substring(start-lenDif,start))
          break;
+
      case "insertFromPaste":
-         console.log('just inserted from paste '+"<"+result.substring(start-lenDif,start)+">");
-     console.log("start:"+start+" finish:"+finish
-           +" lenDif:"+lenDif+" result.len:"+result.length+" last.len:"+lastValue.length);
-         operations.innerHTML +=
-           "<br>insert("+(start-lenDif)+","+result.substring(start-lenDif,start)+")"
+            console.log('just inserted from paste '+"<"+result.substring(start-lenDif,start)+">");
+            console.log("start:"+start+" finish:"+finish
+                +" lenDif:"+lenDif+" result.len:"+result.length+" last.len:"+lastValue.length);
+            operations.innerHTML +=
+              "<br>insert("+(start-lenDif)+","+result.substring(start-lenDif,start)+")"
 
          insert2(start-lenDif,result.substring(start-lenDif,start))
          break;
-     case "deleteByCut":
-         console.log('just deleted by cut')
-         console.log("deletion = <"+lastValue.substring(start,start-lenDif)+">")
-         operations.innerHTML +=
-           "<br>delete("+start+","+lastValue.substring(start,start-lenDif)+")"
-   delete2(start,lastValue.substring(start,start-lenDif))
-         break;
-     case "deleteContentForward":
-         console.log('just deleted forward');
-         console.log("deletion = <"+lastValue.substring(start,start-lenDif)+">")
-         operations.innerHTML +=
-           "<br>delete("+start+","+lastValue.substring(start,start-lenDif)+")"
 
-   delete2(start,lastValue.substring(start,start-lenDif))
+     case "deleteByCut":
+            console.log('just deleted by cut')
+            console.log("deletion = <"+lastValue.substring(start,start-lenDif)+">")
+            operations.innerHTML +=
+              "<br>delete("+start+","+lastValue.substring(start,start-lenDif)+")"
+
+         delete2(start,lastValue.substring(start,start-lenDif))
          break;
+
+     case "deleteContentForward":
+            console.log('just deleted forward');
+            console.log("deletion = <"+lastValue.substring(start,start-lenDif)+">")
+            operations.innerHTML +=
+              "<br>delete("+start+","+lastValue.substring(start,start-lenDif)+")"
+
+         delete2(start,lastValue.substring(start,start-lenDif))
+         break;
+
      case "deleteContentBackward":
-         console.log('just deleted backward');
-         console.log("deletion = <"+lastValue.substring(start,start-lenDif)+">")
-         operations.innerHTML +=
-           "<br>delete("+start+","+lastValue.substring(start,start-lenDif)+")"
-   delete2(start,lastValue.substring(start,start-lenDif))
+            console.log('just deleted backward');
+            console.log("deletion = <"+lastValue.substring(start,start-lenDif)+">")
+            operations.innerHTML +=
+              "<br>delete("+start+","+lastValue.substring(start,start-lenDif)+")"
+         delete2(start,lastValue.substring(start,start-lenDif))
          break;
+
      default:
          console.log('UNKNOWN OP -- just id '+e.inputType)
          console.log("<"+e.target.value.substring(0,e.target.selectionStart)+">")
 
     }
-    //    console.log("\n\n")
+
     lastValue = e.target.value
 
   })
@@ -134,9 +142,9 @@ ta.addEventListener('input',function(e){
 
 
 // prevent CTRL-Z undo operation
-document.onkeydown = function(e) {
+ta.onkeydown = function(e) {
     if (e.metaKey && e.key === 'z') {
   e.preventDefault();
-  alert("Undo is not allowed for this editor");
+  alert("Undo is not allowed for this textarea");
     }
 }
