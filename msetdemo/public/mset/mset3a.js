@@ -91,7 +91,7 @@ class MSET{
     this.size=0;
     this.root = new Node(0,0);
     this.strings = new DLL();
-    this.nodes = [];
+    this.nodes = {};
     this.nodes[[0,0]] = this.root;
     this.opqueue = [];  // dequeue of ops that haven't been applied
     this.waitqueue=[];  // hashtable from targets to list of ops
@@ -110,9 +110,6 @@ class MSET{
     this.root.end = e2;
   }
 
-  enqueue(op) {
-    this.opqueue.push(op);
-  }
 
     /*
      * This method takes a tree op from the queue, checks to see if it can be applied
@@ -120,6 +117,11 @@ class MSET{
      * If the target is in the tree, it applies to tree op, which generates a new node n
      * and the editops waiting on n are then added to the opqueue. It returns true if an operator
      * was processed, false otherwise.
+     *
+     * This method will only be necessary when not using a central server
+     * because the central server serializes all of the calls. In this model,
+     * when we get an op from the network we just enqueue it and then
+     * periodically call processNetOp to handle those ops...
      */
   processNetOp(){
       if (this.opqueue.length == 0) // check to see that the queue is not empty, return else
@@ -128,7 +130,7 @@ class MSET{
       var op=this.opqueue.shift(); // take from the head of the queue!
       var target=this.nodes[op.nodeid]; // make sure the target is in the tree
 
-      if (target===undefined) {  // if not, the push onto the wait queue
+      if (target===undefined) {  // if not, then push onto the wait queue
           this.waitqueue[op.nodeid] = this.waitqueue[op.nodeid] || []; // make waitqueue empty if undefined
           this.waitqueue[op.nodeid].push(op);
       }else {                    // if so, then apply, and enqueue ops waiting for the created result
@@ -142,6 +144,11 @@ class MSET{
       }
       return true;
   }
+
+  enqueue(op) {
+    this.opqueue.push(op);
+  }
+
 
     /* this method take a tree edit operation object
      which it obtains from the network and applies it to the tree
@@ -170,18 +177,13 @@ class MSET{
    */
 
   treeinsert(vm,q,un,c){
-    //  alert("treeinsert vm="+JSON.stringify(vm)  +" q="+q+" un="+JSON.stringify(un)+" c="+c);
-      //console.dir(this);
-      var n = this.nodes[vm]; // O(log(N))
 
-      console.log(JSON.stringify(['IN treeinsert',vm,q,un,c]))
+      var n = this.nodes[vm]; // O(log(N))
       var s = n.iset[q];
       var m = MSET.createCharNode(un,c);  // O(1)
       var e = m.elt[0];
       var f = n.start;
       var k = MSET.insertNode(m,s);  // O(log(N))
-      console.log('after 1st insertNode'); console.dir(m);console.dir(s);
-      //console.log("k=");console.dir(k);
 
       // now we sew m into the doubly linked lists!!!
       if (k==0){
@@ -198,6 +200,7 @@ class MSET{
       f.listNode.insertAfter(m.start).insertAfter(m.elt[0]).insertAfter(m.end); // O(log(N))
       // and insert the new node into the hashtable
       this.nodes[un]=m;
+
       this.size++;
       //alert("treeinsert q="+q+" c="+c);
       return m;
@@ -339,7 +342,6 @@ class MSET{
               else {
                 un = [this.user, this.count++];
                 // case 3b: otherwise insert a new node here
-                // console.log("string insert case 3b: at end, fcell.val.user="+fcell.val.user+" M.user="+M.user);
 
                 this.network.insert(fcell.val.nodeid, fcell.val.treeNode.elt.length, un, c);
                 this.treeinsert(fcell.val.nodeid,fcell.val.treeNode.elt.length,un,c);
@@ -370,24 +372,12 @@ class MSET{
  */
 class Network{
   constructor() {
-    this.clients = [];
-  }
-
-  addClient(M){
-    this.clients.push(M);
-    M.network = this;
-    console.log('added client'); console.dir(this);
   }
 
   broadcast(op,un){
     var i;
     console.log("broadcast: "+JSON.stringify(op) +", "+un[0]);
     sendOperationToServer(op);
-    for (i=0; i<this.clients.length; i++) {
-        const M = this.clients[i];
-        if (M.user != un[0])
-        M.enqueue(op);
-    }
   }
 
   insert(vm,q,un,c) {
@@ -403,15 +393,6 @@ class Network{
   hide(vm,q,un) {
     var op = {op:"delete", nodeid:vm, q:q};
     this.broadcast(op,un);
-  }
-
-
-  processAllOps(){
-    var i;
-    for (i=0; i<this.clients.length; i++) {
-        const M = this.clients[i];
-        while (M.processNetOp()) ;
-    }
   }
 
 }
@@ -501,7 +482,7 @@ class DLL {
 
   nthREV(n){
       var k=this.first.next;
-      while ((n>0 || !k.val.marker)  && (k!= this.last) ) {
+      while ((n>0 || k.val.marker)  && (k!= this.last) ) {
           if ( !k.val.marker)  {
             n = n-1;
           }
@@ -533,7 +514,6 @@ class DLL {
   nextNonMarker(e) {
       // this can be implemented as O(log(N)) but here is O(N)
       while ((e!== null) && e.val.marker){
-          console.log("nextnonmarker e.val.sym="+e.val.sym);
           e=e.next;
       }
       return e;
