@@ -95,6 +95,8 @@ class MSET{
     this.nodes[[0,0]] = this.root;
     this.opqueue = [];  // dequeue of ops that haven't been applied
     this.waitqueue=[];  // hashtable from targets to list of ops
+    this.network = new Network()
+
 
     // the rest of this constructor initializes the
     // instance variables defined above ...
@@ -372,44 +374,45 @@ class Network{
   }
 
   addClient(M){
-  this.clients.push(M);
-  M.network = this;
-  console.log('added client'); console.dir(this);
-    }
+    this.clients.push(M);
+    M.network = this;
+    console.log('added client'); console.dir(this);
+  }
 
   broadcast(op,un){
-  var i;
-  console.log("broadcast: "+JSON.stringify(op) +", "+un[0]);
-  sendOperationToServer(op);
-  for (i=0; i<this.clients.length; i++) {
-      const M = this.clients[i];
-      if (M.user != un[0])
-      M.enqueue(op);
-  }
+    var i;
+    console.log("broadcast: "+JSON.stringify(op) +", "+un[0]);
+    sendOperationToServer(op);
+    for (i=0; i<this.clients.length; i++) {
+        const M = this.clients[i];
+        if (M.user != un[0])
+        M.enqueue(op);
     }
+  }
 
   insert(vm,q,un,c) {
-  var op = {op:"insert", nodeid:vm, q:q, un:un, c:c};
-  this.broadcast(op,un);
-    }
+    var op = {op:"insert", nodeid:vm, q:q, un:un, c:c};
+    this.broadcast(op,un);
+  }
 
   extend(un,c) {
-  var op = {op:"extend", nodeid:un, c:c};
-  this.broadcast(op,un);
-    }
+    var op = {op:"extend", nodeid:un, c:c};
+    this.broadcast(op,un);
+  }
 
   hide(vm,q,un) {
-  var op = {op:"delete", nodeid:vm, q:q};
-  this.broadcast(op,un);
-    }
+    var op = {op:"delete", nodeid:vm, q:q};
+    this.broadcast(op,un);
+  }
+
 
   processAllOps(){
-  var i;
-  for (i=0; i<this.clients.length; i++) {
-      const M = this.clients[i];
-      while (M.processNetOp()) ;
-  }
+    var i;
+    for (i=0; i<this.clients.length; i++) {
+        const M = this.clients[i];
+        while (M.processNetOp()) ;
     }
+  }
 
 }
 

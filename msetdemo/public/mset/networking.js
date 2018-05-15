@@ -10,8 +10,8 @@ socket.on('msetId', function(msg){
   msetId=parseInt(msg);
   console.log('msetId='+msetId);
   mset1 = new MSET(msetId);
-  let network = new Network()
-  network.addClient(mset1);
+  //let network = new Network()
+  //network.addClient(mset1);
   console.dir(mset1);
   document.getElementById('msetId').innerHTML = "msetId="+msetId;
 });
