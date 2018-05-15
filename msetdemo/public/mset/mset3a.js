@@ -148,14 +148,91 @@ class MSET{
   applyTreeOp(treeOp){
       var n;
       if (treeOp.op == "insert") {
-          n = treeinsert(this,treeOp.nodeid, treeOp.q, treeOp.un, treeOp.c);
+          n = this.treeinsert(treeOp.nodeid, treeOp.q, treeOp.un, treeOp.c);
       } else if (treeOp.op == "extend") {
-          n = treeextend(this,treeOp.nodeid, treeOp.c);
+          n = this.treeextend(treeOp.nodeid, treeOp.c);
       } else if (treeOp.op == "delete") {
-          n = treehide(this,treeOp.nodeid, treeOp.q);
+          n = this.treehide(treeOp.nodeid, treeOp.q);
       }
       return n; // this has yet to be written ...
   }
+
+  /* **************************************
+   *  MSET DATA TYPE OPERATIONS
+   */
+
+  /* treeinsert(M,vm,q,un,c)
+   *  this inserts the new node with id un and which contains c
+   *  into the node with id vm at offset q
+   *  and it updates M to reflect this change ...
+   */
+
+  treeinsert(vm,q,un,c){
+    //  alert("treeinsert vm="+JSON.stringify(vm)  +" q="+q+" un="+JSON.stringify(un)+" c="+c);
+      //console.dir(this);
+      var n = this.nodes[vm]; // O(log(N))
+
+      console.log(JSON.stringify(['IN treeinsert',vm,q,un,c]))
+      var s = n.iset[q];
+      var m = createCharNode(un,c);  // O(1)
+      var e = m.elt[0];
+      var f = n.start;
+      var k = insertNode(m,s);  // O(log(N))
+      console.log("k=");console.dir(k);
+
+      // now we sew m into the doubly linked lists!!!
+      if (k==0){
+        if (q==0) {
+            f=n.start;
+        } else { // q>0
+            f=n.elt[q-1];
+        }
+      } else { // k>0
+        f = s[k-1].end; // O(log(N))
+      }
+
+      // next we insert the three new elements into the list
+      f.listNode.insertAfter(m.start).insertAfter(m.elt[0]).insertAfter(m.end); // O(log(N))
+      // and insert the new node into the hashtable
+      this.nodes[un]=m;
+      this.size++;
+      //alert("treeinsert q="+q+" c="+c);
+      insertNode(m,s); //O(log(N))
+      return m;
+  }
+
+
+  /* treeextend(M,nodeid,c)
+   *  this inserts the character c at the end of the node with the specified nodeid
+   *  and it updates M to reflect this change ...
+   */
+  treeextend(nodeid,c){
+      var n = this.nodes[nodeid];  // O(log(N))
+      var e = Element.createChar(c,n);  // O(1)
+      var d = n.elt.length;
+      var f = n.end;
+      e.offset = d;
+      n.elt[d]=e;
+      n.iset[d+1]=[];
+      f.listNode.insertBefore(e); // O(log(N))
+      this.size++;
+      return n;
+  }
+
+  /* treehide(M,nodeid,q)
+   *  this hides the character c with offset q in the node with the specified nodeid
+   *  and it updates M to reflect this change ...
+   */
+  treehide(nodeid,q) {
+      var n = this.nodes[nodeid]; // O(log(N))
+      var e = n.elt[q];
+      e.vis=false;
+      e.sym = "["+e.sym+"]";
+      return n;
+  }
+
+
+
 
 
 }
@@ -373,81 +450,6 @@ function DLL() {
 }
 
 
-/* **************************************
- *  MSET DATA TYPE OPERATIONS
- */
-
-/* treeinsert(M,vm,q,un,c)
- *  this inserts the new node with id un and which contains c
- *  into the node with id vm at offset q
- *  and it updates M to reflect this change ...
- */
-
-function treeinsert(M,vm,q,un,c){
-  //  alert("treeinsert vm="+JSON.stringify(vm)  +" q="+q+" un="+JSON.stringify(un)+" c="+c);
-    console.dir(M);
-    var n = M.nodes[vm]; // O(log(N))
-
-    console.log(JSON.stringify(['IN treeinsert',vm,q,un,c]))
-    var s = n.iset[q];
-    var m = createCharNode(un,c);  // O(1)
-    var e = m.elt[0];
-    var f = n.start;
-    var k = insertNode(m,s);  // O(log(N))
-    console.log("k=");console.dir(k);
-
-    // now we sew m into the doubly linked lists!!!
-    if (k==0){
-      if (q==0) {
-          f=n.start;
-      } else { // q>0
-          f=n.elt[q-1];
-      }
-    } else { // k>0
-      f = s[k-1].end; // O(log(N))
-    }
-
-    // next we insert the three new elements into the list
-    f.listNode.insertAfter(m.start).insertAfter(m.elt[0]).insertAfter(m.end); // O(log(N))
-    // and insert the new node into the hashtable
-    M.nodes[un]=m;
-    M.size++;
-    //alert("treeinsert q="+q+" c="+c);
-    insertNode(m,s); //O(log(N))
-    return m;
-}
-
-
-/* treeextend(M,nodeid,c)
- *  this inserts the character c at the end of the node with the specified nodeid
- *  and it updates M to reflect this change ...
- */
-function treeextend(M,nodeid,c){
-    var n = M.nodes[nodeid];  // O(log(N))
-    var e = Element.createChar(c,n);  // O(1)
-    var d = n.elt.length;
-    var f = n.end;
-    e.offset = d;
-    n.elt[d]=e;
-    n.iset[d+1]=[];
-    f.listNode.insertBefore(e); // O(log(N))
-    M.size++;
-    return n;
-}
-
-/* treehide(M,nodeid,q)
- *  this hides the character c with offset q in the node with the specified nodeid
- *  and it updates M to reflect this change ...
- */
-function treehide(M,nodeid,q) {
-    var n = M.nodes[nodeid]; // O(log(N))
-    var e = n.elt[q];
-    e.vis=false;
-    e.sym = "["+e.sym+"]";
-    return n;
-}
-
-
 
 
 
@@ -476,7 +478,7 @@ function stringinsert(M,k,c) {
       // CASE 0:  no-nonmarkers in the list, so tree must be empty
 
       // insert new node into the root of the empty tree
-      treeinsert(M,[0,0],0,un,c);
+      M.treeinsert([0,0],0,un,c);
       M.network.insert([0,0],0,un,c);
     }
     else if (k==0) {
@@ -493,7 +495,7 @@ function stringinsert(M,k,c) {
       console.log("k=0 case "+JSON.stringify(e.nodeid))
       console.log(M.strings.printList('rev'))
       console.dir(M)
-      treeinsert(M,e.nodeid,0,un,c);
+      M.treeinsert(e.nodeid,0,un,c);
 
     } else { // k>0
         // in the remaining cases we're inserting after a visible character
@@ -510,7 +512,7 @@ function stringinsert(M,k,c) {
             var un = [M.user,M.count++];
 
             M.network.insert(fcell.val.nodeid, fcell.val.offset,un,c);
-            treeinsert(M,fcell.val.nodeid,fcell.val.offset,un,c);
+            M.treeinsert(fcell.val.nodeid,fcell.val.offset,un,c);
 
         } else if (fcell.val.marker && (fcell.val == fcell.val.treeNode.end)) {
 
@@ -519,7 +521,7 @@ function stringinsert(M,k,c) {
             if (fcell.val.treeNode.user==M.user) {
                 // case 3a: it the user owns the node then extend
                 M.network.extend(fcell.val.nodeid, c);
-                treeextend(M,fcell.val.nodeid,c);
+                M.treeextend(fcell.val.nodeid,c);
             }
             else {
               un = [M.user, M.count++];
@@ -527,7 +529,7 @@ function stringinsert(M,k,c) {
               // console.log("string insert case 3b: at end, fcell.val.user="+fcell.val.user+" M.user="+M.user);
 
               M.network.insert(fcell.val.nodeid, fcell.val.treeNode.elt.length, un, c);
-              treeinsert(M,fcell.val.nodeid,fcell.val.treeNode.elt.length,un,c);
+              M.treeinsert(fcell.val.nodeid,fcell.val.treeNode.elt.length,un,c);
             }
         } else {
 
@@ -538,7 +540,7 @@ function stringinsert(M,k,c) {
               fcell = M.strings.nextNonMarker(fcell); // O(log(N))
 
               M.network.insert(fcell.val.nodeid,0,un,c);
-              treeinsert(M,fcell.val.nodeid,0,un,c);
+              M.treeinsert(fcell.val.nodeid,0,un,c);
         }
     }
 }
@@ -567,48 +569,6 @@ function initMSET(){
     network.addClient(mset2);
     network.addClient(mset3);
 
-}
-
-/*
-  This provides some manual tests for a particular mset
-*/
-
-function testops() {
-    mset = new MSET(1);
-    treeinsert(mset,[0,0],0,[1,0],"A");
-    treeinsert(mset,[0,0],0,[3,0],"B");
-    treeinsert(mset,[0,0],0,[2,0],"C");
-    treeinsert(mset,[1,0],1,[1,2],"D");
-    treeextend(mset,[1,0],"E");
-    treeextend(mset,[1,0],"F");
-    treeinsert(mset,[1,0],2,[3,1],"G");
-    treehide(mset,[1,0],0);
-    treehide(mset,[1,0],1);
-    treeinsert(mset,[3,1],1,[3,2],"H");
-    treeinsert(mset,[3,1],1,[1,3],"I");
-    stringdelete(mset,5);
-    stringdelete(mset,1);
-
-    stringinsert(mset,0,'a');
-    stringinsert(mset,1,'b');
-    stringinsert(mset,2,'c');
-    stringinsert(mset,1,'d');
-    stringdelete(mset,1);
-    stringinsert(mset,1,'e');
-    stringdelete(mset,1);
-    stringinsert(mset,1,'f');
-    stringdelete(mset,3);
-    stringinsert(mset,3,'g');
-
-    if (op=="insert")
-  stringinsert(mset,q,c);
-    else
-  stringdelete(mset,q);
-
-    document.getElementById('estring1').innerHTML = mset.strings.printList('edit');
-    document.getElementById('rstring1').innerHTML = mset.strings.printList('rev');
-    document.getElementById('sstring1').innerHTML = mset.strings.printList('std');
-    document.getElementById('status1').innerHTML = "done";
 }
 
 

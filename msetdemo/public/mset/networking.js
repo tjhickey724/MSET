@@ -31,17 +31,17 @@ socket.on('remoteOperation', function(msg){
     case 'insert':
        z = `REMOTE treeinsert([${msg.nodeid}],${msg.q},[${msg.un}],'${msg.c}')`
        console.log(z)
-       treeinsert(mset1,msg.nodeid,msg.q,msg.un,msg.c)
+       mset1.treeinsert(msg.nodeid,msg.q,msg.un,msg.c)
        break;
      case 'extend':
         z = `REMOTE treeextend([${msg.nodeid}],'${msg.c}')`
         console.log(z)
-        treeextend(mset1,msg.nodeid,msg.c)
+        mset1.treeextend(msg.nodeid,msg.c)
         break;
     case 'delete':
        z = `REMOTE treehide([${msg.nodeid}],${msg.q})`
        console.log(z)
-       treehide(mset1,msg.nodeid,msg.q)
+       mset1.treehide(msg.nodeid,msg.q)
        break;
     default: console.log('something else')
   }
