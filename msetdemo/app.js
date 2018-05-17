@@ -12,6 +12,7 @@ var logger = require('morgan');
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 var msetRouter = require('./routes/mset');
+var mset2Router = require('./routes/mset2');
 
 //var app = require('express')();
 var app = express();
@@ -39,6 +40,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/mset', msetRouter);
+app.use('/mset2', mset2Router);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -60,17 +62,17 @@ app.use(function(err, req, res, next) {
 
 module.exports = app;
 
-
-io.on('connection', function(socket){
+const io1 = io.of('/demo1')
+io1.on('connection', function(socket){
   console.log('a user connected');
   socket.on('chat message', function(msg){
     console.log('message: ' + msg);
-    io.emit('chat message', msg);
+    io1.emit('chat message', msg);
   });
   socket.on('operation',function(msg){
     console.log('operation: '+msg);
     console.dir(msg);
-    io.emit('remoteOperation',msg);
+    io1.emit('remoteOperation',msg);
   })
   socket.on('disconnect', function(){
     console.log('user disconnected');
@@ -78,6 +80,23 @@ io.on('connection', function(socket){
   socket.emit('msetId',msetId++);
 });
 
+const io2 = io.of('/demo2')
+io2.on('connection', function(socket){
+  console.log('a user connected');
+  socket.on('chat message', function(msg){
+    console.log('message: ' + msg);
+    io2.emit('chat message', msg);
+  });
+  socket.on('operation',function(msg){
+    console.log('operation: '+msg);
+    console.dir(msg);
+    io2.emit('remoteOperation',msg);
+  })
+  socket.on('disconnect', function(){
+    console.log('user disconnected');
+  });
+  socket.emit('msetId',msetId++);
+});
 
 
 http.listen(4000, function(){

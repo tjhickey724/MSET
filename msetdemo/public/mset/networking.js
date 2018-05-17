@@ -1,4 +1,4 @@
-const socket = io();
+const socket = io('/demo1');
 
 let msetId=-1;
 let mset1 = {};
