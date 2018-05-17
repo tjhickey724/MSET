@@ -65,10 +65,6 @@ module.exports = app;
 const io1 = io.of('/demo1')
 io1.on('connection', function(socket){
   console.log('a user connected');
-  socket.on('chat message', function(msg){
-    console.log('message: ' + msg);
-    io1.emit('chat message', msg);
-  });
   socket.on('operation',function(msg){
     console.log('operation: '+msg);
     console.dir(msg);
@@ -81,20 +77,21 @@ io1.on('connection', function(socket){
 });
 
 const io2 = io.of('/demo2')
+
 io2.on('connection', function(socket){
+
   console.log('a user connected');
-  socket.on('chat message', function(msg){
-    console.log('message: ' + msg);
-    io2.emit('chat message', msg);
-  });
+
   socket.on('operation',function(msg){
     console.log('operation: '+msg);
     console.dir(msg);
     io2.emit('remoteOperation',msg);
   })
+
   socket.on('disconnect', function(){
     console.log('user disconnected');
   });
+
   socket.emit('msetId',msetId++);
 });
 

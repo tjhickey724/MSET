@@ -26,6 +26,7 @@ class MSETsocket{
     console.dir(this)
     const thisMset = this;
 
+
     this.socket.on('msetId', function(msg){
       // here we listen to the server to get our msetId
       thisMset.msetId=parseInt(msg);
@@ -39,6 +40,8 @@ class MSETsocket{
     });
 
     this.socket.on('remoteOperation', function(msg){
+      if (msg.taId!=thisMset.taId) return // filter out msgs to other tas 
+      msg = msg.op;
       console.log(thisMset.taId+'::received remoteOp: '+JSON.stringify(msg));
 
       let z = ""
@@ -91,7 +94,7 @@ class MSETsocket{
 
 
   sendOperationToServer(op){
-    this.socket.emit('operation',op);
+    this.socket.emit('operation',{taId:this.taId,op:op});
   }
 
 
