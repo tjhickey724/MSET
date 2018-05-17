@@ -83,25 +83,14 @@ io2.on('connection', function(socket){
   console.log('a user connected');
 
   socket.on('operation',function(msg){
-    console.log('operation: '+msg);
-    console.dir(msg);
     let z=(oplist[msg.fileId] || [])
     z.push(msg);
     oplist[msg.fileId]=z
-    console.log('z= '+JSON.stringify(z))
-    console.log('oplist length is '+oplist[msg.fileId].length)
-    console.log(oplist[msg.fieldId])
     io2.emit('remoteOperation',msg);
   })
 
   socket.on('reset',function(msg){
-    console.dir(oplist)
-    for(let a in oplist){
-      console.log(a+"->"+JSON.stringify(oplist[a])+"/n/n")
-    }
     let z=(oplist[msg.fileId] || [])
-    console.log('in reset .. msg='+JSON.stringify(msg)
-                 +'z='+JSON.stringify(z));
     socket.emit('reset',{oplist:z});
   })
 
