@@ -1,4 +1,6 @@
-console.log("MSET loaded!");
+export {MSETsocket as default}
+
+console.log("MSET module loading!");
 
 
 // this creates the socket to the server and the MSET tree
@@ -6,9 +8,10 @@ console.log("MSET loaded!");
 
 class MSETsocket{
 
-  constructor(namespace, taId){
+  constructor(namespace, taId, fileId){
     this.socket = io(namespace)
     this.taId = taId
+    this.fileId = (fileId || 'default')
     this.ta = document.getElementById(taId)
     console.log('in MSETsocket')
     console.dir(this)
@@ -21,6 +24,13 @@ class MSETsocket{
     this.addTAlisteners(this.ta);
   }
 
+  exit(){
+    this.socket.close()
+    let old_element = document.getElementById(this.taId);
+    const new_element = old_element.cloneNode(true);
+    old_element.parentNode.replaceChild(new_element, old_element);
+  }
+
   initSocket(){
     console.log('in initSocket')
     console.dir(this)
@@ -29,49 +39,29 @@ class MSETsocket{
 
     this.socket.on('msetId', function(msg){
       // here we listen to the server to get our msetId
-      thisMset.msetId=parseInt(msg);
+      thisMset.msetId=parseInt(msg.msetId);
       thisMset.msetTree = new MSET(thisMset.msetId,thisMset);
+      //this.Mset.ta.value=""
+      //thisMset.applyRemoteOps(msg.oplist)
       console.log('in msetId listener, this.ta = ')
       console.log(thisMset.taId)
       thisMset.ta.readOnly = false;
       console.dir(thisMset)
+      thisMset.socket.emit('reset',{msetId:thisMset.msetId,fileId:thisMset.fileId})
       // this ought to be handle by a callback, why get the document involved!
       //document.getElementById('msetId').innerHTML = "msetId="+msetId;
     });
 
+    this.socket.on('reset', function(msg){
+      //thisMset.msetTree = new MSET(thisMset.msetId,thisMset);
+      thisMset.applyRemoteOps(msg.oplist)
+    })
+
     this.socket.on('remoteOperation', function(msg){
-      if (msg.taId!=thisMset.taId) return // filter out msgs to other tas 
-      msg = msg.op;
-      console.log(thisMset.taId+'::received remoteOp: '+JSON.stringify(msg));
 
-      let z = ""
-      console.log(thisMset.taId+'::msetId='+thisMset.msetId+" msg.nodeid[0]="+msg.nodeid[0])
-      // ignore messages from self
-      if (((msg.op=='extend'))&&(msg.nodeid[0]==thisMset.msetId)){
-        return;
-      } else if ((msg.op=='insert') && (msg.un[0]==thisMset.msetId)){
-        return;
-      }
 
-      thisMset.remoteOp=true; // temporarily ignore changes to the textarea as remote ops are processed
-      switch (msg.op){
-        case 'insert':
-           z = `REMOTE treeinsert([${msg.nodeid}],${msg.q},[${msg.un}],'${msg.c}')`
-           console.log(thisMset.taId+z)
-           thisMset.msetTree.treeinsert(msg.nodeid,msg.q,msg.un,msg.c)
-           break;
-         case 'extend':
-            z = `REMOTE treeextend([${msg.nodeid}],'${msg.c}')`
-            console.log(thisMset.taId+z)
-            thisMset.msetTree.treeextend(msg.nodeid,msg.c)
-            break;
-        case 'delete':
-           z = `REMOTE treehide([${msg.nodeid}],${msg.q})`
-           console.log(thisMset.taId+z)
-           thisMset.msetTree.treehide(msg.nodeid,msg.q)
-           break;
-        default: console.log(thisMset.taId+'::something else')
-      }
+      thisMset.applyRemoteOp(msg);
+
       // this should also be handled by callbacks ..
       /*
       document.getElementById('estring1').value = msetTree.strings.printList('edit');
@@ -80,11 +70,7 @@ class MSETsocket{
       document.getElementById('sstring1').value = newString;
       document.getElementById('ta').value = newString;
       */
-      const newString = thisMset.msetTree.strings.printList('std')
-      thisMset.ta.value = newString
-      thisMset.lastValue = newString;
-      console.log('ta_'+thisMset.taId+' = ...\n'+newString+"\n");
-      thisMset.remoteOp=false;
+
     })
 
       //document.getElementById('msetId').innerHTML = "msetId="+msetId;
@@ -92,9 +78,63 @@ class MSETsocket{
 
   }
 
+  applyRemoteOps(oplist){
+    console.log("in applyRemoteOps with oplist: \n"+JSON.stringify(oplist))
+    for(let i=0; i<oplist.length;i++){
+      this.applyRemoteOp(oplist[i]);
+    }
+    console.log("All "+oplist.length+" remote Ops have been loaded!")
+
+    this.ta.value = this.msetTree.strings.printList('std')
+  }
+
+  applyRemoteOp(msg){
+    if ((msg.taId!=this.taId) || (msg.fileId!=this.fileId)){
+      return // filter out msgs to other tas
+    }
+    console.log(this.taId+'::received remoteOp: '+JSON.stringify(msg));
+    msg = msg.op
+    let z = ""
+    console.log('in applyRemoteOp: '+JSON.stringify(msg))
+    console.dir(msg)
+    console.log(this.taId+'::msetId='+this.msetId+" msg.nodeid[0]="+msg.nodeid[0])
+    // ignore messages from self
+    if (((msg.op=='extend'))&&(msg.nodeid[0]==this.msetId)){
+      return;
+    } else if ((msg.op=='insert') && (msg.un[0]==this.msetId)){
+      return;
+    }
+
+    this.remoteOp=true; // temporarily ignore changes to the textarea as remote ops are processed
+    switch (msg.op){
+      case 'insert':
+         z = `REMOTE treeinsert([${msg.nodeid}],${msg.q},[${msg.un}],'${msg.c}')`
+         console.log(this.taId+z)
+         this.msetTree.treeinsert(msg.nodeid,msg.q,msg.un,msg.c)
+         break;
+       case 'extend':
+          z = `REMOTE treeextend([${msg.nodeid}],'${msg.c}')`
+          console.log(this.taId+z)
+          this.msetTree.treeextend(msg.nodeid,msg.c)
+          break;
+      case 'delete':
+         z = `REMOTE treehide([${msg.nodeid}],${msg.q})`
+         console.log(this.taId+z)
+         this.msetTree.treehide(msg.nodeid,msg.q)
+         break;
+      default: console.log(this.taId+'::something else')
+    }
+    const newString = this.msetTree.strings.printList('std')
+    this.ta.value = newString
+    this.lastValue = newString;
+    console.log('ta_'+this.taId+' = ...\n'+newString+"\n");
+    this.remoteOp=false;
+  }
+
 
   sendOperationToServer(op){
-    this.socket.emit('operation',{taId:this.taId,op:op});
+    this.socket.emit('operation',
+      {taId:this.taId,fileId:this.fileId, op:op});
   }
 
 

@@ -7,6 +7,8 @@ block content
 
   ul#messages
   h1 Edit ta1 below
+  input#f1(type="text")
+  button#b1 Switch file to edit
   textarea#ta1(rows="10",cols="80")
   hr
   h1 Edit ta2 below
@@ -23,5 +25,5 @@ block content
 
   script(src="https://code.jquery.com/jquery-1.11.1.js")
   script(src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.0/socket.io.js")
-  script(src="/mset/MSET.js")
-  script(src="/mset/demo2.js")
+  script(type="module", src="/mset/MSET.js")
+  script(type="module", src="/mset/demo2.js")

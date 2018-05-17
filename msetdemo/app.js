@@ -77,7 +77,7 @@ io1.on('connection', function(socket){
 });
 
 const io2 = io.of('/demo2')
-
+let oplist = {default:[]};
 io2.on('connection', function(socket){
 
   console.log('a user connected');
@@ -85,14 +85,34 @@ io2.on('connection', function(socket){
   socket.on('operation',function(msg){
     console.log('operation: '+msg);
     console.dir(msg);
+    let z=(oplist[msg.fileId] || [])
+    z.push(msg);
+    oplist[msg.fileId]=z
+    console.log('z= '+JSON.stringify(z))
+    console.log('oplist length is '+oplist[msg.fileId].length)
+    console.log(oplist[msg.fieldId])
     io2.emit('remoteOperation',msg);
+  })
+
+  socket.on('reset',function(msg){
+    console.dir(oplist)
+    for(let a in oplist){
+      console.log(a+"->"+JSON.stringify(oplist[a])+"/n/n")
+    }
+    let z=(oplist[msg.fileId] || [])
+    console.log('in reset .. msg='+JSON.stringify(msg)
+                 +'z='+JSON.stringify(z));
+    socket.emit('reset',{oplist:z});
   })
 
   socket.on('disconnect', function(){
     console.log('user disconnected');
   });
 
-  socket.emit('msetId',msetId++);
+  console.log("sending id");
+  socket.emit('msetId',{msetId:msetId++});
+  console.log(msetId)
+  //console.dir(oplist)
 });
 
 
