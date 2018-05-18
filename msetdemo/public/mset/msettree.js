@@ -294,18 +294,20 @@ class MSETtree{
 
 /* ***********************************************************************
  * Here is an implementation of Elements for the MSET data type
+ * The elements are the core objects that wrap the values stored in our DLL
+ * Eventually, we will allow this.sym to be a list of "values" sharing the same visibility
  */
 
 class Element{
 
  constructor (sym,vis,marker) {
-    this.sym = sym;
-    this.vis=vis;
-    this.marker=marker;
-    this.treeNode=null;
-    this.nodeid=null;
-    this.offset=null;
-    this.listNode=null;
+    this.sym = sym; // this is the value of the element which can be any Javascript object
+    this.vis=vis;  // boolean -- true if it is visible, false if hidden
+    this.marker=marker; // boolean -- true if it is a marker symbol, false otherwise
+    this.treeNode=null; // link to the treeNode containing this element
+    this.nodeid=null; // id of this.treeNode
+    this.offset=null; // offset of the element in this.treeNode
+    this.listNode=null; // link to the Doubly Linked List element containing this element
   }
 
   toString() {
@@ -361,7 +363,7 @@ class Node{
 }
 
 /********************************************************
- * Here is an implementation of treelist nodes
+ * Here is an AVL implementation of treelist nodes
  * which let us implement nthXXX in time O(log(n))
  * with rebalancing ... (which we will do later)
  * maybe I'll first implement it so it can do nthEDIT
@@ -394,18 +396,44 @@ class TreeList {
     for(let i=0;i<5; i++){
       console.log('nth '+i+" = "+TreeList.nth(i,x.tln))
     }
+    x.insert('d',x.size())
+    console.log(x.tln.toStringIndent(5))
+    x.insert('e',2)
+    console.log(x.tln.toStringIndent(5))
+    x.insert('f',0)
+    console.log(x.tln.toStringIndent(5))
+    x.insert('g',0)
+    console.log(x.tln.toStringIndent(5))
+    x.insert('h',x.size())
+    console.log(x.tln.toStringIndent(5))
+    x.insert('i',4)
+    console.log(x.tln.toStringIndent(5))
+    for(let i=0;i<x.size(); i++){
+      console.log('nth '+i+" = "+TreeList.nth(i,x.tln))
+    }
+    return x
+  }
+
+  static test2(){
+    const x = new DLL()
+    console.log('[] '+x.tln.toStringIndent(5))
+    for(let i=0; i<10;i++){
+      console.log('X_'+i+" -> "+TreeList.nth(i,x.tln))
+      x.insert(i,x.size())
+    }
+    console.log('0-9 '+x.tln.toStringIndent(5))
     return x
   }
 
   toStringIndent(k){
 
     if (this.isLeaf()){
-      return " ".repeat(k)+("1,"+this.value.val)
+      return " ".repeat(k)+(this.value.val+"[1]")
     }
     else {
-      const leftTree = (!this.left?"null":(this.left.toStringIndent(k+4)))
-      const rightTree = (!this.right?"null":(this.right.toStringIndent(k+4)))
-      return  leftTree+("\n"+" ".repeat(k)+(this.size+","+this.value.val)+"\n")+rightTree
+      const leftTree = (!this.left?(" ".repeat(k+4)+"null[0]"):(this.left.toStringIndent(k+4)))
+      const rightTree = (!this.right?(" ".repeat(k+4)+"null[0]"):(this.right.toStringIndent(k+4)))
+      return  rightTree+("\n"+" ".repeat(k)+(this.value.val+"["+this.size)+"]\n")+leftTree
     }
   }
 
@@ -415,6 +443,7 @@ class TreeList {
 
   static nth(n,tln){
     // find the element at position n in the DLL spanned by tln
+    console.log("nth("+n+"): "+tln.value.val)
     if(n==0){
       while(tln.left) {
           tln = tln.left
@@ -523,7 +552,7 @@ class DLL {
   constructor(){
     this.first = new ListNode("startmarker");
     this.last = new ListNode("endmarker");
-    const startTree = new TreeList(null,null,null,1,this.first)
+    const startTree = new TreeList(null,null,null,2,this.first)
     const endTree = new TreeList(null,null,null,1,this.last)
     startTree.right = endTree
     endTree.parent = startTree
@@ -536,6 +565,16 @@ class DLL {
     this.last.prev = this.first;
     console.log('in DLL constructor')
     console.dir(this)
+  }
+
+  size() {
+    return this.tln.size-2 // don't count the start and end markers
+  }
+
+  insert(elt,pos){
+    const listNode = TreeList.nth(pos,this.tln)
+    console.log('listNode at pos '+pos+' is '+listNode)
+    listNode.insertAfter(elt);
   }
 
   printList(vis) {
