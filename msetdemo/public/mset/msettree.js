@@ -398,16 +398,36 @@ class TreeList {
     const x = new DLL()
     for(let i=0; i<10;i++){
       const a = new Element(i,(i%3)==0,(i%3)==1)
-
-      x.insert(a,x.size())
+      x.first.insertAfter(a,x)
     }
     console.log('****\nx.tln=\n'+x.tln.toStringIndent(5)+"\n****\n")
     for(let i=0; i<x.size()+2;i++){
-      console.log('nth '+i+" = "+TreeList.nth(i,x.tln))
+      console.log('nth edit '+i+" = "+TreeList.nth(i,x.tln,"edit"))
     }
 
     return x
   }
+
+  static test4(){
+    const x = new DLL()
+
+    for(let i=0; i<10;i++){
+      const a = new Element(i,(i%3)==0,(i%3)==1)
+      x.first.insertAfter(a,x)
+    }
+    console.log('****\nx.tln=\n'+x.tln.toStringIndent(5)+"\n****\n")
+    const feature = "edit"
+    console.log(feature)
+    console.log(x.size(feature))
+    console.log(JSON.stringify(x.tln.size))
+    for(let i=0; i<x.size(feature);i++){
+      const z = TreeList.nth(i,x.tln,feature)
+      console.log('nth '+i+" "+feature+" = "+ z)
+    }
+
+    return x
+  }
+
 
 
   toStringIndent(k){
@@ -435,23 +455,28 @@ class TreeList {
     return (this.left==null) && (this.right==null)
   }
 
-  static nth(n,tln){
+  static nth(n,tln,feature){
 
+    //console.dir(tln)
     // find the element at position n in the DLL spanned by tln
-
+    const eltSize = tln.value.size[feature]
     if(n==0){
-      while(tln.left) {
-          tln = tln.left
+
+      if (tln.left && (tln.left.size[feature]>0)){
+        return TreeList.nth(0,tln.left,feature)
+      } else if (tln.value.size[feature]==0) {
+        return TreeList.nth(0,tln.right,feature)
+      } else {
+        return tln.value
       }
-      return tln.value
-    } else if (!tln.left){
-        return TreeList.nth(n-1,tln.right)
-    } else if (n<tln.left.size.edit){
-          return TreeList.nth(n,tln.left)
-    } else if (n==tln.left.size.edit){
+    } else if (!(tln.left) || (tln.left.size[feature]==0)){
+        return TreeList.nth(n-eltSize,tln.right,feature)
+    } else if (n<tln.left.size[feature]){
+          return TreeList.nth(n,tln.left,feature)
+    } else if ((n==tln.left.size[feature]) && (eltSize==1)){
       return tln.value
     } else {
-        return TreeList.nth(n-tln.left.size.edit-1,tln.right)
+        return TreeList.nth(n-tln.left.size[feature]-eltSize,tln.right,feature)
     }
   }
 
@@ -659,11 +684,11 @@ class ListNode{
 class DLL {
   constructor(){
     this.first = new ListNode("startmarker");
-    this.first.size={std:0,rev:0,edit:1};
+    this.first.size={std:0,rev:0,edit:0};
     this.last = new ListNode("endmarker");
-    this.last.size={std:0,rev:0,edit:1};
-    const markerSize1={std:0,rev:0,edit:1}
-    const markerSize2={std:0,rev:0,edit:2}
+    this.last.size={std:0,rev:0,edit:0};
+    const markerSize1={std:0,rev:0,edit:0}
+    const markerSize2={std:0,rev:0,edit:0}
     const startTree = new TreeList(null,null,null,markerSize2,this.first)
     const endTree = new TreeList(null,null,null,markerSize1,this.last)
     startTree.right = endTree
@@ -678,13 +703,16 @@ class DLL {
 
   }
 
-  size() {
-    return this.tln.size.edit-2 // don't count the start and end markers
+  size(feature) {
+    feature = feature || 'edit'
+    //console.log("in size "+feature)
+    //console.dir(this.tln)
+    return this.tln.size[feature] // don't count the start and end markers
   }
 
   insert(elt,pos){
 
-    const listNode = TreeList.nth(pos,this.tln)
+    const listNode = TreeList.nth(pos,this.tln,'vis')
     const z = listNode.insertAfter(elt,this);
   }
 
