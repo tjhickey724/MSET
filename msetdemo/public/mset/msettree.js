@@ -368,15 +368,21 @@ class Node{
  * with rebalancing ... (which we will do later)
  * maybe I'll first implement it so it can do nthEDIT
  * efficiently
+ * We assume that the values support the vis and marker flags
+ * nthVIS returns the nth element with vis=true
+ * nthREV returns the nth element with marker=false
+ *    (so we assume that marker=true => vis=false)
+ * nthEDIT returns the nth element of the list, indep of the flags
  */
 
 class TreeList {
   constructor(left,right,parent,size,value){
     this.left=left
     this.right=right
-    this.size=size
+    this.size=size  //this is a tuple {std:1,rev:1,edit:1}
     this.parent=parent
     this.value = value
+    this.height = 1
   }
 
   static test(){
@@ -416,24 +422,70 @@ class TreeList {
 
   static test2(){
     const x = new DLL()
-    console.log('[] '+x.tln.toStringIndent(5))
     for(let i=0; i<10;i++){
-      console.log('X_'+i+" -> "+TreeList.nth(i,x.tln))
       x.insert(i,x.size())
     }
-    console.log('0-9 '+x.tln.toStringIndent(5))
+    console.log('****\nx.tln=\n'+x.tln.toStringIndent(5)+"\n****\n")
+    for(let i=0; i<x.size()+2;i++){
+      console.log('nth '+i+" = "+TreeList.nth(i,x.tln))
+    }
+
     return x
+  }
+
+  static test3(){
+    const x = new DLL()
+    for(let i=0; i<10;i++){
+      const a = new Element(i,(i%3)==0,(i%3)==1)
+      x.insert(a,x.size())
+    }
+    console.log('****\nx.tln=\n'+x.tln.toStringIndent(5)+"\n****\n")
+    for(let i=0; i<x.size()+2;i++){
+      console.log('nth '+i+" = "+TreeList.nth(i,x.tln))
+    }
+
+    return x
+  }
+
+  static testRR(){
+    const x = new DLL()
+    x.insert('z',0)
+    x.insert('t4',1)
+    x.insert('y',0)
+    x.insert('t3',1)
+    x.insert('x',0)
+    x.insert('t2',1)
+    x.insert('t1',0)
+    console.log(x.tln.toStringIndent(5))
+    console.log("*******  RRot ***")
+    const a = x.tln.right.left.rightRotate()
+    console.log(x.tln.toStringIndent(5))
+  }
+
+  static testLR(){
+    const x = new DLL()
+    x.insert('z',0)
+    x.insert('t1',0)
+    x.insert('y',2)
+    x.insert('t2',2)
+    x.insert('x',4)
+    x.insert('t3',4)
+    x.insert('t4',6)
+    console.log(x.tln.toStringIndent(5))
+    console.log("*******  LRot ***")
+    const a = x.tln.right.left.leftRotate()
+    console.log(x.tln.toStringIndent(5))
   }
 
   toStringIndent(k){
 
     if (this.isLeaf()){
-      return " ".repeat(k)+(this.value.val+"[1]")
+      return " ".repeat(k)+(this.value.val+"[s=1, h=1]")
     }
     else {
       const leftTree = (!this.left?(" ".repeat(k+4)+"null[0]"):(this.left.toStringIndent(k+4)))
       const rightTree = (!this.right?(" ".repeat(k+4)+"null[0]"):(this.right.toStringIndent(k+4)))
-      return  rightTree+("\n"+" ".repeat(k)+(this.value.val+"["+this.size)+"]\n")+leftTree
+      return  rightTree+("\n"+" ".repeat(k)+(this.value.val+"[s="+this.size+", h="+this.height)+"]\n")+leftTree
     }
   }
 
@@ -443,7 +495,7 @@ class TreeList {
 
   static nth(n,tln){
     // find the element at position n in the DLL spanned by tln
-    console.log("nth("+n+"): "+tln.value.val)
+    //console.log("nth("+n+"): "+tln.value.val)
     if(n==0){
       while(tln.left) {
           tln = tln.left
@@ -471,7 +523,8 @@ class TreeList {
       newNode.prev.tln.right = newNode.tln
     }
     newNode.tln.rebalance()
-    return newNode
+    const z = newNode.tln.parent.avlRebalance()
+    return z
   }
 
   static insertBefore(newNode,oldNode){
@@ -482,15 +535,107 @@ class TreeList {
     return this.insert(newNode)
   }
 
+  avlRebalance(){
+    // rebalance the tree above this, assuming this is unbalanced
+    const p = this.parent
+    if (!p) return this
+    if (!p.unbalanced()) {
+      return this.parent.avlRebalance()
+    } else { // rotate to
+      if (p.left==this) {
+        if (this.leftHeavy()){ //LL
+          p.rightRotate()
+        } else {                //LR
+          this.leftRotate()
+          p.rightRotate()
+        }
+      } else {
+        if (this.rightHeavy()){   //RR
+          p.leftRotate();
+        } else {                  //RL
+          this.rightRotate();
+          p.leftRotate();
+        }
+      }
+      return this.avlRebalance()  // as the node moved to its parent position
+    }
+  }
 
+  leftHeavy(){
+    const leftHeight = (this.left?this.left.height:0)
+    const rightHeight = (this.right?this.right.height:0)
+    return leftHeight >= rightHeight
+  }
+
+  rightHeavy(){
+    const leftHeight = (this.left?this.left.height:0)
+    const rightHeight = (this.right?this.right.height:0)
+    return leftHeight <= rightHeight
+  }
+
+  unbalanced(){
+    const leftHeight = (this.left?this.left.height:0)
+    const rightHeight = (this.right?this.right.height:0)
+    return (leftHeight-rightHeight>1)||(rightHeight-leftHeight>1)
+  }
   rebalance(){
     // I need to add height fields and use AVL ..
     const leftSize = (this.left?this.left.size:0)
     const rightSize = (this.right?this.right.size:0)
+    const leftHeight = (this.left?this.left.height:0)
+    const rightHeight = (this.right?this.right.height:0)
+
     this.size = leftSize+rightSize+1
+    this.height = Math.max(leftHeight, rightHeight)+1
     if (this.parent){
       this.parent.rebalance()
     }
+  }
+
+  rightRotate(){
+    const z = this
+    const y = z.left
+    const x = y.left  // error?
+    const p = z.parent
+    const t3 = y.right
+    y.right = z
+    y.parent = z.parent
+    if (p){
+      if (p.left==z) {
+        p.left=y
+      } else {
+        p.right = y
+      }
+    }
+    z.parent = y
+    z.left = t3
+    if (t3) t3.parent = z
+    z.rebalance()
+    y.rebalance()
+    return y
+  }
+
+  leftRotate(){
+    const z = this
+    const y = z.right
+    const x = y.right
+    const p = z.parent
+    const t2 = y.left
+    y.left = z
+    y.parent = z.parent
+    if (p){
+      if (p.left==z) {
+        p.left=y
+      } else {
+        p.right = y
+      }
+    }
+    z.parent = y
+    z.right = t2
+    if (t2) t2.parent = z
+    z.rebalance()
+    y.rebalance()
+    return y
   }
 
 
@@ -531,14 +676,14 @@ class ListNode{
       return x;
     }
 
-    insertAfter(a){
+    insertAfter(a,dll){
       var x = new ListNode(a);
       var tmp = this.next;
       this.next=x;
       x.prev = this;
       x.next = tmp;
       x.next.prev = x;
-      TreeList.insertAfter(x,this)
+      dll.tln = TreeList.insertAfter(x,this) // the top node could change
       return x;
     }
 
@@ -563,8 +708,7 @@ class DLL {
     this.last.nodeid=-1;
     this.first.next = this.last;
     this.last.prev = this.first;
-    console.log('in DLL constructor')
-    console.dir(this)
+
   }
 
   size() {
@@ -573,8 +717,7 @@ class DLL {
 
   insert(elt,pos){
     const listNode = TreeList.nth(pos,this.tln)
-    console.log('listNode at pos '+pos+' is '+listNode)
-    listNode.insertAfter(elt);
+    const z = listNode.insertAfter(elt,this);
   }
 
   printList(vis) {
