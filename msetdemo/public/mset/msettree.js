@@ -1,4 +1,4 @@
-export {MSETtree as default}
+//export {MSETtree as default}
 
 /* ***********************************************************************
  * CORE MSET Demo Implementation in JavaScript
@@ -190,12 +190,12 @@ class MSETtree{
       var i=0, n=s.length, k=-1;
       var u = m.user;
       while(i<n) {
-    if (u< s[i].user) {
-        s.splice(i,0,m);
-        k=i;
-        break;
-    }
-    else i = i+1;
+        if (u< s[i].user) {
+            s.splice(i,0,m);
+            k=i;
+            break;
+        }
+        else i = i+1;
       }
       if (i==n) {s[n]=m; k=n;}
       //alert("insertnode:  k="+k+" s="+s+ " n="+n+" c="+m.elt[0].sym);
@@ -360,8 +360,114 @@ class Node{
   }
 }
 
+/********************************************************
+ * Here is an implementation of treelist nodes
+ * which let us implement nthXXX in time O(log(n))
+ * with rebalancing ... (which we will do later)
+ * maybe I'll first implement it so it can do nthEDIT
+ * efficiently
+ */
+class TreeList {
+  constructor(left,right,parent,size){
+    this.left=left
+    this.right=right
+    this.size=size
+    this.parent=parent
+  }
+
+  static test(){
+    const x = new DLL()
+    const a = new ListNode('a')
+    const b = new ListNode('b')
+    const c = new ListNode('c')
+    const an = x.first.insertAfter(a);
+    console.log(x.tln.toStringIndent(5))
+    const bn = x.first.next.insertAfter(b);
+    console.log(x.tln.toStringIndent(5))
+    const cn = x.first.next.insertBefore(c);
+    console.dir(x)
+    console.log(x.tln.toStringIndent(5))
+    return x
+  }
+
+  toStringIndent(k){
+    /*
+    console.log('tSI '+this.left +","+this.right)
+    console.dir(this.left)
+    console.dir(this.right)
+    console.log(this.left.toStringIndent(k+4))
+    console.log(this.right.toStringIndent(k+4))
+    */
+    const z = (this.right.toStringIndent(k+4))+
+              ("\n"+" ".repeat(k)+this.size+"\n")+
+              (this.left.toStringIndent(k+4))
+    return z
+  }
+
+  static nth(n,tln){
+    // find the element at position n in the DLL spanned by tln
+    console.log("in nth: n="+n+" tlnsize= "+tln.size); console.dir(tln);
+    if(n==0){
+      while(tln.size && (tln.size>1)) {
+        tln= tln.left
+        console.dir(tln)
+      }
+      return tln
+    } else if (n<tln.left.size){
+          return TreeList.nth(n,tln.left)
+    } else {
+        return TreeList.nth(n-tln.left.size,tln.right)
+    }
+  }
+
+  static insertBefore(newNode,oldNode){
+    // insert the newNode before the oldNode
+    // get the treelist node for oldNode
+    const parent = oldNode.treeListNode
+    console.log('in insertBefore ')
+    console.dir([parent,oldNode,newNode,oldNode.treeListNode])
+    for(let j in oldNode){
+      console.log("j="+j+"->"+oldNode[j]+"\n")
+    }
+    const newTLN = new TreeList(newNode,oldNode,parent,2)
+    newNode.treeListNode = newTLN
+    oldNode.treeListNode = newTLN
+    if (parent.right==oldNode){  //insert on right
+      parent.right = newTLN
+    } else {  //insert on left
+      parent.left = newTLN
+    }
+    TreeList.rebalance(parent)
+    // check to see if the oldNode is a left or right child
+  }
+
+  static insertAfter(newNode,oldNode){
+    // insert the newNode before the oldNode
+    // get the treelist node for oldNode
+    const parent = oldNode.treeListNode
+    const newTLN = new TreeList(oldNode,newNode,parent,2)
+    newNode.treeListNode = newTLN
+    oldNode.treeListNode = newTLN
+    if (parent.right==oldNode){  //insert on right
+      parent.right = newTLN
+    } else {  //insert on left
+      parent.left = newTLN
+    }
+    TreeList.rebalance(parent)
+    // check to see if the oldNode is a left or right child
+  }
+
+  static rebalance(tln){
+    while(tln.parent){
+      tln.size = tln.left.size+tln.right.size
+      tln = tln.parent
+    }
+    tln.size = tln.left.size+tln.right.size
+    // we should also check to see if the heights are different and to an AVL transform
+  }
 
 
+}
 
 
 
@@ -374,6 +480,13 @@ class ListNode{
     this.prev = null,
     this.next =null,
     this.val = v;
+    this.size=1;
+    this.treeListNode=null
+  }
+
+  toStringIndent(k){
+    console.dir((this.val.val || this.val))
+    return " ".repeat(k)+(this.val.val || this.val)
   }
 
   insertBefore(a){
@@ -384,6 +497,7 @@ class ListNode{
       x.next = this;
       x.prev = tmp;
       x.prev.next = x;
+      TreeList.insertBefore(x,this)
       return x;
     }
 
@@ -395,6 +509,7 @@ class ListNode{
       x.next = tmp;
       x.next.prev = x;
       a.listNode=x;
+      TreeList.insertAfter(x,this)
       return x;
     }
 
@@ -412,8 +527,12 @@ class DLL {
     this.last.nodeid=-1;
     this.first.next = this.last;
     this.last.prev = this.first;
+    this.tln = new TreeList(this.first,this.last,null,2)
+    this.first.treeListNode =this.tln
+    this.last.treeListNode =this.tln
+  }
 
-    this.printList = function(vis) {
+  printList(vis) {
       var d,s;
 
       s="";
@@ -430,9 +549,12 @@ class DLL {
       }
       if (vis=="std") return s;
       else return ("[\n "+s+" \n]");
-        }
-        this.toString = this.printList;
+    }
+
+  toString(){
+    return this.printList("edit")
   }
+
 
 
   nthSTD(n){
