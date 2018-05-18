@@ -367,103 +367,101 @@ class Node{
  * maybe I'll first implement it so it can do nthEDIT
  * efficiently
  */
+
 class TreeList {
-  constructor(left,right,parent,size){
+  constructor(left,right,parent,size,value){
     this.left=left
     this.right=right
     this.size=size
     this.parent=parent
+    this.value = value
   }
 
   static test(){
     const x = new DLL()
-    const a = new ListNode('a')
-    const b = new ListNode('b')
-    const c = new ListNode('c')
+    const a = 'a'
+    const b = ('b')
+    const c = ('c')
+    console.log('se: '+x.tln.toStringIndent(5))
+
     const an = x.first.insertAfter(a);
-    console.log(x.tln.toStringIndent(5))
+    console.log('sae: '+x.tln.toStringIndent(5))
     const bn = x.first.next.insertAfter(b);
-    console.log(x.tln.toStringIndent(5))
+    console.log('sabe: '+x.tln.toStringIndent(5))
     const cn = x.first.next.insertBefore(c);
     console.dir(x)
-    console.log(x.tln.toStringIndent(5))
+    console.log('sacbe: '+x.tln.toStringIndent(5))
+    for(let i=0;i<5; i++){
+      console.log('nth '+i+" = "+TreeList.nth(i,x.tln))
+    }
     return x
   }
 
   toStringIndent(k){
-    /*
-    console.log('tSI '+this.left +","+this.right)
-    console.dir(this.left)
-    console.dir(this.right)
-    console.log(this.left.toStringIndent(k+4))
-    console.log(this.right.toStringIndent(k+4))
-    */
-    const z = (this.right.toStringIndent(k+4))+
-              ("\n"+" ".repeat(k)+this.size+"\n")+
-              (this.left.toStringIndent(k+4))
-    return z
+
+    if (this.isLeaf()){
+      return " ".repeat(k)+("1,"+this.value.val)
+    }
+    else {
+      const leftTree = (!this.left?"null":(this.left.toStringIndent(k+4)))
+      const rightTree = (!this.right?"null":(this.right.toStringIndent(k+4)))
+      return  leftTree+("\n"+" ".repeat(k)+(this.size+","+this.value.val)+"\n")+rightTree
+    }
+  }
+
+  isLeaf(){
+    return (this.left==null) && (this.right==null)
   }
 
   static nth(n,tln){
     // find the element at position n in the DLL spanned by tln
-    console.log("in nth: n="+n+" tlnsize= "+tln.size); console.dir(tln);
     if(n==0){
-      while(tln.size && (tln.size>1)) {
-        tln= tln.left
-        console.dir(tln)
+      while(tln.left) {
+          tln = tln.left
       }
-      return tln
+      return tln.value
+    } else if (!tln.left){
+        return TreeList.nth(n-1,tln.right)
     } else if (n<tln.left.size){
           return TreeList.nth(n,tln.left)
+    } else if (n==tln.left.size){
+      return tln.value
     } else {
-        return TreeList.nth(n-tln.left.size,tln.right)
+        return TreeList.nth(n-tln.left.size-1,tln.right)
     }
+  }
+
+  static insert(newNode){
+    // insert the DLL node into the tree, assuming left/right neighbors are in tree
+    if (newNode.prev.tln.right){
+      // insert before the next element
+      newNode.tln = new TreeList(null,null,newNode.next.tln,1,newNode)
+      newNode.next.tln.left = newNode.tln
+    } else {
+      newNode.tln =new TreeList(null,null,newNode.prev.tln,1,newNode)
+      newNode.prev.tln.right = newNode.tln
+    }
+    newNode.tln.rebalance()
+    return newNode
   }
 
   static insertBefore(newNode,oldNode){
-    // insert the newNode before the oldNode
-    // get the treelist node for oldNode
-    const parent = oldNode.treeListNode
-    console.log('in insertBefore ')
-    console.dir([parent,oldNode,newNode,oldNode.treeListNode])
-    for(let j in oldNode){
-      console.log("j="+j+"->"+oldNode[j]+"\n")
-    }
-    const newTLN = new TreeList(newNode,oldNode,parent,2)
-    newNode.treeListNode = newTLN
-    oldNode.treeListNode = newTLN
-    if (parent.right==oldNode){  //insert on right
-      parent.right = newTLN
-    } else {  //insert on left
-      parent.left = newTLN
-    }
-    TreeList.rebalance(parent)
-    // check to see if the oldNode is a left or right child
+    return this.insert(newNode)
   }
 
   static insertAfter(newNode,oldNode){
-    // insert the newNode before the oldNode
-    // get the treelist node for oldNode
-    const parent = oldNode.treeListNode
-    const newTLN = new TreeList(oldNode,newNode,parent,2)
-    newNode.treeListNode = newTLN
-    oldNode.treeListNode = newTLN
-    if (parent.right==oldNode){  //insert on right
-      parent.right = newTLN
-    } else {  //insert on left
-      parent.left = newTLN
-    }
-    TreeList.rebalance(parent)
-    // check to see if the oldNode is a left or right child
+    return this.insert(newNode)
   }
 
-  static rebalance(tln){
-    while(tln.parent){
-      tln.size = tln.left.size+tln.right.size
-      tln = tln.parent
+
+  rebalance(){
+    // I need to add height fields and use AVL ..
+    const leftSize = (this.left?this.left.size:0)
+    const rightSize = (this.right?this.right.size:0)
+    this.size = leftSize+rightSize+1
+    if (this.parent){
+      this.parent.rebalance()
     }
-    tln.size = tln.left.size+tln.right.size
-    // we should also check to see if the heights are different and to an AVL transform
   }
 
 
@@ -481,7 +479,11 @@ class ListNode{
     this.next =null,
     this.val = v;
     this.size=1;
-    this.treeListNode=null
+    this.tln=null
+  }
+
+  toString(){
+    return "ListNode("+this.val+")"
   }
 
   toStringIndent(k){
@@ -491,7 +493,6 @@ class ListNode{
 
   insertBefore(a){
       var x = new ListNode(a);
-      a.listNode = x;
       var tmp = this.prev;
       this.prev=x;
       x.next = this;
@@ -508,7 +509,6 @@ class ListNode{
       x.prev = this;
       x.next = tmp;
       x.next.prev = x;
-      a.listNode=x;
       TreeList.insertAfter(x,this)
       return x;
     }
@@ -523,13 +523,19 @@ class DLL {
   constructor(){
     this.first = new ListNode("startmarker");
     this.last = new ListNode("endmarker");
+    const startTree = new TreeList(null,null,null,1,this.first)
+    const endTree = new TreeList(null,null,null,1,this.last)
+    startTree.right = endTree
+    endTree.parent = startTree
+    this.tln = startTree
+    this.first.tln = startTree
+    this.last.tln = endTree
     this.first.nodeid=-1;
     this.last.nodeid=-1;
     this.first.next = this.last;
     this.last.prev = this.first;
-    this.tln = new TreeList(this.first,this.last,null,2)
-    this.first.treeListNode =this.tln
-    this.last.treeListNode =this.tln
+    console.log('in DLL constructor')
+    console.dir(this)
   }
 
   printList(vis) {
