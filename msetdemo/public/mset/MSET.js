@@ -95,7 +95,7 @@ class MSETsocket{
     }
     console.log(this.taId+'::received remoteOp: '+JSON.stringify(msg));
     msg = msg.op
-    let z = ""
+
     console.log('in applyRemoteOp: '+JSON.stringify(msg))
     console.dir(msg)
     console.log(this.taId+'::msetId='+this.msetId+" msg.nodeid[0]="+msg.nodeid[0])
@@ -106,30 +106,9 @@ class MSETsocket{
       return;
     }
 
-    this.remoteOp=true; // temporarily ignore changes to the textarea as remote ops are processed
-    switch (msg.op){
-      case 'insert':
-         z = `REMOTE treeinsert([${msg.nodeid}],${msg.q},[${msg.un}],'${msg.c}')`
-         console.log(this.taId+z)
-         this.msetTree.treeinsert(msg.nodeid,msg.q,msg.un,msg.c)
-         break;
-       case 'extend':
-          z = `REMOTE treeextend([${msg.nodeid}],'${msg.c}')`
-          console.log(this.taId+z)
-          this.msetTree.treeextend(msg.nodeid,msg.c)
-          break;
-      case 'delete':
-         z = `REMOTE treehide([${msg.nodeid}],${msg.q})`
-         console.log(this.taId+z)
-         this.msetTree.treehide(msg.nodeid,msg.q)
-         break;
-      default: console.log(this.taId+'::something else')
-    }
-    const newString = this.msetTree.strings.printList('std')
-    this.ta.value = newString
-    this.lastValue = newString;
-    console.log('/n/n******/n/nta_'+this.taId+' = ...\n'+newString+"\n");
-    this.remoteOp=false;
+    this.msetTree.network.processRemoteOp(msg)
+    return
+
   }
 
 
@@ -273,9 +252,36 @@ class MSETsocket{
 class Network{
   constructor(msetSocket) {
     this.msetSocket = msetSocket
+    this.allowIncoming=true
+    this.allowOutgoing=true
+    this.incomingQueue = []
+    this.outgoingQueue = []
   }
 
+
   broadcast(op,un){
+    this.outgoingQueue.push({op:op,un:un})
+    this.broadcastAll()
+  }
+
+
+  broadcastAll(){
+    console.log("BroadcastAll")
+    if (this.allowOutgoing){
+      for(let i=0;i<this.outgoingQueue.length;i++){
+        console.log("broadcasting "+JSON.stringify(this.outgoingQueue[i]))
+        this.broadcastOne(this.outgoingQueue[i])
+      }
+      this.outgoingQueue = []
+    } else {
+      document.getElementById("outgoingOps").innerHTML =
+          JSON.stringify(this.outgoingQueue)
+    }
+  }
+
+  broadcastOne(msg){
+    const op=msg.op
+    const un=msg.un
     var i;
     console.log("broadcast: "+JSON.stringify(op) +", "+un[0]);
     console.dir(this)
@@ -295,6 +301,56 @@ class Network{
   hide(vm,q,un) {
     var op = {op:"delete", nodeid:vm, q:q};
     this.broadcast(op,un);
+  }
+
+
+  processRemoteOp(msg){
+    this.incomingQueue.push(msg)
+    this.processAllRemoteOps()
+  }
+
+  processAllRemoteOps(){
+    console.log("Process All Incoming")
+    if (this.allowIncoming){
+      for(let i=0;i<this.incomingQueue.length;i++){
+        console.log("receiving "+JSON.stringify(this.incomingQueue[i]))
+        this.processOneRemoteOp(this.incomingQueue[i])
+      }
+      this.incomingQueue = []
+    }else {
+      document.getElementById("incomingOps").innerHTML =
+          JSON.stringify(this.incomingQueue)
+    }
+  }
+
+  processOneRemoteOp(msg){
+    console.log("&&&&&&&&&& in processRemoteOp: "+JSON.stringify(msg))
+    let z = ""
+    const msetTree = this.msetSocket.msetTree;
+    this.msetSocket.remoteOp=true; // temporarily ignore changes to the textarea as remote ops are processed
+    switch (msg.op){
+      case 'insert':
+         z = `REMOTE treeinsert([${msg.nodeid}],${msg.q},[${msg.un}],'${msg.c}')`
+         console.log(this.msetSocket.taId+z)
+         msetTree.treeinsert(msg.nodeid,msg.q,msg.un,msg.c)
+         break;
+       case 'extend':
+          z = `REMOTE treeextend([${msg.nodeid}],'${msg.c}')`
+          console.log(this.msetSocket.taId+z)
+          msetTree.treeextend(msg.nodeid,msg.c)
+          break;
+      case 'delete':
+         z = `REMOTE treehide([${msg.nodeid}],${msg.q})`
+         console.log(this.msetSocket.taId+z)
+         msetTree.treehide(msg.nodeid,msg.q)
+         break;
+      default: console.log(this.msetSocket.taId+'::something else')
+    }
+    const newString = msetTree.strings.printList('std')
+    this.msetSocket.ta.value = newString
+    this.msetSocket.lastValue = newString;
+    console.log('/n/n******/n/nta_'+this.msetSocket.taId+' = ...\n'+newString+"\n");
+    this.msetSocket.remoteOp=false;
   }
 
 }

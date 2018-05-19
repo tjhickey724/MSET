@@ -386,6 +386,8 @@ class InsertionSet{
 
   constructor(){
     this.nodelist = []
+    this.dll = new DLLindexed()
+    this.dll.comparator = (x,y)=>(x.user-y.user)
   }
 
   /* insertNode(m,s) inserts the node m into an ordered set s of nodes
@@ -408,12 +410,20 @@ class InsertionSet{
       if (i==n) {this.nodelist[n]=m; k=n;}
       //alert("insertnode:  k="+k+" s="+s+ " n="+n+" c="+m.elt[0].sym);
       console.log("InsertionSet: inserting a position "+k+" out of "+this.nodelist.length)
+
+      const k1 = this.dll.insert(m).indexOf()
+      console.log("k1="+k1+" k="+k);
       return k;
   }
 
   get(k){
     const result = this.nodelist[k]
     console.log("InsertionSet: getting element "+k+"/"+this.nodelist.length+" from iset: "+result.user+":"+result.count)
-    return result
+
+    const r = this.dll.nth(k)
+    console.dir(r)
+    console.log("r.user="+r.val.user+" result.user="+result.user)
+
+    return r.val  //was return result
   }
 }

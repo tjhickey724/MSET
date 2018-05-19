@@ -1,24 +1,28 @@
 extends layout
 
 block content
-  h1 MSET Demo with 2 textareas
-  p Welcome back #{userId}
+  h1 MSET Demo
+  p This page was designed to help us test the ability of MSET to handle insertion collisions
   div#msetId
 
   ul#messages
+  select#incoming
+    option allowIncoming
+    option queueIncoming
+  select#outgoing
+    option allowOutgoing
+    option queueOutgoing
+  hr
   h1 Edit ta1 below
   input#f1(type="text")
   button#b1 Switch file to edit
   textarea#ta1(rows="10",cols="80")
   hr
-  h1 Edit ta2 below
-  textarea#ta2(rows="10",cols="80")
+  h2 incoming
+  div#incomingOps
   hr
-  h1 View state below, but don't edit!
-  hr
-  div#operations1
-  hr
-  div#operations2
+  h2 outgoing
+  div#outgoingOps
   hr
   div#status
   hr
