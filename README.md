@@ -15,10 +15,7 @@ creates a new indexed doubly link list.
 
 The nodes in the DLL are of type ListNode and the actual elements of the list are in the value field of those nodes.
 There are special marker nodes at the beginning and end of the list which you can access with the fields first and last
-```javascript
-dll.first
-dll.last
-```
+
 You can add elements before or after any DLL node using the insertBefore and insertAfter methods
 ```javascript
 dll.first.insertAfter(7).insertAfter([1,2,3])
@@ -36,14 +33,21 @@ So you can easily print the elements of a DLL with
 ```javascript
 for(let i=0; i<dll.size(); i++) console.log(dll.nth(i).val)
 ```
+or more efficiently as
+```javascript
+for(let n=dll.first.next; n!=dll.last; n=n.next) console.log(n.val)
+```
 
 You can also find the index of a ListNode in the DLL with the indexOf() method
 ```javascript
 for(let i=0;i<10;i++){dll.last.insertBefore(i)}
-const listnode = dll.nth(5)
+let listnode = dll.nth(5)
 for(let i=0;i<10;i++){dll.first.insertAfter(-i)}
-const index = listnode.indexOf()
+let index = listnode.indexOf()
+console.log(dll.nth(index)) // should be the listnode!
 ```
+
+
 
 
 
