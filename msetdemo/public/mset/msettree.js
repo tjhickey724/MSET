@@ -119,17 +119,22 @@ class MSETtree{
       var m = MSETtree.createCharNode(un,c);  // O(1)
       var e = m.elt[0];
       var f = n.start;
-      var k = MSETtree.insertNode(m,s);  // O(log(N))
+      //var k = MSETtree.insertNode(m,s);  // O(log(N))
+      var k = s.insertNode(m);
 
       // now we sew m into the doubly linked lists!!!
       if (k==0){
+        // this is the case where the node is at the front of the iset
         if (q==0) {
+            // here the node is inserted at pos q=0 in the parent node
             f=n.start;
         } else { // q>0
+            // if the node is not inserted at the beginning of the parent node
             f=n.elt[q-1];
         }
-      } else { // k>0
-        f = s[k-1].end; // O(log(N))
+      } else { // here the node is not the first in its iset
+        //f = s[k-1].end; // O(log(N))
+        f = s.get(k-1).end
       }
 
       // next we insert the three new elements into the list
@@ -158,7 +163,7 @@ class MSETtree{
       var f = n.end;
       e.offset = d;
       n.elt[d]=e;
-      n.iset[d+1]=[];
+      n.iset[d+1]= new InsertionSet();;
       f.listNode.insertBefore(e); // O(log(N))
       this.size++;
       return n;
@@ -190,31 +195,12 @@ class MSETtree{
       n.start   = e1;
       n.elt[0] = e2;
       n.end     = e3;
-      n.iset[0] = [];
-      n.iset[1] = [];
+      n.iset[0] =  new InsertionSet()
+      n.iset[1] =  new InsertionSet()
       return n;
   }
 
-  /* insertNode(m,s) inserts the node m into an ordered set s of nodes
-   * (ordered by userid). This is called to create a child object of a node
-   * and we insert the new node in the appropriate iset.
-   * This needs to be reimplemented as a O(log(N)) operation ...
-   */
-  static insertNode(m,s) {
-      var i=0, n=s.length, k=-1;
-      var u = m.user;
-      while(i<n) {
-        if (u< s[i].user) {
-            s.splice(i,0,m);
-            k=i;
-            break;
-        }
-        else i = i+1;
-      }
-      if (i==n) {s[n]=m; k=n;}
-      //alert("insertnode:  k="+k+" s="+s+ " n="+n+" c="+m.elt[0].sym);
-      return k;
-  }
+
 
 
 
@@ -382,7 +368,52 @@ class Node{
     this.count=n;
     this.elt=[];
     this.iset=[];
-    this.iset[0]=[];
+    this.iset[0]= new InsertionSet();
+  }
+}
+
+
+class InsertionSet{
+  // this is a O(log(N)) implementation of the insertion set
+  // data structure which stores all of the nodes inserted at
+  // a particular position k in a parent node
+  // they are ordered by their owner and each owner
+  // can insert at most one element into an insertion block
+  // we also may need to access the previous element in the insertion set
+  // so we need either indexing or a LL restructure
+  // the first step is to move all iset related code into this class
+
+  constructor(){
+    this.nodelist = []
+  }
+
+  /* insertNode(m,s) inserts the node m into an ordered set s of nodes
+   * (ordered by userid). This is called to create a child object of a node
+   * and we insert the new node in the appropriate iset.
+   * This needs to be reimplemented as a O(log(N)) operation ...
+   */
+  insertNode(m) {
+      console.log("InsertionSet: calling insert on node m "+m.user+":"+m.count)
+      var i=0, n=this.nodelist.length, k=-1;
+      var u = m.user;
+      while(i<n) {
+        if (u< this.nodelist[i].user) {
+            this.nodelist.splice(i,0,m);
+            k=i;
+            break;
+        }
+        else i = i+1;
+      }
+      if (i==n) {this.nodelist[n]=m; k=n;}
+      //alert("insertnode:  k="+k+" s="+s+ " n="+n+" c="+m.elt[0].sym);
+      console.log("InsertionSet: inserting a position "+k+" out of "+this.nodelist.length)
+      return k;
+  }
+
+  get(k){
+    const result = this.nodelist[k]
+    console.log("InsertionSet: getting element "+k+"/"+this.nodelist.length+" from iset: "+result.user+":"+result.count)
+    return result
   }
 }
 
