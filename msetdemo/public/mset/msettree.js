@@ -335,7 +335,7 @@ class Element{
     const std = (this.vis)?1:0
     const rev = (this.marker)?0:1
     const edit = 1
-    return {std:std,rev:rev,edit:edit}
+    return {std,rev:rev,edit:edit}
   }
 
   static createChar(c,n){
@@ -430,7 +430,12 @@ class TreeList {
 
     for(let i=0; i<10;i++){
       const a = new Element(i,(i%3)==0,(i%3)==1)
-      x.first.insertAfter(a)
+      if (i%2==0){
+        x.first.insertAfter(a)
+      } else {
+        x.first.next.insertAfter(a)
+      }
+
     }
     console.log('****\nx.tln=\n'+x.tln.toStringIndent(5)+"\n****\n")
     const feature = "edit"
@@ -440,10 +445,13 @@ class TreeList {
     for(let i=0; i<x.size(feature);i++){
       const z = TreeList.nth(i,x.tln,feature)
       console.log('nth '+i+" "+feature+" = "+ z)
+      console.log('index std='+z.indexOf("std"))
+      console.log('index rev='+z.indexOf("rev"))
+      console.log('index edit='+z.indexOf("edit"))
     }
-
     return x
   }
+
 
 
 
@@ -651,6 +659,30 @@ class ListNode{
     return " ".repeat(k)+(this.val.val || this.val)
   }
 
+  indexOf(feature){
+    // this computes the index of the listnode wrt the feature
+    // more precisely, this gives one more than the number of
+    // elements with the specified feature to the left of this listnode
+
+    let tln = this.tln // move to the treenode
+    let index=0
+    if (tln.left) {
+      index += tln.left.size[feature]
+    }
+
+    while (tln.parent){
+      if (tln.parent.right == tln) {
+        const leftSize = 0
+        if (tln.parent.left) {
+          index += tln.parent.left.size[feature] +
+                   tln.parent.value.size[feature]
+        }
+      }
+      tln = tln.parent
+    }
+    return index
+  }
+
 
   insertBefore(a){
       var x = new ListNode(a);
@@ -802,7 +834,19 @@ class DLL {
 
 
 
+
   nextNonMarker(e) {
+    return this.nextNonMarkerOPT(e)
+  }
+
+  nextNonMarkerOPT(listnode){
+    // each of these operations take time O(log(N))
+    const index = listnode.indexOf("rev")
+    const result= this.nth(index,"rev")
+    return result
+  }
+
+  nextNonMarkerORIG(e) {
       // this can be implemented as O(log(N)) but here is O(N)
       while ((e!== null) && e.val.marker){
           e=e.next;
