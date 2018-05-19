@@ -6,8 +6,10 @@ in 2005.
 
 This repository has several very useful Javascript modules
 
-# DLLindexed
-This is a class which implements a doubly linked list of Javascript objects.
+# class DLLindexed
+This is a class which implements a doubly linked list of Javascript objects in which you can access the nth element in time O(log(N)) where N is the size of the list .. you can also add new elements before or after any listnode in constant time. This is an optimally efficient algorithm, no algorithm can take less than O(log(N)) and still implement the addBefore, addAfter, and nth methods. 
+
+I'll eventually write some real documentation, but for now here are some code snippets showing how to use the DLLindexed class
 ```javascript
 const dll = new DLLindexed()
 ```
@@ -48,7 +50,16 @@ console.log(dll.nth(index)) // should be the listnode!
 ```
 
 
-
-
-
 This current implementation creates an AVL tree over the DLL where each TreeNode stores the number
+
+
+# class MSETtree
+This is a class which implements an optimally efficient non-blocking fully distributed version of the DLLindexed class in which any number of clients can simultaneously edit a DLLindexed list while broadcasting their operations to all other clients and receiving operations from all other clients. If everyone stops editing the system rapidly converges to a DLL which is exactly the same on all clients. Each operation requires time at most O(log(N)) where N is the total number of operations that have been applied to the DLL so far.  The current implementation requires a central server, but it will be fairly easy to modify this so that it works in a fully peer-to-peer environment.
+
+Deleting is implemented by "hiding" an element so it is still available using a different view, but is removed from the main view. I'll write more about this later ...
+
+
+# class MSETsocket
+This is a class which provides the client side code needed to collaboratively edit a textarea. It requires a simple server that will broadcast operations to all clients and which will assign a unique userid to each client who joins the editing session. 
+
+I'll write more about this later ...
