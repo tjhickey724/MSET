@@ -1,15 +1,23 @@
-//export {MSETtree as default}
+export {MSETtree as default}
 
 /* ***********************************************************************
  * CORE MSET Demo Implementation in JavaScript
+ *
+ * This is an implementation of lists with insertion and deletion
+ * which is fully distributive and in which all operations can be performed
+ * in time O(log(n)) where n is the total number of operations applied to
+ * the list so far. This is asymptotically optimal.
+ *
+ * The main applications this was built for was
+ *  -- a collaborative text editor
+ * but we also have a demo of a collaborative JSON list editor
+ * which allows any number of people to insert and remove JSON elements
+ * from a shared list.
  *
  * We define the following classes:
  *   Element, Node, MSET, Network, ListNode, DLL
  */
 
-/* ************************************************************
- * Here is an implementation of MSET
- */
 
 class MSETtree{
   constructor(u,msetSocket,network){
@@ -32,8 +40,8 @@ class MSETtree{
     var e1,e2;
     e1 = Element.createStart(this.root);
     e2 = Element.createEnd(this.root);
-    n = n.insertAfter(e1);
-    n = n.insertAfter(e2);
+    n = n.insertAfter(e1,this.strings);
+    n = n.insertAfter(e2,this.strings);
     this.root.start = e1;
     this.root.end = e2;
   }
@@ -125,7 +133,11 @@ class MSETtree{
       }
 
       // next we insert the three new elements into the list
-      f.listNode.insertAfter(m.start).insertAfter(m.elt[0]).insertAfter(m.end); // O(log(N))
+      const node1 = f.listNode.insertAfter(m.start);
+      const node2 = node1.insertAfter(m.elt[0]);
+      const node3 = node2.insertAfter(m.end); // O(log(N))
+
+
       // and insert the new node into the hashtable
       this.nodes[un]=m;
 
@@ -211,12 +223,16 @@ class MSETtree{
    */
 
   stringdelete(k) {
-      var e = this.strings.nth(k,"std").val;  // O(log(N))
+      var listnode = this.strings.nth(k,"std")
+      var e = listnode.val
+      //var e = this.strings.nth(k,"std").val;  // O(log(N))
 
       console.log("stringdelete: e="+e.toString());
       e.vis=false;
-      e.sym = "["+e.sym+"]";
-      var un = [this.user,0];
+      e.sym = "["+e.sym+"]"
+      listnode.size.std = 0  // it is not longer visible
+      listnode.tln.rebalance()
+      var un = [this.user,0]
       this.network.hide(e.nodeid,e.offset,un); // un is used to prevent broadcast from going back to user
   }
 
@@ -244,7 +260,6 @@ class MSETtree{
       } else { // k>0
           // in the remaining cases we're inserting after a visible character
           // so, get the visible, non-marker elt e at position k-1
-
           var ecell=this.strings.nth(k-1,"std"); //O(log(N))
           // and get the element after the ecell
           var fcell=ecell.next;
@@ -398,7 +413,7 @@ class TreeList {
     const x = new DLL()
     for(let i=0; i<10;i++){
       const a = new Element(i,(i%3)==0,(i%3)==1)
-      x.first.insertAfter(a,x)
+      x.first.insertAfter(a)
     }
     console.log('****\nx.tln=\n'+x.tln.toStringIndent(5)+"\n****\n")
     for(let i=0; i<x.size()+2;i++){
@@ -413,7 +428,7 @@ class TreeList {
 
     for(let i=0; i<10;i++){
       const a = new Element(i,(i%3)==0,(i%3)==1)
-      x.first.insertAfter(a,x)
+      x.first.insertAfter(a)
     }
     console.log('****\nx.tln=\n'+x.tln.toStringIndent(5)+"\n****\n")
     const feature = "edit"
@@ -432,14 +447,9 @@ class TreeList {
 
   toStringIndent(k){
 
-    if (this.isLeaf()){
-      return " ".repeat(k)+
-         (this.value.val+
-           "[s="+JSON.stringify(this.size)+", h=1]")
-    }
-    else {
       const leftTree = (!this.left?(" ".repeat(k+4)+"null[0]"):(this.left.toStringIndent(k+4)))
       const rightTree = (!this.right?(" ".repeat(k+4)+"null[0]"):(this.right.toStringIndent(k+4)))
+
       return  rightTree+
                 ("\n"+" ".repeat(k)+
                   (this.value.val+
@@ -448,16 +458,12 @@ class TreeList {
                    )+
                  "]\n")+
             leftTree
-    }
-  }
-
-  isLeaf(){
-    return (this.left==null) && (this.right==null)
   }
 
   static nth(n,tln,feature){
 
-    //console.dir(tln)
+    if (!tln) throw new Error("")
+
     // find the element at position n in the DLL spanned by tln
     const eltSize = tln.value.size[feature]
     if(n==0){
@@ -469,7 +475,7 @@ class TreeList {
       } else {
         return tln.value
       }
-    } else if (!(tln.left) || (tln.left.size[feature]==0)){
+    } else if (!(tln.left) || (tln.left.size[feature]==0)){ // nothing on the left
         return TreeList.nth(n-eltSize,tln.right,feature)
     } else if (n<tln.left.size[feature]){
           return TreeList.nth(n,tln.left,feature)
@@ -499,15 +505,6 @@ class TreeList {
     return z
   }
 
-
-
-  static insertBefore(newNode,oldNode){
-    return this.insert(newNode)
-  }
-
-  static insertAfter(newNode,oldNode){
-    return this.insert(newNode)
-  }
 
   avlRebalance(){
     // rebalance the tree above this, assuming this is unbalanced
@@ -639,7 +636,7 @@ class ListNode{
     } else {
       this.size={std:0,rev:0,edit:1}
     }
-
+    this.dll=null
     this.tln=null
   }
 
@@ -655,23 +652,28 @@ class ListNode{
 
   insertBefore(a){
       var x = new ListNode(a);
+      a.listNode = x;
+      x.dll = this.dll;
       var tmp = this.prev;
       this.prev=x;
       x.next = this;
       x.prev = tmp;
       x.prev.next = x;
-      TreeList.insertBefore(x,this)
+      this.dll.tln = TreeList.insert(x)
       return x;
     }
 
-    insertAfter(a,dll){
+    insertAfter(a){
       var x = new ListNode(a);
+      a.listNode = x;
+      x.dll = this.dll
       var tmp = this.next;
       this.next=x;
       x.prev = this;
       x.next = tmp;
       x.next.prev = x;
-      dll.tln = TreeList.insertAfter(x,this) // the top node could change
+      this.dll.tln = TreeList.insert(x) // the top node could change
+      console.log("just inserted x="+x)
       return x;
     }
 
@@ -684,8 +686,10 @@ class ListNode{
 class DLL {
   constructor(){
     this.first = new ListNode("startmarker");
+    this.first.dll = this
     this.first.size={std:0,rev:0,edit:0};
     this.last = new ListNode("endmarker");
+    this.last.dll = this
     this.last.size={std:0,rev:0,edit:0};
     const markerSize1={std:0,rev:0,edit:0}
     const markerSize2={std:0,rev:0,edit:0}
@@ -705,8 +709,6 @@ class DLL {
 
   size(feature) {
     feature = feature || 'edit'
-    //console.log("in size "+feature)
-    //console.dir(this.tln)
     return this.tln.size[feature] // don't count the start and end markers
   }
 
@@ -772,11 +774,26 @@ class DLL {
       return k;
     }
 
+  nthSTDopt(n){
+    return TreeList.nth(n,this.tln,"std")
+  }
+  nthREVopt(n){
+    return TreeList.nth(n,this.tln,"rev")
+  }
+  nthEDITopt(n){
+    return TreeList.nth(n,this.tln,"edit")
+  }
+
   nth(n,vis){
+      let a=null
+      let b=null
       switch(vis){
-        case 'std': return this.nthSTD(n);
-        case 'rev': return this.nthREV(n);
-        case 'edit': return this.nthEDIT(n);
+        case 'std':
+          return this.nthSTDopt(n);
+        case 'rev':
+          return this.nthREVopt(n); break;
+        case 'edit':
+          return this.nthEDITopt(n);
         default: return undefined;
       }
     }
