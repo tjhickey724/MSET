@@ -56,14 +56,43 @@ class DLL {
 
   insert(elt,pos){
     if (this.comparator && !pos){
-      this.tln.binaryInsert(elt,this.comparator)
+      return this.tln.binaryInsert(elt,this.comparator)
     } else {
         const listNode = TreeList.nth(pos,this.tln,'vis')
         if (this.comparator && this.comparator(listNode.val,elt)>0) {
           throw new Error("Attempt to insert violates the order of the list")
         }
         const z = listNode.insertAfter(elt,this);
+        return z
     }
+  }
+
+  indexOf(elt,feature){
+    let index=-1
+    if (this.comparator){
+      feature = feature || "edit"
+      const indexObj = this.tln.binarySearch(elt,this.comparator)
+      index = (indexObj)?indexObj.indexOf(feature):-1
+    } else {
+      let x = this.first.next;
+      let index = 0
+      while (x!= this.last){
+        if (x.value == elt) {
+          return index
+        } else {
+          if (!feature) {
+            index++;
+          } else {
+            index += x.size[feature]
+          }
+          x = x.next
+        }
+      }
+      if (x==this.last) {
+        index = -1
+      }
+    }
+    return index
   }
 
   printList(vis) {
@@ -72,14 +101,19 @@ class DLL {
       s="";
       for(d = this.first.next; d != this.last; d=d.next) {
           if  ((vis=="std") && d.val.vis) {
-      s = s + "" + d.val.sym;
+            s = s + "" + d.val.sym;
           }
           else if ((vis=="rev") && !(d.val.marker)){
-      s = s + "|" + d.val.sym;
+            s = s + "|" + d.val.sym;
           }
-          else if ((vis=="edit") || (vis==undefined) ) {
-      s = s + " " + d.val.sym;
-      }
+          else if ((vis=="edit") ) {
+            s = s + " " + d.val.sym;
+          }
+          else if (!vis){
+            console.log("in printList::: vis="+vis)
+            console.dir(d.val)
+            s = s + " " + d.val.sym;
+          }
       }
       if (vis=="std") return s;
       else return ("[\n "+s+" \n]");
@@ -133,6 +167,8 @@ class DLL {
   }
 
   nth(n,vis){
+      if (n<0) return
+      vis = vis || "edit"
       let a=null
       let b=null
       switch(vis){
@@ -140,9 +176,8 @@ class DLL {
           return this.nthSTDopt(n);
         case 'rev':
           return this.nthREVopt(n); break;
-        case 'edit':
+        default:
           return this.nthEDITopt(n);
-        default: return undefined;
       }
     }
 
@@ -204,7 +239,7 @@ class ListNode{
     // this computes the index of the listnode wrt the feature
     // more precisely, this gives one more than the number of
     // elements with the specified feature to the left of this listnode
-
+    feature = feature || "edit"
     let tln = this.tln // move to the treenode
     let index=0
     if (tln.left) {
@@ -253,7 +288,6 @@ class ListNode{
       x.next = tmp;
       x.next.prev = x;
       this.dll.tln = TreeList.insert(x) // the top node could change
-      console.log("just inserted x="+x)
       return x;
     }
 

@@ -128,7 +128,7 @@ class MSETsocket{
     const newString = this.msetTree.strings.printList('std')
     this.ta.value = newString
     this.lastValue = newString;
-    console.log('ta_'+this.taId+' = ...\n'+newString+"\n");
+    console.log('/n/n******/n/nta_'+this.taId+' = ...\n'+newString+"\n");
     this.remoteOp=false;
   }
 
