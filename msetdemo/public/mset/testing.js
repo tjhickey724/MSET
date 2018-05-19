@@ -1,6 +1,6 @@
-
+//import {DLLindexed} from './DLLindexed.js'
 console.log("this is a test file!")
-const x = new DLL()
+const x = new DLLindexed()
 x.printList()
 function compare(x,y) {return x-y}
 x.comparator = compare
