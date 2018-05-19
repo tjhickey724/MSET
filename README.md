@@ -52,9 +52,17 @@ console.log(dll.nth(index)) // should be the listnode!
 
 This current implementation creates an AVL tree over the DLL where each TreeNode stores the number
 
+Additional features:
+* weighted nodes -- you can provide a feature vector for each element which specifies its size for each feature
+  the nth and indexOf methods can then take a feature as a parameter and return values based on weighted indices
+  the default is that all nodes have size 1
+
 
 # class MSETtree
-This is a class which implements an optimally efficient non-blocking fully distributed version of the DLLindexed class in which any number of clients can simultaneously edit a DLLindexed list while broadcasting their operations to all other clients and receiving operations from all other clients. If everyone stops editing the system rapidly converges to a DLL which is exactly the same on all clients. Each operation requires time at most O(log(N)) where N is the total number of operations that have been applied to the DLL so far.  The current implementation requires a central server, but it will be fairly easy to modify this so that it works in a fully peer-to-peer environment.
+This is a class which implements an optimally efficient non-blocking fully distributed version of the DLLindexed class in which any number of clients can simultaneously edit a DLLindexed list while broadcasting their operations to all other clients and receiving operations from all other clients. If everyone stops editing the system rapidly converges to a DLL which is exactly the same on all clients. 
+
+The current implementation requires a central server, but it will be fairly easy to modify this so that it works in a fully peer-to-peer environment. Each operation requires time at most O(log(N)) assuming the operations where N is the total number of operations that have been applied to the DLL so far and this is optimal.  In a peer-to-peer topology, some operations need to be cached until the operations they depend on have been received, but each individual operation still requires only log(N) time to complete and the cached operations can be stored in a hashtable where the key is the operation they are waiting for.
+This minimizes the time required to process the cache when new operations arrive.
 
 Deleting is implemented by "hiding" an element so it is still available using a different view, but is removed from the main view. I'll write more about this later ...
 
