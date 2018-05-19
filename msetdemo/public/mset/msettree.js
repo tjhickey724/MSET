@@ -173,6 +173,8 @@ class MSETtree{
       var e = n.elt[q];
       e.vis=false;
       e.sym = "["+e.sym+"]";
+      e.listNode.size.std = 0  // it is not longer visible
+      e.listNode.tln.rebalance()
       return n;
   }
 
@@ -223,15 +225,15 @@ class MSETtree{
    */
 
   stringdelete(k) {
-      var listnode = this.strings.nth(k,"std")
-      var e = listnode.val
+      var listNode = this.strings.nth(k,"std")
+      var e = listNode.val
       //var e = this.strings.nth(k,"std").val;  // O(log(N))
 
       console.log("stringdelete: e="+e.toString());
       e.vis=false;
       e.sym = "["+e.sym+"]"
-      listnode.size.std = 0  // it is not longer visible
-      listnode.tln.rebalance()
+      listNode.size.std = 0  // it is not longer visible
+      listNode.tln.rebalance()
       var un = [this.user,0]
       this.network.hide(e.nodeid,e.offset,un); // un is used to prevent broadcast from going back to user
   }
