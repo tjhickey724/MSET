@@ -1,5 +1,5 @@
 export {MSETtree as default}
-import {DLL} from "./indexedDLL.js"
+import {DLLindexed} from "./DLLindexed.js"
 
 /* ***********************************************************************
  * CORE MSET Demo Implementation in JavaScript
@@ -26,7 +26,7 @@ class MSETtree{
     this.count = 0;
     this.size=0;
     this.root = new Node(0,0);
-    this.strings = new DLL();
+    this.strings = new DLLindexed();
     this.nodes = {};
     this.nodes[[0,0]] = this.root;
     this.opqueue = [];  // dequeue of ops that haven't been applied

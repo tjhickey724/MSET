@@ -1,4 +1,4 @@
-export {DLL}
+export {DLLindexed}
 /********************************************************
  * Here is an AVL implementation of treelist nodes
  * which let us implement nthXXX in time O(log(n))
@@ -17,7 +17,7 @@ export {DLL}
  * Here is an implementation of a doubly linked list of elements
  * which has three views std, rev, and edit.
  */
-class DLL {
+class DLLindexed {
   constructor(){
     this.first = new ListNode("startmarker",this);
     this.first.size={std:0,rev:0,edit:0};
