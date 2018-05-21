@@ -1,5 +1,6 @@
 export {MSETtree as default}
 import {WIDLL} from "./WIDLL.js"
+import {WIBST} from "./WIBST.js"
 
 /* ***********************************************************************
  * CORE MSET Demo Implementation in JavaScript
@@ -15,8 +16,9 @@ import {WIDLL} from "./WIDLL.js"
  * which allows any number of people to insert and remove JSON elements
  * from a shared list.
  *
- * We define the following classes:
- *   Element, Node, MSET, Network, ListNode, DLL
+ * The MSETtree has two main methods
+ *  insert(pos,element)
+ *  delete(pos)
  */
 
 
@@ -217,26 +219,25 @@ class MSETtree{
 
 
   /********************************************************
-   * String Operations
+   * List Operations
    * Here is where we convert string operations (insert, delete) into tree ops
    * following the algorithm in the paper
    */
 
-  stringdelete(k) {
+  delete(k) {
       var listNode = this.strings.nth(k,"std")
       var e = listNode.val
       //var e = this.strings.nth(k,"std").val;  // O(log(N))
 
-      console.log("stringdelete: e="+e.toString());
+      console.log("delete: e="+e.toString());
       e.vis=false;
-      e.sym = "["+e.sym+"]"
       listNode.size.std = 0  // it is not longer visible
       listNode.tln.rebalance()
       var un = [this.user,0]
       this.network.hide(e.nodeid,e.offset,un); // un is used to prevent broadcast from going back to user
   }
 
-  stringinsert(k,c) {
+  insert(k,c) {
       var un;
       console.log("inserting "+k+","+c)
       if (this.size==0) {
@@ -409,9 +410,7 @@ class InsertionSet{
   // the first step is to move all iset related code into this class
 
   constructor(){
-    this.nodelist = []
-    this.dll = new WIDLL() // we use the default size function ..
-    this.dll.comparator = (x,y)=>(x.user-y.user)
+    this.bst = new WIBST((x,y)=>(x.user-y.user))
   }
 
   /* insertNode(m,s) inserts the node m into an ordered set s of nodes
@@ -420,34 +419,10 @@ class InsertionSet{
    * This needs to be reimplemented as a O(log(N)) operation ...
    */
   insertNode(m) {
-      console.log("InsertionSet: calling insert on node m "+m.user+":"+m.count)
-      var i=0, n=this.nodelist.length, k=-1;
-      var u = m.user;
-      while(i<n) {
-        if (u< this.nodelist[i].user) {
-            this.nodelist.splice(i,0,m);
-            k=i;
-            break;
-        }
-        else i = i+1;
-      }
-      if (i==n) {this.nodelist[n]=m; k=n;}
-      //alert("insertnode:  k="+k+" s="+s+ " n="+n+" c="+m.elt[0].sym);
-      console.log("InsertionSet: inserting a position "+k+" out of "+this.nodelist.length)
-
-      const k1 = this.dll.insert(m).indexOf()
-      console.log("k1="+k1+" k="+k);
-      return k;
+    return this.bst.insert(m)
   }
 
   get(k){
-    const result = this.nodelist[k]
-    console.log("InsertionSet: getting element "+k+"/"+this.nodelist.length+" from iset: "+result.user+":"+result.count)
-
-    const r = this.dll.nth(k)
-    console.dir(r)
-    console.log("r.user="+r.val.user+" result.user="+result.user)
-
-    return r.val  //was return result
+    return this.bst.get(k)
   }
 }

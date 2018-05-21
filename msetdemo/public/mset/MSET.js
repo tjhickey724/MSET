@@ -96,8 +96,13 @@ class MSETsocket{
     } else if ((msg.op=='insert') && (msg.un[0]==this.msetId)){
       return;
     }
-
+    this.remoteOp=true; // temporarily ignore changes to the textarea as remote ops are processed
     this.msetTree.network.processRemoteOp(msg)
+    const newString = this.msetTree.strings.toString('','std')
+    this.ta.value = newString
+    this.lastValue = newString;
+    this.remoteOp=false;
+
     return
 
   }
@@ -121,13 +126,13 @@ class MSETsocket{
 
   insert2(offset,text){
       for(let i=0; i<text.length; i++){
-         this.msetTree.stringinsert(offset+i,text[i])
+         this.msetTree.insert(offset+i,text[i])
       }
   }
 
   delete2(offset,text){
       for(let i=0; i<text.length; i++){
-        this.msetTree.stringdelete(offset);
+        this.msetTree.delete(offset);
       }
   }
 
@@ -318,29 +323,22 @@ class Network{
     console.log("&&&&&&&&&& in processRemoteOp: "+JSON.stringify(msg))
     let z = ""
     const msetTree = this.msetSocket.msetTree;
-    this.msetSocket.remoteOp=true; // temporarily ignore changes to the textarea as remote ops are processed
-    switch (msg.op){
+        switch (msg.op){
       case 'insert':
          z = `REMOTE treeinsert([${msg.nodeid}],${msg.q},[${msg.un}],'${msg.c}')`
-         console.log(this.msetSocket.taId+z)
          msetTree.treeinsert(msg.nodeid,msg.q,msg.un,msg.c)
          break;
        case 'extend':
           z = `REMOTE treeextend([${msg.nodeid}],'${msg.c}')`
-          console.log(this.msetSocket.taId+z)
           msetTree.treeextend(msg.nodeid,msg.c)
           break;
       case 'delete':
          z = `REMOTE treehide([${msg.nodeid}],${msg.q})`
-         console.log(this.msetSocket.taId+z)
          msetTree.treehide(msg.nodeid,msg.q)
          break;
-      default: console.log(this.msetSocket.taId+'::something else')
+      default: throw new Error("unknown remote op: "+JSON.stringify(msg))
     }
-    const newString = msetTree.strings.toString('','std')
-    this.msetSocket.ta.value = newString
-    this.msetSocket.lastValue = newString;
-    this.msetSocket.remoteOp=false;
+
   }
 
 }

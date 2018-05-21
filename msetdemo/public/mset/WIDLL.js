@@ -65,51 +65,34 @@ class WIDLL {
   }
 
   insert(elt,pos){
-    if (this.comparator && !pos){
-      return this.tln.binaryInsert(elt,this.comparator)
+    const size = this.size()
+    if (pos == size) {
+      return this.last.insertBefore(elt, this)
+    } else if (pos>size || pos<0){
+      throw new Error("trying to insert at pos "+pos+" in a list of size "+s)
     } else {
-        const listNode = TreeList.nth(pos,this.tln,'count')
-        if (this.comparator && this.comparator(listNode.val,elt)>0) {
-          throw new Error("Attempt to insert violates the order of the list")
-        }
-        const z = listNode.insertBefore(elt,this);
-        return z
+      const listNode = TreeList.nth(pos,this.tln,'count')
+
+      if (this.comparator && this.comparator(listNode.val,elt)>0) {
+        throw new Error("Attempt to insert violates the order of the list")
+      }
+      const z = listNode.insertBefore(elt,this);
+      return z
     }
   }
 
   delete(pos){
-    const listNode = TreeList.nth(pos,this.tln,'count')
+    const size = this.size()
+    if (pos < 0 || pos>=size){
+      throw new Error("trying to delete element at pos "+pos+" in a list of size "+s)
+    }
+    const listNode = this.tln.nth(pos,'count')
+    console.log('just found the listnode to delete '+listNode.val)
+    console.dir(listNode)
     const z = listNode.delete(this);
     return z
   }
 
-  indexOf(elt,feature){
-    let index=-1
-    if (this.comparator){
-      feature = feature || "edit"
-      const indexObj = this.tln.binarySearch(elt,this.comparator)
-      index = (indexObj)?indexObj.indexOf(feature):-1
-    } else {
-      let x = this.first.next;
-      let index = 0
-      while (x!= this.last){
-        if (x.value == elt) {
-          return index
-        } else {
-          if (!feature) {
-            index++;
-          } else {
-            index += x.size[feature]
-          }
-          x = x.next
-        }
-      }
-      if (x==this.last) {
-        index = -1
-      }
-    }
-    return index
-  }
 
   toString(separator,feature) {
       let s="";
@@ -124,29 +107,10 @@ class WIDLL {
       return s
   }
 
-
-
-  nthDLL(n,feature){
-    // this is the slow version that uses the linked list ..
-    feature = feature || 'count'
-    var k=this.first.next;
-    while (n>0 && (k!= this.last) ) {
-      n = n - this.value.sizefn(feature)
-      k=k.next;
-    }
-    if (n>0) {
-      return null // return null if the weighted size of the list is < n
-    } else {
-      return k
-    }
-
-  }
-
   nth(n,feature){
     feature = feature || 'count'
     return TreeList.nth(n,this.tln,feature)
   }
-
 
 }
 
@@ -162,10 +126,8 @@ class ListNode{
     this.next =null
     this.val = v
     this.dll=dll
-    this.tln=null
-
+    this.tln=null // this will get instantiated when the node is inserted in the list
     if ((v!='startmarker')&&(v!='endmarker')){
-      //v.listNode=this
       this.size = dll.sizefn(v)
     } else {
       this.size = dll.emptySize
@@ -178,14 +140,13 @@ class ListNode{
   }
 
   toStringIndent(k){
-
     return " ".repeat(k)+(this.val.val || this.val)
   }
 
   indexOf(feature){
     // this computes the index of the listnode wrt the feature
-    // more precisely, this gives one more than the number of
-    // elements with the specified feature to the left of this listnode
+    // more precisely, this gives the sum of the weights
+    // of all elements to the left of this listNode
     feature = feature || "count"
     let tln = this.tln // move to the treenode
     let index=0
@@ -208,9 +169,8 @@ class ListNode{
 
 
   insertBefore(a){
-      if (this.dll.comparator &&
-          this.dll.comparator(this.val,a)<0) {
-            throw new Error("Call to insertBefore violates the order of the list")
+      if (this.val=='startmarker'){
+        throw new Error("you can't insert before the startmarker")
       }
       var x = new ListNode(a,this.dll);
       var tmp = this.prev;
@@ -222,23 +182,27 @@ class ListNode{
       return x;
     }
 
-    insertAfter(a){
-      if (this.dll.comparator &&
-          this.dll.comparator(this.val,a)>0) {
-            throw new Error("Call to insertAfter violates the order of the list")
-      }
-      var x = new ListNode(a,this.dll);
-
-      var tmp = this.next;
-      this.next=x;
-      x.prev = this;
-      x.next = tmp;
-      x.next.prev = x;
-      this.dll.tln = TreeList.insert(x) // the top node could change
-      return x;
+  insertAfter(a){
+    if (this.val=='endmarker'){
+      throw new Error("you can't insert after the endmarker")
     }
+    var x = new ListNode(a,this.dll);
 
-    delete(){
+    var tmp = this.next;
+    this.next=x;
+    x.prev = this;
+    x.next = tmp;
+    x.next.prev = x;
+    this.dll.tln = TreeList.insert(x) // the top node could change
+    return x;
+  }
+
+  delete(){
+    if (this.val=='startmarker'){
+      throw new Error("you can't delete the startmarker")
+    } else if (this.val =='endmarker'){
+      throw new Error("you can't delete the endmarker")
+    } else {
       const p = this.prev // could be startmarker
       const n = this.next // could be endmarker
       p.next=n
@@ -246,6 +210,7 @@ class ListNode{
       this.dll.tln = TreeList.delete(this)
       return this.val
     }
+  }
 
 }
 
@@ -278,7 +243,7 @@ class TreeList {
 
 
   toStringIndent(k){
-    // pretty print the tree
+    // pretty print the tree for debugging purposes
 
       const leftTree = (!this.left?(" ".repeat(k+4)+"null[0]"):(this.left.toStringIndent(k+4)))
       const rightTree = (!this.right?(" ".repeat(k+4)+"null[0]"):(this.right.toStringIndent(k+4)))
@@ -294,36 +259,34 @@ class TreeList {
   }
 
   static nth(n,tln,feature){
-    // find the nth element in the tree rooted at tln
-    // which has the specified feature
     if (!tln) throw new Error("")
-    //console.log("in nth "+n+" "+feature)
-    //console.log(tln.toStringIndent(5))
+    return tln.nth(n,feature)
+  }
 
+  nth(n,feature){
+    // find the nth element in the tree using weighted elements
     // find the element at position n in the DLL spanned by tln
-    const eltSize = tln.value.size[feature]
+    const eltSize = this.value.size[feature]
     if(n==0){
-
-      if (tln.left && (tln.left.size[feature]>0)){
-        return TreeList.nth(0,tln.left,feature)
-      } else if (tln.value.size[feature]==0) {
-        return TreeList.nth(0,tln.right,feature)
+      if (this.left && (this.left.size[feature]>0)){
+        return this.left.nth(0,feature)
+      } else if (this.value.size[feature]==0) {
+        return this.right.nth(0,feature)
       } else {
-        return tln.value
+        return this.value
       }
-    } else if (!(tln.left) || (tln.left.size[feature]==0)){ // nothing on the left
-        return TreeList.nth(n-eltSize,tln.right,feature)
-    } else if (n<tln.left.size[feature]){
-          return TreeList.nth(n,tln.left,feature)
-    } else if ((n==tln.left.size[feature]) && (eltSize==1)){
-      return tln.value
+    } else if (!(this.left) || (this.left.size[feature]==0)){ // nothing on the left
+        return this.right.nth(n-eltSize,feature)
+    } else if (n<this.left.size[feature]){
+          return this.left.nth(n,feature)
+    } else if ((n==this.left.size[feature]) && (eltSize==1)){
+      return this.value
     } else {
-        return TreeList.nth(n-tln.left.size[feature]-eltSize,tln.right,feature)
+        return this.right.nth(n-this.left.size[feature]-eltSize,feature)
     }
   }
 
   static insert(newNode){
-
     // insert the DLL node into the tree, assuming left/right neighbors are in tree
     const size = newNode.val.size
     if (newNode.prev.tln.right){
@@ -367,7 +330,7 @@ class TreeList {
           if (prevT.left!=null) { // if prev has a child
             prevT.value = prevT.left.value // move it up
             prevT.value.tln = prevT // reset the tln link
-            prevT.left = null
+            prevT.left = null // remove the left child
             prevT.rebalance()
             return prevT.avlRebalance() // and rebalance
           } else {
@@ -388,8 +351,8 @@ class TreeList {
           oldT.value.ltn = oldT
           if (nextT.right!=null) { // if next has a child
             nextT.value = nextT.right.value // move it up
-            nextT.value.ltn = nextT
-            nextT.right = null
+            nextT.value.ltn = nextT //reset its ltn link
+            nextT.right = null // remove the right child
             nextT.rebalance()
             return nextT.avlRebalance() // and rebalance
           } else {
@@ -412,6 +375,7 @@ class TreeList {
     /* This inserts a node into the DLL by finding its position in the list
        It assumes that the list is ordered by the node.val fields wrt the
        comparator function. It returns the new node it creates.
+       This only works if the tree has been created entirely using binaryInsert
     */
     if ((this.value.val=='startmarker')
          ||
@@ -593,55 +557,5 @@ class TreeList {
     return y
   }
 
-
-}
-
-
-class Testing {
-
-    constructor(){
-      // do nothing ...
-    }
-
-    static test3(){
-      const x = new DLL()
-      for(let i=0; i<10;i++){
-        const a = new Element(i,(i%3)==0,(i%3)==1)
-        x.first.insertAfter(a)
-      }
-      console.log('****\nx.tln=\n'+x.tln.toStringIndent(5)+"\n****\n")
-      for(let i=0; i<x.size()+2;i++){
-        console.log('nth edit '+i+" = "+TreeList.nth(i,x.tln,"edit"))
-      }
-
-      return x
-    }
-
-    static test4(){
-      const x = new DLL()
-
-      for(let i=0; i<10;i++){
-        const a = new Element(i,(i%3)==0,(i%3)==1)
-        if (i%2==0){
-          x.first.insertAfter(a)
-        } else {
-          x.first.next.insertAfter(a)
-        }
-
-      }
-      console.log('****\nx.tln=\n'+x.tln.toStringIndent(5)+"\n****\n")
-      const feature = "edit"
-      console.log(feature)
-      console.log(x.size(feature))
-      console.log(JSON.stringify(x.tln.size))
-      for(let i=0; i<x.size(feature);i++){
-        const z = TreeList.nth(i,x.tln,feature)
-        console.log('nth '+i+" "+feature+" = "+ z)
-        for(let f in z.size){
-          console.log('index '+f+' = '+z.indexOf(f))
-        }
-      }
-      return x
-    }
 
 }
