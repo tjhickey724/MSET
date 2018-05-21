@@ -1,4 +1,4 @@
-export {WIDLL}
+//export {WIDLL}
 /********************************************************
  * Here is an AVL implementation of weighted treelist nodes
  */
@@ -296,9 +296,9 @@ class TreeList {
   static nth(n,tln,feature){
     // find the nth element in the tree rooted at tln
     // which has the specified feature
-    console.log("Calling nth "+n)
-    console.log(tln.toStringIndent(5))
     if (!tln) throw new Error("")
+    console.log("in nth "+n+" "+feature)
+    console.log(tln.toStringIndent(5))
 
     // find the element at position n in the DLL spanned by tln
     const eltSize = tln.value.size[feature]
@@ -351,6 +351,7 @@ class TreeList {
       } else {
         q.right = null
       }
+      q.rebalance()
       return q.avlRebalance()
     } else { // move either the previous or next
 
@@ -361,6 +362,7 @@ class TreeList {
           if (prevT.left!=null) { // if prev has a child
             prevT.value = prevT.left.value // move it up
             prevT.left = null
+            prevT.rebalance()
             return prevT.avlRebalance() // and rebalance
           } else {
             let q = prevT.parent
@@ -369,6 +371,7 @@ class TreeList {
             } else {
               q.right=null
             }
+            q.rebalance()
             return q.avlRebalance()
           }
         } else {
@@ -377,6 +380,7 @@ class TreeList {
           if (nextT.right!=null) { // if next has a child
             nextT.value = nextT.right.value // move it up
             nextT.right = null
+            nextT.rebalance()
             return nextT.avlRebalance() // and rebalance
           } else {
             let q = nextT.parent
@@ -385,6 +389,7 @@ class TreeList {
             } else {
               q.right=null
             }
+            q.rebalance()
             return q.avlRebalance()
           }
 
