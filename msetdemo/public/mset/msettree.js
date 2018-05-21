@@ -19,6 +19,9 @@ import {WIBST} from "./WIBST.js"
  * The MSETtree has two main methods
  *  insert(pos,element)
  *  delete(pos)
+ *  which can be called by the client
+ *  they use the network to send messages to the peers
+ * It also receives remote operations from the network and applies it to the tree
  * It requires a Network object and a Socket object,
  * which afre passed in when the tree is created...
  *
@@ -26,7 +29,7 @@ import {WIBST} from "./WIBST.js"
 
 
 class MSETtree{
-  constructor(u,msetSocket,network){
+  constructor(u,network){
     this.user = u;
     this.count = 0;
     this.size=0;
@@ -37,7 +40,9 @@ class MSETtree{
     this.opqueue = [];  // dequeue of ops that haven't been applied
     this.waitqueue=[];  // hashtable from targets to list of ops
     this.network = network
-    this.msetSocket = msetSocket
+
+    this.insertCallback = function(k,elt,user){console.log("insert("+k+","+elt+","+user+")")}
+    this.deleteCallback = function(k,elt,user){console.log("delete("+k+","+elt+","+user+")")}
 
 
     // the rest of this constructor initializes the
@@ -152,13 +157,10 @@ class MSETtree{
       m.elt[0].listNode = node2
       const node3 = node2.insertAfter(m.end); // O(log(N))
       m.end.listNode = node3
-
-
       // and insert the new node into the hashtable
       this.nodes[un]=m;
-
       this.size++;
-      //alert("treeinsert q="+q+" c="+c);
+      this.insertCallback(node2.indexOf("std"),c,un[0])
       return m;
   }
 
@@ -177,6 +179,7 @@ class MSETtree{
       n.iset[d+1]= new InsertionSet();;
       e.listNode = f.listNode.insertBefore(e); // O(log(N))
       this.size++;
+      this.insertCallback(f.listNode.indexOf("std"),c,n.user)
       return n;
   }
 
@@ -185,12 +188,14 @@ class MSETtree{
    *  and it updates M to reflect this change ...
    */
   treehide(nodeid,q) {
-      var n = this.nodes[nodeid]; // O(log(N))
-      var e = n.elt[q];
-      e.vis=false;
-      e.sym = "["+e.sym+"]";
+      var n = this.nodes[nodeid] // O(log(N))
+      var e = n.elt[q]
+      var offset = e.listNode.indexOf("std")
+      e.vis=false
+      e.sym = e.sym
       e.listNode.size.std = 0  // it is not longer visible
       e.listNode.tln.rebalance()
+      this.deleteCallback(offset,e.sym,n.user)
       return n;
   }
 
@@ -232,7 +237,6 @@ class MSETtree{
       var e = listNode.val
       //var e = this.strings.nth(k,"std").val;  // O(log(N))
 
-      console.log("delete: e="+e.toString());
       e.vis=false;
       listNode.size.std = 0  // it is not longer visible
       listNode.tln.rebalance()
@@ -242,7 +246,6 @@ class MSETtree{
 
   insert(k,c) {
       var un;
-      console.log("inserting "+k+","+c)
       if (this.size==0) {
         un = [this.user,this.count++];
         // CASE 0:  no-nonmarkers in the list, so tree must be empty
