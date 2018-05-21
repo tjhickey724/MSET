@@ -1,4 +1,4 @@
-//export {WIDLL}
+export {WIDLL}
 /********************************************************
  * Here is an AVL implementation of weighted treelist nodes
  */
@@ -111,7 +111,7 @@ class WIDLL {
     return index
   }
 
-  printList(feature,separator) {
+  toString(separator,feature) {
       let s="";
       feature = feature || "count"
       separator = separator || ""
@@ -122,10 +122,6 @@ class WIDLL {
         }
       }
       return s
-  }
-
-  toString(){
-    return this.printList("edit")
   }
 
 

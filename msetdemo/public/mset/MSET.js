@@ -63,15 +63,6 @@ class MSETsocket{
 
       thisMset.applyRemoteOp(msg);
 
-      // this should also be handled by callbacks ..
-      /*
-      document.getElementById('estring1').value = msetTree.strings.printList('edit');
-      document.getElementById('rstring1').value = msetTree.strings.printList('rev');
-
-      document.getElementById('sstring1').value = newString;
-      document.getElementById('ta').value = newString;
-      */
-
     })
 
       //document.getElementById('msetId').innerHTML = "msetId="+msetId;
@@ -86,7 +77,7 @@ class MSETsocket{
     }
     console.log("All "+oplist.length+" remote Ops have been loaded!")
 
-    this.ta.value = this.msetTree.strings.printList('std')
+    this.ta.value = this.msetTree.strings.toString("",'std')
   }
 
   applyRemoteOp(msg){
@@ -346,15 +337,9 @@ class Network{
          break;
       default: console.log(this.msetSocket.taId+'::something else')
     }
-    const newString = msetTree.strings.printList('std')
-    console.dir(msetTree)
-    console.log(msetTree.strings.printList('std'))
-    console.log(msetTree.strings.printList('rev'))
-    console.log(msetTree.strings.printList('edit'))
-    console.log(msetTree.strings.printList('count'))
+    const newString = msetTree.strings.toString('','std')
     this.msetSocket.ta.value = newString
     this.msetSocket.lastValue = newString;
-    console.log('/n/n******/n/nta_'+this.msetSocket.taId+' = ...\n'+newString+"\n");
     this.msetSocket.remoteOp=false;
   }
 
