@@ -1,4 +1,4 @@
-//export {WIDLL}
+export {WIDLL}
 /********************************************************
  * Here is an AVL implementation of weighted treelist nodes
  */
@@ -297,8 +297,8 @@ class TreeList {
     // find the nth element in the tree rooted at tln
     // which has the specified feature
     if (!tln) throw new Error("")
-    console.log("in nth "+n+" "+feature)
-    console.log(tln.toStringIndent(5))
+    //console.log("in nth "+n+" "+feature)
+    //console.log(tln.toStringIndent(5))
 
     // find the element at position n in the DLL spanned by tln
     const eltSize = tln.value.size[feature]
@@ -343,8 +343,11 @@ class TreeList {
 
   static delete(oldNode){
     let oldT = oldNode.tln;
+    //console.log('in DELETE '+oldNode.val)
+    //console.dir(oldNode)
     if ((oldT.left==null) && (oldT.right==null)) {
       // if p is a leaf, just remove it and rebalance the parent
+      //console.log("just removing the node and rebalancing parent")
       const q = oldT.parent
       if (q.left==oldT) { //remove oldT from tree
         q.left=null
@@ -354,13 +357,16 @@ class TreeList {
       q.rebalance()
       return q.avlRebalance()
     } else { // move either the previous or next
-
+      //console.log("replacing node.val with prev value")
 
         let prevT = oldNode.prev.tln
         if (prevT.parent!=null) {
+          //console.log("moving prev up")
           oldT.value = prevT.value  // copy prev value to root
+          oldT.value.tln = oldT // reset the tln link
           if (prevT.left!=null) { // if prev has a child
             prevT.value = prevT.left.value // move it up
+            prevT.value.tln = prevT // reset the tln link
             prevT.left = null
             prevT.rebalance()
             return prevT.avlRebalance() // and rebalance
@@ -375,10 +381,14 @@ class TreeList {
             return q.avlRebalance()
           }
         } else {
+          //console.log("prev is root, so moving next up");
+          //console.dir(oldNode);
           let nextT = oldNode.next.tln;
           oldT.value = nextT.value  // copy next value to root
+          oldT.value.ltn = oldT
           if (nextT.right!=null) { // if next has a child
             nextT.value = nextT.right.value // move it up
+            nextT.value.ltn = nextT
             nextT.right = null
             nextT.rebalance()
             return nextT.avlRebalance() // and rebalance
@@ -451,10 +461,26 @@ class TreeList {
 
 
   avlRebalance(){
-    // rebalance the tree above this, assuming this is unbalanced
+    // rebalance the tree above this, assuming this is balanced
+    //console.log("\n\n\n\n*******\nin avlRebalance: ")
+    //console.log(this.toStringIndent(5))
+    //console.log(" in ")
+    let rebalancedTree = null
+    //if (this.parent) console.log(this.parent.toStringIndent(5))
     const p = this.parent
     if (!p) return this
-    if (!p.unbalanced()) {
+    // first we check to see if this is unbalanced, and if so we call avlRebalance
+    // on one of its children...
+    if (this.unbalanced()){
+      //console.log("THIS is UNBALANCED!!")
+      if (this.leftheavy) {
+        //console.log('BALANCING ON LEFT')
+        rebalancedTree = this.left.avlRebalance()
+      } else {
+        //console.log('BALANCING ON RIGHT')
+        rebalancedTree =  this.right.avlRebalance()
+      }
+    } else if (!p.unbalanced()) {
       return this.parent.avlRebalance()
     } else { // rotate to
       if (p.left==this) {
@@ -472,8 +498,10 @@ class TreeList {
           p.leftRotate();
         }
       }
-      return this.avlRebalance()  // as the node moved to its parent position
+      rebalancedTree =  this.avlRebalance()  // as the node moved to its parent position
     }
+    //console.log('REBALANCED TREE:\n'+rebalancedTree.toStringIndent(5))
+    return rebalancedTree
   }
 
   leftHeavy(){
