@@ -347,6 +347,11 @@ class Network{
       default: console.log(this.msetSocket.taId+'::something else')
     }
     const newString = msetTree.strings.printList('std')
+    console.dir(msetTree)
+    console.log(msetTree.strings.printList('std'))
+    console.log(msetTree.strings.printList('rev'))
+    console.log(msetTree.strings.printList('edit'))
+    console.log(msetTree.strings.printList('count'))
     this.msetSocket.ta.value = newString
     this.msetSocket.lastValue = newString;
     console.log('/n/n******/n/nta_'+this.msetSocket.taId+' = ...\n'+newString+"\n");

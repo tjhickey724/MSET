@@ -1,32 +1,42 @@
-export {DLLindexed}
+//export {WIDLL}
 /********************************************************
- * Here is an AVL implementation of treelist nodes
- * which let us implement nthXXX in time O(log(n))
- * with rebalancing ... (which we will do later)
- * maybe I'll first implement it so it can do nthEDIT
- * efficiently
- * We assume that the values support the vis and marker flags
- * nthVIS returns the nth element with vis=true
- * nthREV returns the nth element with marker=false
- *    (so we assume that marker=true => vis=false)
- * nthEDIT returns the nth element of the list, indep of the flags
+ * Here is an AVL implementation of weighted treelist nodes
  */
 
 
 /********************************************************
- * Here is an implementation of a doubly linked list of elements
- * which has three views std, rev, and edit.
- */
-class DLLindexed {
-  constructor(){
+ *
+ * sizefn(elt) returns a json object which specifies the sizes of the element
+ *    with respect to various user-defined features. It must return an object
+ *    of the form:
+ *       {count:n0, p1:n2, ...., p2:n2}
+ *    where the ni are positive numbers. The property count is mandatory,
+ *    but the other pi are optional. Also, the sizefn should give a value to the
+ *    null object (and any falsey value) which is 0 for all features. The
+ *    default sizefn is
+ *       (x)=>(x?{count:1}:{count:0})
+ *
+  */
+class WIDLL {
+  constructor(sizefn){
+    // initialize the sizefn
+    this.sizefn = (sizefn || ((x)=>({count:1})))
+    // make sure it ignores the start and end markers
+    this.emptySize = this.sizefn(null)
+    for(let x in this.emptySize){
+      this.emptySize[x]=0
+    }
+
+    // initialize the start and end markers
     this.first = new ListNode("startmarker",this);
-    this.first.size={std:0,rev:0,edit:0};
+    this.first.size= this.emptySize
     this.last = new ListNode("endmarker",this);
-    this.last.size={std:0,rev:0,edit:0};
-    const markerSize1={std:0,rev:0,edit:0}
-    const markerSize2={std:0,rev:0,edit:0}
-    const startTree = new TreeList(null,null,null,markerSize2,this.first)
-    const endTree = new TreeList(null,null,null,markerSize1,this.last)
+    this.last.size=this.emptySize
+
+    // initialize the index tree with startmarker at the root
+    // and endmarker as its right subtree
+    const startTree = new TreeList(null,null,null,this.emptySize,this.first)
+    const endTree = new TreeList(null,null,null,this.emptySize,this.last)
     startTree.right = endTree
     endTree.parent = startTree
     this.tln = startTree
@@ -40,17 +50,17 @@ class DLLindexed {
     /*
       if a comparator function is specified f(a,b)={neg,0,pos}
       then the list will be maintained in sorted order and
-      insertBefore, insertAfter will only be allowed if the preserve the order
+      insertBefore, insertAfter will only be allowed if they preserve the order
       and insert will use an O(log(N)) balanced binary insertion tree
       If there is no comparator then the insert function will always add at the
-      end of the list.
+      end of the list.  Actually, this should be an subclass of WIDLL ...
     */
     this.comparator = false
 
   }
 
   size(feature) {
-    feature = feature || 'edit'
+    feature = feature || 'count'
     return this.tln.size[feature] // don't count the start and end markers
   }
 
@@ -58,13 +68,19 @@ class DLLindexed {
     if (this.comparator && !pos){
       return this.tln.binaryInsert(elt,this.comparator)
     } else {
-        const listNode = TreeList.nth(pos,this.tln,'vis')
+        const listNode = TreeList.nth(pos,this.tln,'count')
         if (this.comparator && this.comparator(listNode.val,elt)>0) {
           throw new Error("Attempt to insert violates the order of the list")
         }
-        const z = listNode.insertAfter(elt,this);
+        const z = listNode.insertBefore(elt,this);
         return z
     }
+  }
+
+  delete(pos){
+    const listNode = TreeList.nth(pos,this.tln,'count')
+    const z = listNode.delete(this);
+    return z
   }
 
   indexOf(elt,feature){
@@ -95,29 +111,18 @@ class DLLindexed {
     return index
   }
 
-  printList(vis) {
-      var d,s;
+  printList(feature,separator) {
+      let s="";
+      feature = feature || "count"
+      separator = separator || ""
 
-      s="";
-      for(d = this.first.next; d != this.last; d=d.next) {
-          if  ((vis=="std") && d.val.vis) {
-            s = s + "" + d.val.sym;
-          }
-          else if ((vis=="rev") && !(d.val.marker)){
-            s = s + "|" + d.val.sym;
-          }
-          else if ((vis=="edit") ) {
-            s = s + " " + d.val.sym;
-          }
-          else if (!vis){
-            console.log("in printList::: vis="+vis)
-            console.dir(d.val)
-            s = s + " " + d.val.sym;
-          }
+      for(let d = this.first.next; d != this.last; d=d.next) {
+        if (this.sizefn(d.val)[feature]>0) {
+          s += d.val + ((d.next==this.last)?"":separator)
+        }
       }
-      if (vis=="std") return s;
-      else return ("[\n "+s+" \n]");
-    }
+      return s
+  }
 
   toString(){
     return this.printList("edit")
@@ -125,83 +130,27 @@ class DLLindexed {
 
 
 
-  nthSTD(n){
-      var k=this.first.next;
-      while ((n>0 || !k.val.vis)  && (k!= this.last) ) {
-          if ( k.val.vis)  {
-            n = n-1;
-          }
-          k=k.next;
-        }
-      return k;
+  nthDLL(n,feature){
+    // this is the slow version that uses the linked list ..
+    feature = feature || 'count'
+    var k=this.first.next;
+    while (n>0 && (k!= this.last) ) {
+      n = n - this.value.sizefn(feature)
+      k=k.next;
+    }
+    if (n>0) {
+      return null // return null if the weighted size of the list is < n
+    } else {
+      return k
     }
 
-  nthREV(n){
-      var k=this.first.next;
-      while ((n>0 || k.val.marker)  && (k!= this.last) ) {
-          if ( !k.val.marker)  {
-            n = n-1;
-          }
-          k=k.next;
-        }
-      return k;
-    }
-
-  nthEDIT(n){
-      var k=this.first.next;
-      while ((n>0)  && (k!= this.last) ) {
-          n = n-1;
-          k=k.next;
-      }
-      return k;
-    }
-
-  nthSTDopt(n){
-    return TreeList.nth(n,this.tln,"std")
-  }
-  nthREVopt(n){
-    return TreeList.nth(n,this.tln,"rev")
-  }
-  nthEDITopt(n){
-    return TreeList.nth(n,this.tln,"edit")
   }
 
-  nth(n,vis){
-      if (n<0) return
-      vis = vis || "edit"
-      let a=null
-      let b=null
-      switch(vis){
-        case 'std':
-          return this.nthSTDopt(n);
-        case 'rev':
-          return this.nthREVopt(n); break;
-        default:
-          return this.nthEDITopt(n);
-      }
-    }
-
-
-
-
-  nextNonMarker(e) {
-    return this.nextNonMarkerOPT(e)
+  nth(n,feature){
+    feature = feature || 'count'
+    return TreeList.nth(n,this.tln,feature)
   }
 
-  nextNonMarkerOPT(listnode){
-    // each of these operations take time O(log(N))
-    const index = listnode.indexOf("rev")
-    const result= this.nth(index,"rev")
-    return result
-  }
-
-  nextNonMarkerORIG(e) {
-      // this can be implemented as O(log(N)) but here is O(N)
-      while ((e!== null) && e.val.marker){
-          e=e.next;
-      }
-      return e;
-    }
 
 }
 
@@ -213,18 +162,20 @@ class DLLindexed {
  */
 class ListNode{
   constructor(v,dll){
-    this.prev = null,
-    this.next =null,
-    this.val = v;
-    if (v.constructor.name=='Element') {
-      this.size=v.eltSize()
-      v.listNode = this
-    } else {
-      this.size={std:0,rev:0,edit:1}
-    }
+    this.prev = null
+    this.next =null
+    this.val = v
     this.dll=dll
     this.tln=null
+
+    if ((v!='startmarker')&&(v!='endmarker')){
+      //v.listNode=this
+      this.size = dll.sizefn(v)
+    } else {
+      this.size = dll.emptySize
+    }
   }
+
 
   toString(){
     return "ListNode("+this.val+")"
@@ -239,7 +190,7 @@ class ListNode{
     // this computes the index of the listnode wrt the feature
     // more precisely, this gives one more than the number of
     // elements with the specified feature to the left of this listnode
-    feature = feature || "edit"
+    feature = feature || "count"
     let tln = this.tln // move to the treenode
     let index=0
     if (tln.left) {
@@ -291,6 +242,15 @@ class ListNode{
       return x;
     }
 
+    delete(){
+      const p = this.prev // could be startmarker
+      const n = this.next // could be endmarker
+      p.next=n
+      n.prev=p
+      this.dll.tln = TreeList.delete(this)
+      return this.val
+    }
+
 }
 
 
@@ -308,13 +268,11 @@ class TreeList {
   // of all elements to the left of p. Each TreeList node has a size
   // which is the sum of the sizes of all DLL nodes in the tree.
 
-  // for now it uses 3 properties: std, rev, edit but I will soon
-  // abstract this !
 
   constructor(left,right,parent,size,value){
     this.left=left
     this.right=right
-    this.size=size  //this is a tuple {std:1,rev:1,edit:1}
+    this.size=size  //this is a tuple {count:1,p1:n1,...,pk:nk}
     this.parent=parent
     this.value = value
     this.height = 1
@@ -342,7 +300,8 @@ class TreeList {
   static nth(n,tln,feature){
     // find the nth element in the tree rooted at tln
     // which has the specified feature
-
+    console.log("Calling nth "+n)
+    console.log(tln.toStringIndent(5))
     if (!tln) throw new Error("")
 
     // find the element at position n in the DLL spanned by tln
@@ -384,6 +343,58 @@ class TreeList {
     const z = newNode.tln.parent.avlRebalance()
 
     return z
+  }
+
+  static delete(oldNode){
+    let oldT = oldNode.tln;
+    if ((oldT.left==null) && (oldT.right==null)) {
+      // if p is a leaf, just remove it and rebalance the parent
+      const q = oldT.parent
+      if (q.left==oldT) { //remove oldT from tree
+        q.left=null
+      } else {
+        q.right = null
+      }
+      return q.avlRebalance()
+    } else { // move either the previous or next
+
+
+        let prevT = oldNode.prev.tln
+        if (prevT.parent!=null) {
+          oldT.value = prevT.value  // copy prev value to root
+          if (prevT.left!=null) { // if prev has a child
+            prevT.value = prevT.left.value // move it up
+            prevT.left = null
+            return prevT.avlRebalance() // and rebalance
+          } else {
+            let q = prevT.parent
+            if (q.left==prevT) {
+              q.left=null
+            } else {
+              q.right=null
+            }
+            return q.avlRebalance()
+          }
+        } else {
+          let nextT = oldNode.next.tln;
+          oldT.value = nextT.value  // copy next value to root
+          if (nextT.right!=null) { // if next has a child
+            nextT.value = nextT.right.value // move it up
+            nextT.right = null
+            return nextT.avlRebalance() // and rebalance
+          } else {
+            let q = nextT.parent
+            if (q.left==nextT) { // remove nextT from the tree
+              q.left=null
+            } else {
+              q.right=null
+            }
+            return q.avlRebalance()
+          }
+
+        }
+      }
+
   }
 
   binaryInsert(elt,comparator){
@@ -483,7 +494,11 @@ class TreeList {
   }
   rebalance(){
     // I need to add height fields and use AVL ..
-    const nullSize = {std:0,rev:0,edit:0}
+    const nullSize = {}
+    for(let x in this.value.size){
+      nullSize[x]=0
+    }
+
     const leftSize = (this.left?this.left.size:nullSize)
     const rightSize = (this.right?this.right.size:nullSize)
     const leftHeight = (this.left?this.left.height:0)
@@ -593,9 +608,9 @@ class Testing {
       for(let i=0; i<x.size(feature);i++){
         const z = TreeList.nth(i,x.tln,feature)
         console.log('nth '+i+" "+feature+" = "+ z)
-        console.log('index std='+z.indexOf("std"))
-        console.log('index rev='+z.indexOf("rev"))
-        console.log('index edit='+z.indexOf("edit"))
+        for(let f in z.size){
+          console.log('index '+f+' = '+z.indexOf(f))
+        }
       }
       return x
     }

@@ -1,5 +1,5 @@
 export {MSETtree as default}
-import {DLLindexed} from "./DLLindexed.js"
+import {WIDLL} from "./WIDLL.js"
 
 /* ***********************************************************************
  * CORE MSET Demo Implementation in JavaScript
@@ -26,7 +26,7 @@ class MSETtree{
     this.count = 0;
     this.size=0;
     this.root = new Node(0,0);
-    this.strings = new DLLindexed();
+    this.strings = new WIDLL(Element.sizefn);
     this.nodes = {};
     this.nodes[[0,0]] = this.root;
     this.opqueue = [];  // dequeue of ops that haven't been applied
@@ -42,7 +42,9 @@ class MSETtree{
     e1 = Element.createStart(this.root);
     e2 = Element.createEnd(this.root);
     n = n.insertAfter(e1,this.strings);
+    e1.listNode=n
     n = n.insertAfter(e2,this.strings);
+    e2.listNode=n
     this.root.start = e1;
     this.root.end = e2;
   }
@@ -140,8 +142,11 @@ class MSETtree{
 
       // next we insert the three new elements into the list
       const node1 = f.listNode.insertAfter(m.start);
+      m.start.listNode=node1
       const node2 = node1.insertAfter(m.elt[0]);
+      m.elt[0].listNode = node2
       const node3 = node2.insertAfter(m.end); // O(log(N))
+      m.end.listNode = node3
 
 
       // and insert the new node into the hashtable
@@ -165,7 +170,7 @@ class MSETtree{
       e.offset = d;
       n.elt[d]=e;
       n.iset[d+1]= new InsertionSet();;
-      f.listNode.insertBefore(e); // O(log(N))
+      e.listNode = f.listNode.insertBefore(e); // O(log(N))
       this.size++;
       return n;
   }
@@ -199,6 +204,12 @@ class MSETtree{
       n.iset[0] =  new InsertionSet()
       n.iset[1] =  new InsertionSet()
       return n;
+  }
+
+  nextNonMarker(listnode){
+    const index = listnode.indexOf("rev")
+    const result= this.strings.nth(index,"rev")
+    return result
   }
 
 
@@ -284,7 +295,7 @@ class MSETtree{
 
                 // in this case, find the next non-marker f (which must exist) and insert before f
                 un = [this.user,this.count++];
-                fcell = this.strings.nextNonMarker(fcell); // O(log(N))
+                fcell = this.nextNonMarker(fcell); // O(log(N))
 
                 this.network.insert(fcell.val.nodeid,0,un,c);
                 this.treeinsert(fcell.val.nodeid,0,un,c);
@@ -314,7 +325,16 @@ class Element{
     this.listNode=null; // link to the Doubly Linked List element containing this element
   }
 
-  toString() {
+  toString(){
+    if (this.vis || this.marker) {
+      return this.sym
+    } {
+      return "["+this.sym+"]"
+    }
+
+  }
+
+  toStringLong() {
     return "{"+this.sym+","+this.vis+","+this.marker+","+this.nodeid+","+this.offset+"}";
   }
 
@@ -322,7 +342,11 @@ class Element{
     const std = (this.vis)?1:0
     const rev = (this.marker)?0:1
     const edit = 1
-    return {std,rev:rev,edit:edit}
+    return {std,rev:rev,edit:edit,count:1}
+  }
+
+  static sizefn(element){
+    return element?element.eltSize():{count:0,std:0,rev:0,edit:0}
   }
 
   static createChar(c,n){
@@ -386,7 +410,7 @@ class InsertionSet{
 
   constructor(){
     this.nodelist = []
-    this.dll = new DLLindexed()
+    this.dll = new WIDLL() // we use the default size function ..
     this.dll.comparator = (x,y)=>(x.user-y.user)
   }
 
