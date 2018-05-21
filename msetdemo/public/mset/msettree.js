@@ -19,6 +19,9 @@ import {WIBST} from "./WIBST.js"
  * The MSETtree has two main methods
  *  insert(pos,element)
  *  delete(pos)
+ * It requires a Network object and a Socket object,
+ * which afre passed in when the tree is created...
+ *
  */
 
 
