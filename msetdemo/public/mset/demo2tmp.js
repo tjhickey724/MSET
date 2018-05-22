@@ -1,10 +1,10 @@
-import MSETsocket from './MSETtmp.js'
+import MSETtexteditor from './MSETtmp.js'
 
 // create mset sockets for the two textareas
 // they will now be collaboratively editable by
 // anyone who visits the page, and the edits stay
 // until the server is shut down...
-let mset1 = new MSETsocket('/demo2','ta1','default');
+let mset1 = new MSETtexteditor('/demo2','ta1','ta2','default');
 
 console.log('in demo2.js')
 console.dir(mset1)
@@ -22,7 +22,7 @@ button1TF.addEventListener('click',function(event){
   mset1.exit();
   text1TA.value=""
   console.log('text1TA value = '+ text1TA.value)
-  mset1 = new MSETsocket('/demo2','ta1',file1TF.value)
+  mset1 = new MSETtexteditor('/demo2','ta1','ta2',file1TF.value)
   console.log('text1TA value = '+ text1TA.value)
 })
 

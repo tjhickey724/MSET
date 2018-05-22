@@ -144,6 +144,7 @@ class ListNode{
   }
 
   indexOf(feature){
+    //console.log("in indexOf "+feature)
     // this computes the index of the listnode wrt the feature
     // more precisely, this gives the sum of the weights
     // of all elements to the left of this listNode
@@ -152,15 +153,21 @@ class ListNode{
     let index=0
     if (tln.left) {
       index += tln.left.size[feature]
+      //console.log("adding "+ tln.left.size[feature]+ "from left child")
     }
 
     while (tln.parent){
+      //console.log("in indexOf loop: tln.parent="+tln.parent.toStringIndent(5))
       if (tln.parent.right == tln) {
         const leftSize = 0
         if (tln.parent.left) {
-          index += tln.parent.left.size[feature] +
-                   tln.parent.value.size[feature]
+          index += tln.parent.left.size[feature]
+
+          //console.log("adding "+tln.parent.left.size[feature], +" from left of parent")
         }
+        index += tln.parent.value.size[feature]
+      } else {
+        //console.log('tln is a left child')
       }
       tln = tln.parent
     }

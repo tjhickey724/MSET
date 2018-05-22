@@ -174,12 +174,17 @@ class MSETtree{
       var e = Element.createChar(c,n);  // O(1)
       var d = n.elt.length;
       var f = n.end;
+      var insertionPos = f.listNode.indexOf("std")
+      console.log("in treeextend:"+JSON.stringify([d,insertionPos]))
+      console.dir([n,this])
+      console.log(this.strings.tln.toStringIndent(5))
+      this.strings.toString(' ','count')
       e.offset = d;
       n.elt[d]=e;
       n.iset[d+1]= new InsertionSet();;
       e.listNode = f.listNode.insertBefore(e); // O(log(N))
       this.size++;
-      this.insertCallback(f.listNode.indexOf("std"),c,n.user)
+      this.insertCallback(insertionPos,c,n.user)
       return n;
   }
 

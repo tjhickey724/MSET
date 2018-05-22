@@ -2,7 +2,7 @@ import MSETtree from './MSETtree.js'
 export {MSETsocket as default}
 
 
-
+console.log("loading MSETsocket")
 // this creates the socket to the server and the MSET tree
 // and add listeners to the textareas ...
 
@@ -41,13 +41,15 @@ class MSETsocket{
       thisMset.msetTree.insertCallback = function(pos,elt,user){
         console.log(JSON.stringify(['insert',pos,elt,user]))
         const theString = thisMset.msetTree.strings.toString("",'std')
-        thisMset.ta.value = theString
+        //thisMset.ta.value = theString
+        document.getElementById('ta2').value = theString
         this.lastValue = theString
       }
       thisMset.msetTree.deleteCallback = function(pos,elt,user){
         console.log(JSON.stringify(['delete',pos,elt,user]))
         const theString = thisMset.msetTree.strings.toString("",'std')
-        thisMset.ta.value = theString
+        //thisMset.ta.value = theString
+        document.getElementById('ta2').value = theString
         this.lastValue = theString
       }
       //this.Mset.ta.value=""
