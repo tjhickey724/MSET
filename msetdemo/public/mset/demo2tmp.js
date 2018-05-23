@@ -1,4 +1,4 @@
-import MSETtexteditor from './MSETtmp.js'
+import MSETtexteditor from './MSETtexteditor.js'
 
 // create mset sockets for the two textareas
 // they will now be collaboratively editable by

@@ -1,5 +1,5 @@
 import MSETtree from './MSETtree.js'
-export {MSETtexteditor as default}
+export {MSET as default}
 
 
 console.log("loading MSETtmp")
@@ -7,9 +7,9 @@ console.log("loading MSETtmp")
 // and add listeners to the textareas ...
 
 class MSET {
-  constructor(namespace,fileId,callback){
+  constructor(namespace,documentId,callback){
     this.socket = io(namespace)
-    this.fileId = fileId
+    this.documentId = documentId
     this.msetId=-1;
     this.msetTree={};
     this.initSocket();
@@ -35,7 +35,7 @@ class MSET {
           function(pos,elt,user){
               return thisMSET.callback('delete',pos,elt,user,thisMSET.msetId)
             }
-      thisMSET.socket.emit('reset',{msetId:thisMSET.msetId,fileId:thisMSET.fileId})
+      thisMSET.socket.emit('reset',{msetId:thisMSET.msetId,documentId:thisMSET.documentId})
     });
 
     this.socket.on('reset', function(msg){
@@ -56,7 +56,7 @@ class MSET {
     }
 
     applyRemoteOp(msg){
-      if (msg.fileId!=this.fileId) return
+      if (msg.documentId!=this.documentId) return
       msg = msg.op
       // ignore insert and extend messages from self
       if (((msg.op=='extend'))&&(msg.nodeid[0]==this.msetId)){
@@ -77,158 +77,11 @@ class MSET {
 
     sendOperationToServer(op){
       this.socket.emit('operation',
-        {taId:this.taId,fileId:this.fileId, op:op});
+        {taId:this.taId,documentId:this.documentId, op:op});
     }
 
 }
 
-
-class MSETtexteditor {
-
-  constructor(namespace, taId, taId2, fileId){
-    this.fileId = (fileId || 'default')
-    this.mset = new MSET(namespace,fileId,editorCallbacks)
-    this.taId = taId
-
-    this.ta = document.getElementById(taId)
-    this.ta2 = document.getElementById(taId2)
-    this.lastValue = ""
-    this.ta.lastValue = ""
-    this.remoteOp = false;
-    this.ta.readOnly = true;
-    this.addTAlisteners(this.ta);
-  }
-
-  exit(){
-    this.mset.exit()
-    let old_element = document.getElementById(this.taId);
-    const new_element = old_element.cloneNode(true);
-    old_element.parentNode.replaceChild(new_element, old_element);
-  }
-
-
-
-
-
-  /*
-    Setup event listeners for the textarea
-  */
-
-
-
-
-
-
-  insertChars(offset,text){
-      for(let i=0; i<text.length; i++){
-         this.mset.msetTree.insert(offset+i,text[i])
-      }
-  }
-
-  deleteChars(offset,text){
-      for(let i=0; i<text.length; i++){
-        this.mset.msetTree.delete(offset);
-      }
-  }
-
-
-  addTAlisteners(ta){
-    const theMset = this.mset;
-    const theEditor = this;
-
-    ta.addEventListener('input',function(e){
-
-        if (theEditor.mset.remoteOp) return;
-        if (ta.readOnly) return;
-        const lastValue = ta.lastValue;
-
-        const start = e.target.selectionStart
-        const finish = e.target.selectionEnd
-        const result = e.target.value
-        const lenDif = (result.length-lastValue.length)
-        const edit = result.substring(start-lenDif,start)
-
-        //console.log("in editor:"+JSON.stringify([ta.readOnly,e.inputType,start,finish,result,lenDif,edit,lastValue]))
-        //console.log(e.inputType+JSON.stringify([start-lenDif,result.substring(start-lenDif,start)]))
-
-
-        switch (e.inputType){
-         case "insertText":
-             theEditor.insertChars(start-lenDif,result.substring(start-lenDif,start))
-             break;
-
-         case "insertLineBreak":
-             theEditor.insertChars(start-lenDif,result.substring(start-lenDif,start))
-             break;
-
-         case "insertFromPaste":
-             theEditor.insertChars(start-lenDif,result.substring(start-lenDif,start))
-             break;
-
-         case "deleteByCut":
-             theEditor.deleteChars(start,lastValue.substring(start,start-lenDif))
-             break;
-
-         case "deleteContentForward":
-             theEditor.deleteChars(start,lastValue.substring(start,start-lenDif))
-             break;
-
-         case "deleteContentBackward":
-             theEditor.deleteChars(start,lastValue.substring(start,start-lenDif))
-             break;
-
-         default:
-             console.log('UNKNOWN OP -- just id '+e.inputType)
-             console.log("<"+e.target.value.substring(0,e.target.selectionStart)+">")
-
-        }
-
-        ta.lastValue = e.target.value
-        //console.log('ta.lastValue changed to :\n'+ta.lastValue)
-
-      })
-
-     ta.addEventListener('change',function(e){
-
-         //console.log("defaultvalue = '"+e.target.defaultValue+"'")
-         //console.log("value = '"+e.target.value+"'")
-      })
-     ta.addEventListener('cut', function(e){
-
-         if (theEditor.remoteOp) return;
-         e.preventDefault()
-     })
-
-     ta.addEventListener('copy', function(e){
-
-     })
-
-     ta.addEventListener('undo', function(e){
-
-
-         if (theEditor.remoteOp) return;
-         e.preventDefault()
-     })
-
-     ta.addEventListener('paste', function(e){
-
-         if (theEditor.remoteOp) return;
-         e.preventDefault()
-
-     })
-
-
-    // prevent CTRL-Z undo operation
-    ta.onkeydown = function(e) {
-        if (e.metaKey && e.key === 'z') {
-      e.preventDefault();
-      alert("Undo is not allowed for this textarea");
-        }
-    }
-  }
-
-
-}
 
 
 /* ************************************************************
@@ -334,6 +187,7 @@ class Network{
   }
 
 }
+
 
 
 function editorCallbacks(op,pos,elt,user,me){
