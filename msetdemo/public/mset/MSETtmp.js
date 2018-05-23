@@ -50,17 +50,12 @@ class MSET {
 
 
     applyRemoteOps(oplist){
-      console.dir(['applyRemoteOps',oplist])
-      console.dir(this)
       for(let i = 0; i<oplist.length;i++){
         this.applyRemoteOp(oplist[i])
       }
     }
 
     applyRemoteOp(msg){
-      console.log('applyRemoteOp:'+JSON.stringify(msg))
-      console.dir(this)
-      console.log('msg:'+JSON.stringify(msg)+" this:"+this)
       if (msg.fileId!=this.fileId) return
       msg = msg.op
       // ignore insert and extend messages from self
@@ -97,7 +92,6 @@ class MSETtexteditor {
 
     this.ta = document.getElementById(taId)
     this.ta2 = document.getElementById(taId2)
-    console.dir(['in MSETtexteditor',taId2,ta2])
     this.lastValue = ""
     this.ta.lastValue = ""
     this.remoteOp = false;
@@ -154,9 +148,8 @@ class MSETtexteditor {
         const lenDif = (result.length-lastValue.length)
         const edit = result.substring(start-lenDif,start)
 
-        console.log("in editor:"+JSON.stringify(
-          [ta.readOnly,e.inputType,start,finish,result,lenDif,edit,lastValue]))
-        console.log(e.inputType+JSON.stringify([start-lenDif,result.substring(start-lenDif,start)]))
+        //console.log("in editor:"+JSON.stringify([ta.readOnly,e.inputType,start,finish,result,lenDif,edit,lastValue]))
+        //console.log(e.inputType+JSON.stringify([start-lenDif,result.substring(start-lenDif,start)]))
 
 
         switch (e.inputType){
@@ -191,7 +184,7 @@ class MSETtexteditor {
         }
 
         ta.lastValue = e.target.value
-        console.log('ta.lastValue changed to :\n'+ta.lastValue)
+        //console.log('ta.lastValue changed to :\n'+ta.lastValue)
 
       })
 
@@ -344,29 +337,29 @@ class Network{
 
 
 function editorCallbacks(op,pos,elt,user,me){
-  console.log('editorCallbacks:'+JSON.stringify([op,pos,elt,user,me]))
+  //console.log('editorCallbacks:'+JSON.stringify([op,pos,elt,user,me]))
   let theString = ""
   const ta1 = document.getElementById('ta1')
   const ta2 = document.getElementById('ta2')
   switch(op){
     case "init": document.getElementById('ta1').readOnly = false;  break;
     case "insert":
-      console.log(JSON.stringify([ta1.readOnly,'insert',pos,elt,user,me]))
+      //console.log(JSON.stringify([ta1.readOnly,'insert',pos,elt,user,me]))
       if (user==me) return
       ta1.readOnly=true
       theString = ta1.value
-      console.log("s="+theString)
+      //console.log("s="+theString)
       theString = theString.substring(0,pos)+elt+theString.substring(pos)
-      console.log("t="+theString)
+      //console.log("t="+theString)
       this.lastValue = theString
       ta2.value = theString
       ta1.value = theString
       ta1.lastValue = theString
-      console.log('ta.lastValue changed to :\n'+ta1.lastValue)
+      //console.log('ta.lastValue changed to :\n'+ta1.lastValue)
       ta1.readOnly = false
       break
     case "delete":
-      console.log(JSON.stringify([ta1.readOnly,'delete',pos,elt,user,me]))
+      //console.log(JSON.stringify([ta1.readOnly,'delete',pos,elt,user,me]))
       if (user==me) return
       ta1.readOnly=true
       //console.log(JSON.stringify([ta1.readOnly,'delete',pos,elt,user,me]))
@@ -377,7 +370,7 @@ function editorCallbacks(op,pos,elt,user,me){
       ta1.value = theString
       ta2.value = theString
       ta1.lastValue = theString
-      console.log('ta.lastValue changed to :\n'+ta1.lastValue)
+      //console.log('ta.lastValue changed to :\n'+ta1.lastValue)
       ta1.readOnly = false
       break
   }
