@@ -1,4 +1,4 @@
-export {MSETtree as default}
+export {msetDLL as default}
 import {wiDLL} from "./wiDLL.js"
 import {wiBST} from "./wiBST.js"
 
@@ -16,7 +16,7 @@ import {wiBST} from "./wiBST.js"
  * which allows any number of people to insert and remove JSON elements
  * from a shared list.
  *
- * The MSETtree has two main methods
+ * The msetDLL has two main methods
  *  insert(pos,element)
  *  delete(pos)
  *  which can be called by the client
@@ -28,7 +28,7 @@ import {wiBST} from "./wiBST.js"
  */
 
 
-class MSETtree{
+class msetDLL{
   constructor(u,network){
     this.user = u;
     this.count = 0;
@@ -39,7 +39,8 @@ class MSETtree{
     this.nodes[[0,0]] = this.root;
     this.opqueue = [];  // dequeue of ops that haven't been applied
     this.waitqueue=[];  // hashtable from targets to list of ops
-    this.network = network
+    //this.emptyNetwork = {hide:(x)=>null,insert:(x)=>null,extend:(x)=>null}
+    this.network = network //|| this.emptyNetwork
 
     this.insertCallback = function(k,elt,user){console.log("insert("+k+","+elt+","+user+")")}
     this.deleteCallback = function(k,elt,user){console.log("delete("+k+","+elt+","+user+")")}
@@ -129,10 +130,10 @@ class MSETtree{
 
       var n = this.nodes[vm]; // O(log(N))
       var s = n.iset[q];
-      var m = MSETtree.createCharNode(un,c);  // O(1)
+      var m = msetDLL.createCharNode(un,c);  // O(1)
       var e = m.elt[0];
       var f = n.start;
-      //var k = MSETtree.insertNode(m,s);  // O(log(N))
+      //var k = msetDLL.insertNode(m,s);  // O(log(N))
       var k = s.insertNode(m);
 
       // now we sew m into the doubly linked lists!!!
