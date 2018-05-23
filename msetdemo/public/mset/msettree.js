@@ -110,7 +110,7 @@ class MSETtree{
       } else if (treeOp.op == "extend") {
           n = this.treeextend(treeOp.nodeid, treeOp.c);
       } else if (treeOp.op == "delete") {
-          n = this.treehide(treeOp.nodeid, treeOp.q);
+          n = this.treehide(treeOp.nodeid, treeOp.q, treeOp.u);
       }
       return n; // this has yet to be written ...
   }
@@ -192,7 +192,7 @@ class MSETtree{
    *  this hides the character c with offset q in the node with the specified nodeid
    *  and it updates M to reflect this change ...
    */
-  treehide(nodeid,q) {
+  treehide(nodeid,q,u) {
       var n = this.nodes[nodeid] // O(log(N))
       var e = n.elt[q]
       var offset = e.listNode.indexOf("std")
@@ -200,7 +200,7 @@ class MSETtree{
       e.sym = e.sym
       e.listNode.size.std = 0  // it is not longer visible
       e.listNode.tln.rebalance()
-      this.deleteCallback(offset,e.sym,n.user)
+      this.deleteCallback(offset,e.sym,u) // u is the one who deleted e.sym
       return n;
   }
 
@@ -245,8 +245,7 @@ class MSETtree{
       e.vis=false;
       listNode.size.std = 0  // it is not longer visible
       listNode.tln.rebalance()
-      var un = [this.user,0]
-      this.network.hide(e.nodeid,e.offset,un); // un is used to prevent broadcast from going back to user
+      this.network.hide(e.nodeid,e.offset,this.user); // un is used to prevent broadcast from going back to user
   }
 
   insert(k,c) {

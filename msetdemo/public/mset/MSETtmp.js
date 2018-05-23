@@ -277,7 +277,7 @@ class Network{
 
   broadcastOne(msg){
     const op=msg.op
-    const un=msg.un
+    const un=msg.un  //we don't need this parameter, refactor ...
     var i;
 
     this.msetSocket.sendOperationToServer(op);
@@ -293,9 +293,9 @@ class Network{
     this.broadcast(op,un);
   }
 
-  hide(vm,q,un) {
-    var op = {op:"delete", nodeid:vm, q:q};
-    this.broadcast(op,un);
+  hide(vm,q,u) {
+    var op = {op:"delete", nodeid:vm, q:q, u:u};  // refactor ... change this to hide
+    this.broadcast(op,u);
   }
 
 
@@ -332,8 +332,8 @@ class Network{
           msetTree.treeextend(msg.nodeid,msg.c)
           break;
       case 'delete':
-         z = `REMOTE treehide([${msg.nodeid}],${msg.q})`
-         msetTree.treehide(msg.nodeid,msg.q)
+         z = `REMOTE treehide([${msg.nodeid}],${msg.q},${msg.u})`
+         msetTree.treehide(msg.nodeid,msg.q,msg.u)
          break;
       default: throw new Error("unknown remote op: "+JSON.stringify(msg))
     }
@@ -351,10 +351,9 @@ function editorCallbacks(op,pos,elt,user,me){
   switch(op){
     case "init": document.getElementById('ta1').readOnly = false;  break;
     case "insert":
+      console.log(JSON.stringify([ta1.readOnly,'insert',pos,elt,user,me]))
       if (user==me) return
       ta1.readOnly=true
-      console.log(JSON.stringify([ta1.readOnly,'insert',pos,elt,user,me]))
-
       theString = ta1.value
       console.log("s="+theString)
       theString = theString.substring(0,pos)+elt+theString.substring(pos)
@@ -367,9 +366,10 @@ function editorCallbacks(op,pos,elt,user,me){
       ta1.readOnly = false
       break
     case "delete":
+      console.log(JSON.stringify([ta1.readOnly,'delete',pos,elt,user,me]))
       if (user==me) return
       ta1.readOnly=true
-      console.log(JSON.stringify([ta1.readOnly,'delete',pos,elt,user,me]))
+      //console.log(JSON.stringify([ta1.readOnly,'delete',pos,elt,user,me]))
 
       theString = document.getElementById('ta1').value
       theString = theString.substring(0,pos)+theString.substring(pos+1)
