@@ -39,8 +39,8 @@ class msetDLL{
     this.nodes[[0,0]] = this.root;
     this.opqueue = [];  // dequeue of ops that haven't been applied
     this.waitqueue=[];  // hashtable from targets to list of ops
-    //this.emptyNetwork = {hide:(x)=>null,insert:(x)=>null,extend:(x)=>null}
-    this.network = network //|| this.emptyNetwork
+    this.emptyNetwork = {hide:(x)=>null,insert:(x)=>null,extend:(x)=>null}
+    this.network = network || this.emptyNetwork
 
     this.insertCallback = function(k,elt,user){console.log("insert("+k+","+elt+","+user+")")}
     this.deleteCallback = function(k,elt,user){console.log("delete("+k+","+elt+","+user+")")}
@@ -60,7 +60,32 @@ class msetDLL{
     this.root.end = e2;
   }
 
+  treeHeight(){
+    return this.strings.tln.height
+  }
 
+  copy(){
+    const elts = this.toList()
+    const newMSET = new msetDLL()
+    for(let i in elts){
+      newMSET.insert(i,elts[i])
+    }
+    return newMSET
+  }
+
+
+  toString(separator,feature){
+    separator = separator || ''
+    return this.strings.toString(separator,'std')
+  }
+
+  nth(n,feature){
+    return this.strings.nth(n,'std').val.sym
+  }
+
+  toList(feature){
+    return this.strings.toList('std')
+  }
     /*
      * This method takes a tree op from the queue, checks to see if it can be applied
      * If its target is not there, it adds it to a wait queue on that target
@@ -437,3 +462,9 @@ class InsertionSet{
     return this.bst.get(k)
   }
 }
+
+// these allow me access to the class from the Javascript console
+window.msetDLL = msetDLL
+window.Element = Element
+window.Node = Node
+window.InsertionSet = InsertionSet

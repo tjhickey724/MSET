@@ -189,43 +189,5 @@ class Network{
 }
 
 
-
-function editorCallbacks(op,pos,elt,user,me){
-  //console.log('editorCallbacks:'+JSON.stringify([op,pos,elt,user,me]))
-  let theString = ""
-  const ta1 = document.getElementById('ta1')
-  const ta2 = document.getElementById('ta2')
-  switch(op){
-    case "init": document.getElementById('ta1').readOnly = false;  break;
-    case "insert":
-      //console.log(JSON.stringify([ta1.readOnly,'insert',pos,elt,user,me]))
-      if (user==me) return
-      ta1.readOnly=true
-      theString = ta1.value
-      //console.log("s="+theString)
-      theString = theString.substring(0,pos)+elt+theString.substring(pos)
-      //console.log("t="+theString)
-      this.lastValue = theString
-      ta2.value = theString
-      ta1.value = theString
-      ta1.lastValue = theString
-      //console.log('ta.lastValue changed to :\n'+ta1.lastValue)
-      ta1.readOnly = false
-      break
-    case "delete":
-      //console.log(JSON.stringify([ta1.readOnly,'delete',pos,elt,user,me]))
-      if (user==me) return
-      ta1.readOnly=true
-      //console.log(JSON.stringify([ta1.readOnly,'delete',pos,elt,user,me]))
-
-      theString = document.getElementById('ta1').value
-      theString = theString.substring(0,pos)+theString.substring(pos+1)
-      this.lastValue = theString
-      ta1.value = theString
-      ta2.value = theString
-      ta1.lastValue = theString
-      //console.log('ta.lastValue changed to :\n'+ta1.lastValue)
-      ta1.readOnly = false
-      break
-  }
-}
+window.MSET=MSET
+window.Network = Network

@@ -17,6 +17,11 @@ export {wiDLL}
  *       (x)=>(x?{count:1}:{count:0})
  *
   */
+
+const startmarker="startmarker"
+const endmarker="endmarker"
+
+
 class wiDLL {
   constructor(sizefn){
     // initialize the sizefn
@@ -28,9 +33,9 @@ class wiDLL {
     }
 
     // initialize the start and end markers
-    this.first = new ListNode("startmarker",this);
+    this.first = new ListNode(startmarker,this);
     this.first.size= this.emptySize
-    this.last = new ListNode("endmarker",this);
+    this.last = new ListNode(endmarker,this);
     this.last.size=this.emptySize
 
     // initialize the index tree with startmarker at the root
@@ -101,10 +106,21 @@ class wiDLL {
 
       for(let d = this.first.next; d != this.last; d=d.next) {
         if (this.sizefn(d.val)[feature]>0) {
-          s += d.val + ((d.next==this.last)?"":separator)
+          s += d.val.sym + ((d.next===this.last)?"":separator)
         }
       }
       return s
+  }
+
+  toList(feature){
+    feature = feature || "count"
+    let s=[]
+    for(let d = this.first.next; d != this.last; d=d.next) {
+      if (this.sizefn(d.val)[feature]>0) {
+        s.push(d.val.sym)
+      }
+    }
+    return s
   }
 
   nth(n,feature){
@@ -127,7 +143,9 @@ class ListNode{
     this.val = v
     this.dll=dll
     this.tln=null // this will get instantiated when the node is inserted in the list
-    if ((v!='startmarker')&&(v!='endmarker')){
+    //console.dir(v)
+    //console.log('in ListNode: v='+JSON.stringify(v))
+    if ((v!==startmarker)&&(v!==endmarker)){
       this.size = dll.sizefn(v)
     } else {
       this.size = dll.emptySize
@@ -176,7 +194,7 @@ class ListNode{
 
 
   insertBefore(a){
-      if (this.val=='startmarker'){
+      if (this.val===startmarker){
         throw new Error("you can't insert before the startmarker")
       }
       var x = new ListNode(a,this.dll);
@@ -190,7 +208,7 @@ class ListNode{
     }
 
   insertAfter(a){
-    if (this.val=='endmarker'){
+    if (this.val===endmarker){
       throw new Error("you can't insert after the endmarker")
     }
     var x = new ListNode(a,this.dll);
@@ -205,9 +223,9 @@ class ListNode{
   }
 
   delete(){
-    if (this.val=='startmarker'){
+    if (this.val===startmarker){
       throw new Error("you can't delete the startmarker")
-    } else if (this.val =='endmarker'){
+    } else if (this.val ===endmarker){
       throw new Error("you can't delete the endmarker")
     } else {
       const p = this.prev // could be startmarker
@@ -384,7 +402,7 @@ class TreeList {
        comparator function. It returns the new node it creates.
        This only works if the tree has been created entirely using binaryInsert
     */
-    if ((this.value.val=='startmarker')
+    if ((this.value.val===startmarker)
          ||
          (comparator(elt,this.value.val)>=0))   {
        if (this.right) {
@@ -407,7 +425,7 @@ class TreeList {
        It assumes that the list is ordered by the node.val fields wrt the
        comparator function. It returns the new node it creates.
     */
-    if ((this.value.val=='startmarker')
+    if ((this.value.val===startmarker)
          ||
          (comparator(elt,this.value.val)>0))   {
        if (this.right) {
@@ -416,7 +434,7 @@ class TreeList {
          return false
        }
     } else if
-         ((this.value.val=='endmarker')
+         ((this.value.val===endmarker)
          ||
          (comparator(elt,this.value.val)<0)){
         if (this.left){

@@ -190,3 +190,5 @@ function editorCallbacks(op,pos,elt,user,me){
       break
   }
 }
+
+window.MSETtexteditor = MSETtexteditor
