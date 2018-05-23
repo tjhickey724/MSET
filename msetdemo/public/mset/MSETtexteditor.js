@@ -1,4 +1,4 @@
-import MSET from './MSETtmp.js'
+import MSET from './MSET.js'
 export {MSETtexteditor as default}
 
 

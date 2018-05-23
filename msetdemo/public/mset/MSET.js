@@ -1,239 +1,87 @@
 import MSETtree from './MSETtree.js'
-export {MSETsocket as default}
+export {MSET as default}
 
 
-console.log("loading MSETsocket")
+console.log("loading MSET")
 // this creates the socket to the server and the MSET tree
 // and add listeners to the textareas ...
 
-class MSETsocket{
-
-  constructor(namespace, taId, fileId){
+class MSET {
+  constructor(namespace,documentId,callback){
     this.socket = io(namespace)
-    this.taId = taId
-    this.fileId = (fileId || 'default')
-    this.ta = document.getElementById(taId)
+    this.documentId = documentId
     this.msetId=-1;
     this.msetTree={};
-    this.lastValue = ""
-    this.remoteOp = false;
     this.initSocket();
-    this.ta.readOnly = true;
-    this.addTAlisteners(this.ta);
+    this.callback = callback
   }
 
-  exit(){
+  exit() {
     this.socket.close()
-    let old_element = document.getElementById(this.taId);
-    const new_element = old_element.cloneNode(true);
-    old_element.parentNode.replaceChild(new_element, old_element);
   }
 
   initSocket(){
-
-    const thisMset = this;
-
-
+    const thisMSET = this;
     this.socket.on('msetId', function(msg){
       // here we listen to the server to get our msetId
-      thisMset.msetId=parseInt(msg.msetId);
-      thisMset.msetTree = new MSETtree(thisMset.msetId,new Network(thisMset));
-      thisMset.msetTree.insertCallback = function(pos,elt,user){
-        console.log(JSON.stringify(['insert',pos,elt,user]))
-        const theString = thisMset.msetTree.strings.toString("",'std')
-        //thisMset.ta.value = theString
-        document.getElementById('ta2').value = theString
-        this.lastValue = theString
-      }
-      thisMset.msetTree.deleteCallback = function(pos,elt,user){
-        console.log(JSON.stringify(['delete',pos,elt,user]))
-        const theString = thisMset.msetTree.strings.toString("",'std')
-        //thisMset.ta.value = theString
-        document.getElementById('ta2').value = theString
-        this.lastValue = theString
-      }
-      //this.Mset.ta.value=""
-      //thisMset.applyRemoteOps(msg.oplist)
-
-      thisMset.ta.readOnly = false;
-
-      thisMset.socket.emit('reset',{msetId:thisMset.msetId,fileId:thisMset.fileId})
-      // this ought to be handle by a callback, why get the document involved!
-      //document.getElementById('msetId').innerHTML = "msetId="+msetId;
+      thisMSET.msetId=parseInt(msg.msetId);
+      thisMSET.msetTree = new MSETtree(thisMSET.msetId,new Network(thisMSET));
+      thisMSET.callback('init')
+      thisMSET.msetTree.insertCallback =
+          function(pos,elt,user){
+              return thisMSET.callback('insert',pos,elt,user,thisMSET.msetId)
+            }
+      thisMSET.msetTree.deleteCallback =
+          function(pos,elt,user){
+              return thisMSET.callback('delete',pos,elt,user,thisMSET.msetId)
+            }
+      thisMSET.socket.emit('reset',{msetId:thisMSET.msetId,documentId:thisMSET.documentId})
     });
 
     this.socket.on('reset', function(msg){
-      //thisMset.msetTree = new MSET(thisMset.msetId,thisMset);
-      thisMset.applyRemoteOps(msg.oplist)
+      thisMSET.applyRemoteOps(msg.oplist)
     })
 
     this.socket.on('remoteOperation', function(msg){
-
-
-      thisMset.applyRemoteOp(msg);
+      thisMSET.applyRemoteOp(msg);
 
     })
-
-      //document.getElementById('msetId').innerHTML = "msetId="+msetId;
-
-
-  }
-
-  applyRemoteOps(oplist){
-
-    for(let i=0; i<oplist.length;i++){
-      this.applyRemoteOp(oplist[i]);
-    }
-
-
-    //this.ta.value = this.msetTree.strings.toString("",'std')
-  }
-
-  applyRemoteOp(msg){
-    if ((msg.taId!=this.taId) || (msg.fileId!=this.fileId)){
-      return // filter out msgs to other tas
-    }
-
-    msg = msg.op
-
-
-
-    // ignore messages from self
-    if (((msg.op=='extend'))&&(msg.nodeid[0]==this.msetId)){
-      return;
-    } else if ((msg.op=='insert') && (msg.un[0]==this.msetId)){
-      return;
-    }
-    this.remoteOp=true; // temporarily ignore changes to the textarea as remote ops are processed
-    this.msetTree.network.processRemoteOp(msg)
-    const newString = this.msetTree.strings.toString('','std')
-    this.ta.value = newString
-    this.lastValue = newString;
-    this.remoteOp=false;
-
-    return
-
   }
 
 
-  sendOperationToServer(op){
-    this.socket.emit('operation',
-      {taId:this.taId,fileId:this.fileId, op:op});
-  }
-
-
-
-  /*
-    Setup event listeners for the textarea
-  */
-
-
-
-
-
-
-  insert2(offset,text){
-      for(let i=0; i<text.length; i++){
-         this.msetTree.insert(offset+i,text[i])
+    applyRemoteOps(oplist){
+      for(let i = 0; i<oplist.length;i++){
+        this.applyRemoteOp(oplist[i])
       }
-  }
-
-  delete2(offset,text){
-      for(let i=0; i<text.length; i++){
-        this.msetTree.delete(offset);
-      }
-  }
-
-
-  addTAlisteners(ta){
-    const theMset = this;
-
-    ta.addEventListener('input',function(e){
-        if (this.remoteOp) return;
-
-        const start = e.target.selectionStart
-        const finish = e.target.selectionEnd
-        const result = e.target.value
-        const lenDif = (result.length-theMset.lastValue.length)
-
-
-
-        switch (e.inputType){
-         case "insertText":
-             theMset.insert2(start-lenDif,result.substring(start-lenDif,start))
-             break;
-
-         case "insertLineBreak":
-             theMset.insert2(start-lenDif,result.substring(start-lenDif,start))
-             break;
-
-         case "insertFromPaste":
-             theMset.insert2(start-lenDif,result.substring(start-lenDif,start))
-             break;
-
-         case "deleteByCut":
-             theMset.delete2(start,theMset.lastValue.substring(start,start-lenDif))
-             break;
-
-         case "deleteContentForward":
-             theMset.delete2(start,theMset.lastValue.substring(start,start-lenDif))
-             break;
-
-         case "deleteContentBackward":
-             theMset.delete2(start,theMset.lastValue.substring(start,start-lenDif))
-             break;
-
-         default:
-             console.log('UNKNOWN OP -- just id '+e.inputType)
-             console.log("<"+e.target.value.substring(0,e.target.selectionStart)+">")
-
-        }
-
-        theMset.lastValue = e.target.value
-
-      })
-
-     ta.addEventListener('change',function(e){
-
-         //console.log("defaultvalue = '"+e.target.defaultValue+"'")
-         //console.log("value = '"+e.target.value+"'")
-      })
-     ta.addEventListener('cut', function(e){
-
-         if (theMset.remoteOp) return;
-         e.preventDefault()
-     })
-
-     ta.addEventListener('copy', function(e){
-
-     })
-
-     ta.addEventListener('undo', function(e){
-
-
-         if (theMset.remoteOp) return;
-         e.preventDefault()
-     })
-
-     ta.addEventListener('paste', function(e){
-
-         if (theMset.remoteOp) return;
-         e.preventDefault()
-
-     })
-
-
-    // prevent CTRL-Z undo operation
-    ta.onkeydown = function(e) {
-        if (e.metaKey && e.key === 'z') {
-      e.preventDefault();
-      alert("Undo is not allowed for this textarea");
-        }
     }
-  }
 
+    applyRemoteOp(msg){
+      if (msg.documentId!=this.documentId) return
+      msg = msg.op
+      // ignore insert and extend messages from self
+      if (((msg.op=='extend'))&&(msg.nodeid[0]==this.msetId)){
+        return;
+      } else if ((msg.op=='insert') && (msg.un[0]==this.msetId)){
+        return;
+      }
+      this.remoteOp=true; // temporarily ignore changes to the textarea as remote ops are processed
+      this.msetTree.network.processRemoteOp(msg)
+      //const newString = this.msetTree.strings.toString('','std')
+      //this.ta.value = newString
+      //this.lastValue = newString;
+      this.remoteOp=false;
+
+      return
+
+    }
+
+    sendOperationToServer(op){
+      this.socket.emit('operation',
+        {taId:this.taId,documentId:this.documentId, op:op});
+    }
 
 }
+
 
 
 /* ************************************************************
@@ -275,7 +123,7 @@ class Network{
 
   broadcastOne(msg){
     const op=msg.op
-    const un=msg.un
+    const un=msg.un  //we don't need this parameter, refactor ...
     var i;
 
     this.msetSocket.sendOperationToServer(op);
@@ -291,9 +139,9 @@ class Network{
     this.broadcast(op,un);
   }
 
-  hide(vm,q,un) {
-    var op = {op:"delete", nodeid:vm, q:q};
-    this.broadcast(op,un);
+  hide(vm,q,u) {
+    var op = {op:"delete", nodeid:vm, q:q, u:u};  // refactor ... change this to hide
+    this.broadcast(op,u);
   }
 
 
@@ -330,12 +178,54 @@ class Network{
           msetTree.treeextend(msg.nodeid,msg.c)
           break;
       case 'delete':
-         z = `REMOTE treehide([${msg.nodeid}],${msg.q})`
-         msetTree.treehide(msg.nodeid,msg.q)
+         z = `REMOTE treehide([${msg.nodeid}],${msg.q},${msg.u})`
+         msetTree.treehide(msg.nodeid,msg.q,msg.u)
          break;
       default: throw new Error("unknown remote op: "+JSON.stringify(msg))
     }
 
   }
 
+}
+
+
+
+function editorCallbacks(op,pos,elt,user,me){
+  //console.log('editorCallbacks:'+JSON.stringify([op,pos,elt,user,me]))
+  let theString = ""
+  const ta1 = document.getElementById('ta1')
+  const ta2 = document.getElementById('ta2')
+  switch(op){
+    case "init": document.getElementById('ta1').readOnly = false;  break;
+    case "insert":
+      //console.log(JSON.stringify([ta1.readOnly,'insert',pos,elt,user,me]))
+      if (user==me) return
+      ta1.readOnly=true
+      theString = ta1.value
+      //console.log("s="+theString)
+      theString = theString.substring(0,pos)+elt+theString.substring(pos)
+      //console.log("t="+theString)
+      this.lastValue = theString
+      ta2.value = theString
+      ta1.value = theString
+      ta1.lastValue = theString
+      //console.log('ta.lastValue changed to :\n'+ta1.lastValue)
+      ta1.readOnly = false
+      break
+    case "delete":
+      //console.log(JSON.stringify([ta1.readOnly,'delete',pos,elt,user,me]))
+      if (user==me) return
+      ta1.readOnly=true
+      //console.log(JSON.stringify([ta1.readOnly,'delete',pos,elt,user,me]))
+
+      theString = document.getElementById('ta1').value
+      theString = theString.substring(0,pos)+theString.substring(pos+1)
+      this.lastValue = theString
+      ta1.value = theString
+      ta2.value = theString
+      ta1.lastValue = theString
+      //console.log('ta.lastValue changed to :\n'+ta1.lastValue)
+      ta1.readOnly = false
+      break
+  }
 }
