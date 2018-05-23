@@ -106,7 +106,7 @@ class wiDLL {
 
       for(let d = this.first.next; d != this.last; d=d.next) {
         if (this.sizefn(d.val)[feature]>0) {
-          s += d.val.sym + ((d.next===this.last)?"":separator)
+          s += d.val.sym.toString() + ((d.next===this.last)?"":separator)
         }
       }
       return s
@@ -154,11 +154,11 @@ class ListNode{
 
 
   toString(){
-    return "ListNode("+this.val+")"
+    return "ListNode("+this.val.toString() +")"
   }
 
   toStringIndent(k){
-    return " ".repeat(k)+(this.val.val || this.val)
+    return " ".repeat(k)+ this.val.toString()
   }
 
   indexOf(feature){
@@ -171,21 +171,16 @@ class ListNode{
     let index=0
     if (tln.left) {
       index += tln.left.size[feature]
-      //console.log("adding "+ tln.left.size[feature]+ "from left child")
     }
 
     while (tln.parent){
-      //console.log("in indexOf loop: tln.parent="+tln.parent.toStringIndent(5))
       if (tln.parent.right == tln) {
         const leftSize = 0
         if (tln.parent.left) {
           index += tln.parent.left.size[feature]
-
-          //console.log("adding "+tln.parent.left.size[feature], +" from left of parent")
         }
         index += tln.parent.value.size[feature]
       } else {
-        //console.log('tln is a left child')
       }
       tln = tln.parent
     }
@@ -275,7 +270,7 @@ class TreeList {
 
       return  rightTree+
                 ("\n"+" ".repeat(k)+
-                  (this.value.val+
+                  (this.value.val.toString()+
                    "[s="+JSON.stringify(this.size)+
                    ", h="+this.height
                    )+
@@ -291,8 +286,12 @@ class TreeList {
   nth(n,feature){
     // find the nth element in the tree using weighted elements
     // find the element at position n in the DLL spanned by tln
+    //console.log('in TreeList.nth '+n+' '+feature)
+    //console.dir(this)
     const eltSize = this.value.size[feature]
+    //console.log('eltSize= '+eltSize)
     if(n==0){
+      //console.log('n=0 case')
       if (this.left && (this.left.size[feature]>0)){
         return this.left.nth(0,feature)
       } else if (this.value.size[feature]==0) {
@@ -300,13 +299,18 @@ class TreeList {
       } else {
         return this.value
       }
-    } else if (!(this.left) || (this.left.size[feature]==0)){ // nothing on the left
+    } else if ((!(this.left) || (this.left.size[feature]==0)) && (n>=eltSize)){ // nothing on the left
+        //console.log('nothing on left, n>0')
         return this.right.nth(n-eltSize,feature)
     } else if (n<this.left.size[feature]){
-          return this.left.nth(n,feature)
-    } else if ((n==this.left.size[feature]) && (eltSize==1)){
-      return this.value
+        //console.log('moving to left')
+        return this.left.nth(n,feature)
+    } else if ((n<(this.left.size[feature]+eltSize))){
+        //console.log('found it')
+        return this.value
     } else {
+        //console.log('moving to the right')
+        //console.log(JSON.stringify([n,this.left.size[feature],eltSize]))
         return this.right.nth(n-this.left.size[feature]-eltSize,feature)
     }
   }
@@ -512,6 +516,8 @@ class TreeList {
   }
   rebalance(){
     // I need to add height fields and use AVL ..
+    console.log('entering rebalance')
+    console.dir(this)
     const nullSize = {}
     for(let x in this.value.size){
       nullSize[x]=0
@@ -521,12 +527,15 @@ class TreeList {
     const rightSize = (this.right?this.right.size:nullSize)
     const leftHeight = (this.left?this.left.height:0)
     const rightHeight = (this.right?this.right.height:0)
+    console.dir(this.value)
     const eltSize = this.value.size;
 
     this.size=nullSize
     for (let x in this.size){
       this.size[x] = leftSize[x]+rightSize[x]+eltSize[x]
     }
+    console.log('updating the size')
+    console.dir([this,leftSize,rightSize,eltSize,nullSize])
     //this.size = leftSize+rightSize+1
     this.height = Math.max(leftHeight, rightHeight)+1
 
@@ -584,3 +593,7 @@ class TreeList {
 
 
 }
+
+window.wiDLL = wiDLL
+window.ListNode = ListNode
+window.TreeList = TreeList
