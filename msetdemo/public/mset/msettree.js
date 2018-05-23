@@ -1,6 +1,6 @@
 export {MSETtree as default}
-import {WIDLL} from "./WIDLL.js"
-import {WIBST} from "./WIBST.js"
+import {wiDLL} from "./wiDLL.js"
+import {wiBST} from "./wiBST.js"
 
 /* ***********************************************************************
  * CORE MSET Demo Implementation in JavaScript
@@ -34,7 +34,7 @@ class MSETtree{
     this.count = 0;
     this.size=0;
     this.root = new Node(0,0);
-    this.strings = new WIDLL(Element.sizefn);
+    this.strings = new wiDLL(Element.sizefn);
     this.nodes = {};
     this.nodes[[0,0]] = this.root;
     this.opqueue = [];  // dequeue of ops that haven't been applied
@@ -421,7 +421,7 @@ class InsertionSet{
   // the first step is to move all iset related code into this class
 
   constructor(){
-    this.bst = new WIBST((x,y)=>(x.user-y.user))
+    this.bst = new wiBST((x,y)=>(x.user-y.user))
   }
 
   /* insertNode(m,s) inserts the node m into an ordered set s of nodes

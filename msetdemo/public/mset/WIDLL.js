@@ -1,4 +1,4 @@
-export {WIDLL}
+export {wiDLL}
 /********************************************************
  * Here is an AVL implementation of weighted treelist nodes
  */
@@ -17,7 +17,7 @@ export {WIDLL}
  *       (x)=>(x?{count:1}:{count:0})
  *
   */
-class WIDLL {
+class wiDLL {
   constructor(sizefn){
     // initialize the sizefn
     this.sizefn = (sizefn || ((x)=>({count:1})))

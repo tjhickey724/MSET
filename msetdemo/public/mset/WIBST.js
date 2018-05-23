@@ -1,5 +1,5 @@
-import {WIDLL} from './WIDLL.js'
-export {WIBST}
+import {wiDLL} from './wiDLL.js'
+export {wiBST}
 /*
 Weighted Indexable Binary Search Tree
 This is an implementation of a binary search tree in which you
@@ -7,11 +7,11 @@ an insert/delete and lookup elements, and you can also get the
 nth element. All of these operations have time complexity O(log(N))
 */
 
-class WIBST extends WIDLL {
+class wiBST extends wiDLL {
 
   constructor(comparator){
     super()
-    this.dll = new WIDLL()
+    this.dll = new wiDLL()
     this.dll.comparator = comparator
   }
 
