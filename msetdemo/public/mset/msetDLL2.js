@@ -164,51 +164,71 @@ class msetDLL2{
       console.log('in treeinsert:'+JSON.stringify([vm,q,un,c]))
       console.dir(this)
       const n = this.nodes[vm] // O(1) with a hashtable Implementation
-      const s = n.subnodes.nth(q) // return subnode containing offset q
-      if (!s.val.iset){
-        s.val.iset = new InsertionSet()
-      }
-      var iset = s.val.iset
-      var m = msetDLL2.createCharNode(un,c);  // O(1)
-      var e = m.subnodes;
-      var f = n.start;
-      //var k = msetDLL.insertNode(m,s);  // O(log(N))
-      // TRICKY ... if q is in the middle of the subnode, then we need to split it
-      // and return the iset for that node if it is the last subnode, we need to
-      // make sure it stays the last and we insert the new split subnode before it
-      // I'll assume that has been done for now ...
-      // WE CAN DO ALL THIS SPLITTING AND TESTING HERE ..
-      var k = iset.insertNode(m)
+      const s = n.subnodes.nth(q,'std') // return subnode containing offset q
+      const s_offset = s.indexOf('std')
+      const s_size = s.val.size;
 
-      // now we sew m into the doubly linked lists!!!
-      if (k==0){
-        // this is the case where the node is at the front of the iset
-        if (q==0) {
-            // here the node is inserted at pos q=0 in the parent node
-            f=n.start;
-        } else { // q>0
-            // if the node is not inserted at the beginning of the parent node
-            // HERE WE NEED TO LET F BE THE PREVIOUS NODE ...
-            f=n.elt[q-1];
+      if (s_offset==0){
+        // then we need to insert in the InsertionSet at the left of this node
+        // and we may need to create it
+        if (!s.val.iset){
+          s.val.iset = new InsertionSet()
         }
-      } else { // here the node is not the first in its iset
-        //f = s[k-1].end; // O(log(N))
-        // THIS REMAINS THE SAME!!
-        f = s.get(k-1).end
+        var iset = s.val.iset
+        var m = msetDLL2.createCharNode(un,c);  // O(1)
+        var e = m.subnodes;
+        var f = n.start;
+
+
+        var k = iset.insertNode(m)
+        // now we sew m into the doubly linked lists!!!
+        if (k==0){
+          // this is the case where the node is at the front of the iset
+          if (q==0) {
+              // here the node is inserted at pos q=0 in the parent node
+              f=n.start;
+          } else { // q>0
+              // if the node is not inserted at the beginning of the parent node
+              // HERE WE NEED TO LET F BE THE PREVIOUS NODE ...
+              f=n.subnodes.nth(q-1,'std');
+          }
+        } else { // here the node is not the first in its iset
+          //f = s[k-1].end; // O(log(N))
+          // THIS REMAINS THE SAME!!
+          f = iset.get(k-1).end
+        }
+
+        // next we insert the three new elements into the list
+        const node1 = f.listNode.insertAfter(m.start);
+        m.start.listNode=node1
+        const node2 = node1.insertAfter(m.subnodes.first.next.val);
+        m.subnodes.first.next.val.listNode = node2
+        const node3 = node2.insertAfter(m.end); // O(log(N))
+        m.end.listNode = node3
+        // and insert the new node into the hashtable
+        this.nodes[un]=m; // add the new node to the hash table
+        this.size++;
+        this.insertCallback(node2.indexOf("std"),c,un[0]) // ILL HAVE TO CHECK WHAT INDEXOF RETURNS
+        return m;
+
+
+      } else if (s_offset < s_size){
+        // we are inserting in the middle of the subnode and need to split it
+
+          // we first check to see if we are the last subnode of the node
+            // in this case we know we don't own the node, so we
+            // create a new subnode and insert into it's InsertionSet
+
+          // or if we are not at the last subnode of the node
+            // in which case we go to the next node and insert
+            // actually this is the same as the last part of the previous step ..
+      } else { // s_offset==s_size
+        // we are adding to the end of the node, which we don't own
+        // (it would be treeextend otherwise), so we need to
+        // create a new node and insert it after this node, and insert in its iset
       }
 
-      // next we insert the three new elements into the list
-      const node1 = f.listNode.insertAfter(m.start);
-      m.start.listNode=node1
-      const node2 = node1.insertAfter(m.subnodes.first.next.val);
-      m.subnodes.first.next.val.listNode = node2
-      const node3 = node2.insertAfter(m.end); // O(log(N))
-      m.end.listNode = node3
-      // and insert the new node into the hashtable
-      this.nodes[un]=m;
-      this.size++;
-      this.insertCallback(node2.indexOf("std"),c,un[0]) // ILL HAVE TO CHECK WHAT INDEXOF RETURNS
-      return m;
+
   }
 
 
@@ -218,9 +238,7 @@ class msetDLL2{
    */
   treeextend(nodeid,c){
       console.log("inside treeextend: "+JSON.stringify([nodeid,c]))
-      var n = this.nodes[nodeid];  // O(log(N))
-      //var e = Element.createChar(c,n);  // O(1)
-      //var e = new Element(n.elts.length,c.length,true,false,n,true)
+      var n = this.nodes[nodeid];
       console.dir(n)
       console.dir(c)
       n.elts = n.elts.concat(c)

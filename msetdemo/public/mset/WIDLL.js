@@ -516,8 +516,8 @@ class TreeList {
   }
   rebalance(){
     // I need to add height fields and use AVL ..
-    console.log('entering rebalance')
-    console.dir(this)
+    //console.log('entering rebalance')
+    //console.dir(this)
     const nullSize = {}
     for(let x in this.value.size){
       nullSize[x]=0
@@ -527,15 +527,15 @@ class TreeList {
     const rightSize = (this.right?this.right.size:nullSize)
     const leftHeight = (this.left?this.left.height:0)
     const rightHeight = (this.right?this.right.height:0)
-    console.dir(this.value)
+    //console.dir(this.value)
     const eltSize = this.value.size;
 
     this.size=nullSize
     for (let x in this.size){
       this.size[x] = leftSize[x]+rightSize[x]+eltSize[x]
     }
-    console.log('updating the size')
-    console.dir([this,leftSize,rightSize,eltSize,nullSize])
+    //console.log('updating the size')
+    //console.dir([this,leftSize,rightSize,eltSize,nullSize])
     //this.size = leftSize+rightSize+1
     this.height = Math.max(leftHeight, rightHeight)+1
 
