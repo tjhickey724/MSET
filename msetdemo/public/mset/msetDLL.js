@@ -80,7 +80,7 @@ class msetDLL{
   }
 
   nth(n,feature){
-    return this.strings.nth(n,'std').val.sym
+    return this.strings.nth(n,'std').data.userData
   }
 
   toList(feature){
@@ -223,10 +223,10 @@ class msetDLL{
       var e = n.elt[q]
       var offset = e.listNode.indexOf("std")
       e.vis=false
-      e.sym = e.sym
+      e.userData = e.userData
       e.listNode.size.std = 0  // it is not longer visible
       e.listNode.tln.rebalance()
-      this.deleteCallback(offset,e.sym,u) // u is the one who deleted e.sym
+      this.deleteCallback(offset,e.userData,u) // u is the one who deleted e.userData
       return n;
   }
 
@@ -265,8 +265,8 @@ class msetDLL{
 
   delete(k) {
       var listNode = this.strings.nth(k,"std")
-      var e = listNode.val
-      //var e = this.strings.nth(k,"std").val;  // O(log(N))
+      var e = listNode.data
+      //var e = this.strings.nth(k,"std").data;  // O(log(N))
 
       e.vis=false;
       listNode.size.std = 0  // it is not longer visible
@@ -290,7 +290,7 @@ class msetDLL{
 
         //  strategy - insert before the first non-marker character
         un = [this.user,this.count++];
-        var e = this.strings.nth(0,"rev").val; //O(log(N))
+        var e = this.strings.nth(0,"rev").data; //O(log(N))
         this.network.insert(e.nodeid,0,un,c);
         this.treeinsert(e.nodeid,0,un,c);
 
@@ -300,31 +300,31 @@ class msetDLL{
           var ecell=this.strings.nth(k-1,"std"); //O(log(N))
           // and get the element after the ecell
           var fcell=ecell.next;
-          if (!fcell.val.marker) {
+          if (!fcell.data.marker) {
 
               // CASE 2: inserting between two non-marker elements
 
               // if the next elt is a non-marker insert there
               var un = [this.user,this.count++];
 
-              this.network.insert(fcell.val.nodeid, fcell.val.offset,un,c);
-              this.treeinsert(fcell.val.nodeid,fcell.val.offset,un,c);
+              this.network.insert(fcell.data.nodeid, fcell.data.offset,un,c);
+              this.treeinsert(fcell.data.nodeid,fcell.data.offset,un,c);
 
-          } else if (fcell.val.marker && (fcell.val == fcell.val.treeNode.end)) {
+          } else if (fcell.data.marker && (fcell.data == fcell.data.treeNode.end)) {
 
               // CASE 3: the next element is an end marker
 
-              if (fcell.val.treeNode.user==this.user) {
+              if (fcell.data.treeNode.user==this.user) {
                   // case 3a: it the user owns the node then extend
-                  this.network.extend(fcell.val.nodeid, c);
-                  this.treeextend(fcell.val.nodeid,c);
+                  this.network.extend(fcell.data.nodeid, c);
+                  this.treeextend(fcell.data.nodeid,c);
               }
               else {
                 un = [this.user, this.count++];
                 // case 3b: otherwise insert a new node here
 
-                this.network.insert(fcell.val.nodeid, fcell.val.treeNode.elt.length, un, c);
-                this.treeinsert(fcell.val.nodeid,fcell.val.treeNode.elt.length,un,c);
+                this.network.insert(fcell.data.nodeid, fcell.data.treeNode.elt.length, un, c);
+                this.treeinsert(fcell.data.nodeid,fcell.data.treeNode.elt.length,un,c);
               }
           } else {
 
@@ -334,8 +334,8 @@ class msetDLL{
                 un = [this.user,this.count++];
                 fcell = this.nextNonMarker(fcell); // O(log(N))
 
-                this.network.insert(fcell.val.nodeid,0,un,c);
-                this.treeinsert(fcell.val.nodeid,0,un,c);
+                this.network.insert(fcell.data.nodeid,0,un,c);
+                this.treeinsert(fcell.data.nodeid,0,un,c);
           }
       }
   }
@@ -347,13 +347,13 @@ class msetDLL{
 /* ***********************************************************************
  * Here is an implementation of Elements for the MSET data type
  * The elements are the core objects that wrap the values stored in our DLL
- * Eventually, we will allow this.sym to be a list of "values" sharing the same visibility
+ * Eventually, we will allow this.userData to be a list of "values" sharing the same visibility
  */
 
 class Element{
 
  constructor (sym,vis,marker) {
-    this.sym = sym; // this is the value of the element which can be any Javascript object
+    this.userData = sym; // this is the value of the element which can be any Javascript object
     this.vis=vis;  // boolean -- true if it is visible, false if hidden
     this.marker=marker; // boolean -- true if it is a marker symbol, false otherwise
     this.treeNode=null; // link to the treeNode containing this element
@@ -364,15 +364,15 @@ class Element{
 
   toString(){
     if (this.vis || this.marker) {
-      return this.sym
+      return this.userData
     } {
-      return "["+this.sym+"]"
+      return "["+this.userData+"]"
     }
 
   }
 
   toStringLong() {
-    return "{"+this.sym+","+this.vis+","+this.marker+","+this.nodeid+","+this.offset+"}";
+    return "{"+this.userData+","+this.vis+","+this.marker+","+this.nodeid+","+this.offset+"}";
   }
 
   eltSize(){

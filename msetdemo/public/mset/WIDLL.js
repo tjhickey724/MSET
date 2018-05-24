@@ -69,16 +69,20 @@ class wiDLL {
     return this.tln.size[feature] // don't count the start and end markers
   }
 
-  insert(elt,pos){
-    const size = this.size()
+  insert(pos,elt){
+    console.dir(this)
+    const size = this.tln.size.count
     if (pos == size) {
       return this.last.insertBefore(elt, this)
     } else if (pos>size || pos<0){
       throw new Error("trying to insert at pos "+pos+" in a list of size "+s)
     } else {
+      console.log('insert')
+      console.dir([elt,pos,size,this])
+      console.log(this.tln.toStringIndent(5))
       const listNode = TreeList.nth(pos,this.tln,'count')
 
-      if (this.comparator && this.comparator(listNode.val,elt)>0) {
+      if (this.comparator && this.comparator(listNode.data,elt)>0) {
         throw new Error("Attempt to insert violates the order of the list")
       }
       const z = listNode.insertBefore(elt,this);
@@ -92,7 +96,7 @@ class wiDLL {
       throw new Error("trying to delete element at pos "+pos+" in a list of size "+s)
     }
     const listNode = this.tln.nth(pos,'count')
-    console.log('just found the listnode to delete '+listNode.val)
+    console.log('just found the listnode to delete '+listNode.data)
     console.dir(listNode)
     const z = listNode.delete(this);
     return z
@@ -105,8 +109,9 @@ class wiDLL {
       separator = separator || ""
 
       for(let d = this.first.next; d != this.last; d=d.next) {
-        if (this.sizefn(d.val)[feature]>0) {
-          s += d.val.sym.toString() + ((d.next===this.last)?"":separator)
+        if (this.sizefn(d.data)[feature]>0) {
+        //  s += d.data.userData.toString() + ((d.next===this.last)?"":separator)
+         s += d.data.toString() + ((d.next===this.last)?"":separator)
         }
       }
       return s
@@ -116,8 +121,9 @@ class wiDLL {
     feature = feature || "count"
     let s=[]
     for(let d = this.first.next; d != this.last; d=d.next) {
-      if (this.sizefn(d.val)[feature]>0) {
-        s.push(d.val.sym)
+      if (this.sizefn(d.data)[feature]>0) {
+      //  s.push(d.data.userData)
+       s.push(d.data)
       }
     }
     return s
@@ -140,7 +146,7 @@ class ListNode{
   constructor(v,dll){
     this.prev = null
     this.next =null
-    this.val = v
+    this.data = v
     this.dll=dll
     this.tln=null // this will get instantiated when the node is inserted in the list
     //console.dir(v)
@@ -154,11 +160,11 @@ class ListNode{
 
 
   toString(){
-    return "ListNode("+this.val.toString() +")"
+    return "ListNode("+this.data.toString() +")"
   }
 
   toStringIndent(k){
-    return " ".repeat(k)+ this.val.toString()
+    return " ".repeat(k)+ this.data.toString()
   }
 
   indexOf(feature){
@@ -179,7 +185,7 @@ class ListNode{
         if (tln.parent.left) {
           index += tln.parent.left.size[feature]
         }
-        index += tln.parent.value.size[feature]
+        index += tln.parent.listNode.size[feature]
       } else {
       }
       tln = tln.parent
@@ -189,7 +195,7 @@ class ListNode{
 
 
   insertBefore(a){
-      if (this.val===startmarker){
+      if (this.data===startmarker){
         throw new Error("you can't insert before the startmarker")
       }
       var x = new ListNode(a,this.dll);
@@ -203,24 +209,27 @@ class ListNode{
     }
 
   insertAfter(a){
-    if (this.val===endmarker){
+    if (window.debugging){console.log("in Insert After")}
+    if (this.data===endmarker){
       throw new Error("you can't insert after the endmarker")
     }
     var x = new ListNode(a,this.dll);
 
     var tmp = this.next;
+    if (window.debugging) console.dir(['insertAfter-1',x,tmp])
     this.next=x;
     x.prev = this;
     x.next = tmp;
     x.next.prev = x;
     this.dll.tln = TreeList.insert(x) // the top node could change
+    if (window.debugging) console.dir(['insertAfter-2',x,tmp])
     return x;
   }
 
   delete(){
-    if (this.val===startmarker){
+    if (this.data===startmarker){
       throw new Error("you can't delete the startmarker")
-    } else if (this.val ===endmarker){
+    } else if (this.data ===endmarker){
       throw new Error("you can't delete the endmarker")
     } else {
       const p = this.prev // could be startmarker
@@ -228,7 +237,7 @@ class ListNode{
       p.next=n
       n.prev=p
       this.dll.tln = TreeList.delete(this)
-      return this.val
+      return this.data
     }
   }
 
@@ -250,12 +259,12 @@ class TreeList {
   // which is the sum of the sizes of all DLL nodes in the tree.
 
 
-  constructor(left,right,parent,size,value){
+  constructor(left,right,parent,size,listNode){
     this.left=left
     this.right=right
     this.size=size  //this is a tuple {count:1,p1:n1,...,pk:nk}
     this.parent=parent
-    this.value = value
+    this.listNode = listNode
     this.height = 1
 
   }
@@ -270,7 +279,7 @@ class TreeList {
 
       return  rightTree+
                 ("\n"+" ".repeat(k)+
-                  (this.value.val.toString()+
+                  (this.listNode.data.toString()+
                    "[s="+JSON.stringify(this.size)+
                    ", h="+this.height
                    )+
@@ -288,16 +297,16 @@ class TreeList {
     // find the element at position n in the DLL spanned by tln
     //console.log('in TreeList.nth '+n+' '+feature)
     //console.dir(this)
-    const eltSize = this.value.size[feature]
+    const eltSize = this.listNode.size[feature]
     //console.log('eltSize= '+eltSize)
     if(n==0){
       //console.log('n=0 case')
       if (this.left && (this.left.size[feature]>0)){
         return this.left.nth(0,feature)
-      } else if (this.value.size[feature]==0) {
+      } else if (this.listNode.size[feature]==0) {
         return this.right.nth(0,feature)
       } else {
-        return this.value
+        return this.listNode
       }
     } else if ((!(this.left) || (this.left.size[feature]==0)) && (n>=eltSize)){ // nothing on the left
         //console.log('nothing on left, n>0')
@@ -307,7 +316,7 @@ class TreeList {
         return this.left.nth(n,feature)
     } else if ((n<(this.left.size[feature]+eltSize))){
         //console.log('found it')
-        return this.value
+        return this.listNode
     } else {
         //console.log('moving to the right')
         //console.log(JSON.stringify([n,this.left.size[feature],eltSize]))
@@ -317,7 +326,7 @@ class TreeList {
 
   static insert(newNode){
     // insert the DLL node into the tree, assuming left/right neighbors are in tree
-    const size = newNode.val.size
+    const size = newNode.data.size
     if (newNode.prev.tln.right){
       // insert before the next element
       newNode.tln = new TreeList(null,null,newNode.next.tln,size,newNode)
@@ -335,7 +344,7 @@ class TreeList {
 
   static delete(oldNode){
     let oldT = oldNode.tln;
-    //console.log('in DELETE '+oldNode.val)
+    //console.log('in DELETE '+oldNode.data)
     //console.dir(oldNode)
     if ((oldT.left==null) && (oldT.right==null)) {
       // if p is a leaf, just remove it and rebalance the parent
@@ -349,16 +358,16 @@ class TreeList {
       q.rebalance()
       return q.avlRebalance()
     } else { // move either the previous or next
-      //console.log("replacing node.val with prev value")
+      //console.log("replacing node.data with prev value")
 
         let prevT = oldNode.prev.tln
         if (prevT.parent!=null) {
           //console.log("moving prev up")
-          oldT.value = prevT.value  // copy prev value to root
-          oldT.value.tln = oldT // reset the tln link
+          oldT.listNode = prevT.listNode  // copy prev value to root
+          oldT.listNode.tln = oldT // reset the tln link
           if (prevT.left!=null) { // if prev has a child
-            prevT.value = prevT.left.value // move it up
-            prevT.value.tln = prevT // reset the tln link
+            prevT.listNode = prevT.left.listNode // move it up
+            prevT.listNode.tln = prevT // reset the tln link
             prevT.left = null // remove the left child
             prevT.rebalance()
             return prevT.avlRebalance() // and rebalance
@@ -376,11 +385,11 @@ class TreeList {
           //console.log("prev is root, so moving next up");
           //console.dir(oldNode);
           let nextT = oldNode.next.tln;
-          oldT.value = nextT.value  // copy next value to root
-          oldT.value.ltn = oldT
+          oldT.listNode = nextT.listNode  // copy next value to root
+          oldT.listNode.ltn = oldT
           if (nextT.right!=null) { // if next has a child
-            nextT.value = nextT.right.value // move it up
-            nextT.value.ltn = nextT //reset its ltn link
+            nextT.listNode = nextT.right.listNode // move it up
+            nextT.listNode.ltn = nextT //reset its ltn link
             nextT.right = null // remove the right child
             nextT.rebalance()
             return nextT.avlRebalance() // and rebalance
@@ -402,23 +411,23 @@ class TreeList {
 
   binaryInsert(elt,comparator){
     /* This inserts a node into the DLL by finding its position in the list
-       It assumes that the list is ordered by the node.val fields wrt the
+       It assumes that the list is ordered by the node.data fields wrt the
        comparator function. It returns the new node it creates.
        This only works if the tree has been created entirely using binaryInsert
     */
-    if ((this.value.val===startmarker)
+    if ((this.listNode.data===startmarker)
          ||
-         (comparator(elt,this.value.val)>=0))   {
+         (comparator(elt,this.listNode.data)>=0))   {
        if (this.right) {
          return this.right.binaryInsert(elt,comparator)
        } else {
-         return this.value.insertAfter(elt)
+         return this.listNode.insertAfter(elt)
        }
     } else {
         if (this.left){
           return this.left.binaryInsert(elt,comparator)
         } else {
-          return this.value.insertBefore(elt)
+          return this.listNode.insertBefore(elt)
         }
     }
 
@@ -426,28 +435,28 @@ class TreeList {
 
   binarySearch(elt,comparator){
     /* This inserts a node into the DLL by finding its position in the list
-       It assumes that the list is ordered by the node.val fields wrt the
+       It assumes that the list is ordered by the node.data fields wrt the
        comparator function. It returns the new node it creates.
     */
-    if ((this.value.val===startmarker)
+    if ((this.listNode.data===startmarker)
          ||
-         (comparator(elt,this.value.val)>0))   {
+         (comparator(elt,this.listNode.data)>0))   {
        if (this.right) {
          return this.right.binarySearch(elt,comparator)
        } else {
          return false
        }
     } else if
-         ((this.value.val===endmarker)
+         ((this.listNode.data===endmarker)
          ||
-         (comparator(elt,this.value.val)<0)){
+         (comparator(elt,this.listNode.data)<0)){
         if (this.left){
           return this.left.binarySearch(elt,comparator)
         } else {
           return false
         }
     } else { //they are equal
-      return this.value
+      return this.listNode
     }
 
   }
@@ -519,7 +528,7 @@ class TreeList {
     //console.log('entering rebalance')
     //console.dir(this)
     const nullSize = {}
-    for(let x in this.value.size){
+    for(let x in this.listNode.size){
       nullSize[x]=0
     }
 
@@ -527,8 +536,8 @@ class TreeList {
     const rightSize = (this.right?this.right.size:nullSize)
     const leftHeight = (this.left?this.left.height:0)
     const rightHeight = (this.right?this.right.height:0)
-    //console.dir(this.value)
-    const eltSize = this.value.size;
+    //console.dir(this.listNode)
+    const eltSize = this.listNode.size;
 
     this.size=nullSize
     for (let x in this.size){
