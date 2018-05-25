@@ -1,4 +1,4 @@
-import msetDLL from './msetDLL2.js'
+import DLLmset from './DLLmset2.js'
 export {MSET as default}
 
 
@@ -25,7 +25,7 @@ class MSET {
     this.socket.on('msetId', function(msg){
       // here we listen to the server to get our msetId
       thisMSET.msetId=parseInt(msg.msetId);
-      thisMSET.msetTree = new msetDLL(thisMSET.msetId,new Network(thisMSET));
+      thisMSET.msetTree = new DLLmset(thisMSET.msetId,new Network(thisMSET));
       thisMSET.callback('init')
       thisMSET.msetTree.insertCallback =
           function(pos,elt,user){

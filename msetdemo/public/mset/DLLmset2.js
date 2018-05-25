@@ -1,6 +1,6 @@
-export {msetDLL}
-import {wiDLL} from "./wiDLL.js"
-import {wiBST} from "./wiBST.js"
+export {DLLmset}
+import {DLLwi} from "./DLLwi.js"
+import {BSTwi} from "./BSTwi.js"
 
 /* ***********************************************************************
  * CORE MSET Demo Implementation in JavaScript
@@ -22,7 +22,7 @@ import {wiBST} from "./wiBST.js"
  * which allows any number of people to insert and remove JSON elements
  * from a shared list.
  *
- * The msetDLL class has four main methods
+ * The DLLmset class has four main methods
  *  insert(pos,element)
  *  delete(pos)
  *  nth(pos)  -- return the nth element in the
@@ -38,7 +38,7 @@ import {wiBST} from "./wiBST.js"
  */
 
 
-class msetDLL{
+class DLLmset{
   constructor(u,network,elements){
     elements = elements || []
     this.user = u;
@@ -46,7 +46,7 @@ class msetDLL{
     this.size=0;
     this.root = new Node(0,0,elements);
 
-    this.strings = new wiDLL(Element.sizefn);
+    this.strings = new DLLwi(Element.sizefn);
     this.nodes = {};
     this.nodes[[0,0]] = this.root;
     this.opqueue = [];  // dequeue of ops that haven't been applied
@@ -80,7 +80,7 @@ class msetDLL{
 
   copy(){
     const elts = this.toList()
-    const newMSET = new msetDLL()
+    const newMSET = new DLLmset()
     newMSET.insertAll(i,elts) // have to write insertALL
     return newMSET
   }
@@ -211,7 +211,7 @@ class msetDLL{
       // in this conditional, we create the node m = (un,c)
       // and find insert it into the appropriate iset
       // after the conditional we see the node m in where we sew it in after
-      let m = msetDLL.createCharNode(un,c);  // O(1)
+      let m = DLLmset.createCharNode(un,c);  // O(1)
       //console.log("***** m=")
       //console.dir(m)
       let f=null
@@ -632,7 +632,7 @@ class Node{
     this.user=u;
     this.count=n;
     this.elts= elements || [];
-    this.subnodes = new wiDLL(Element.sizefn)
+    this.subnodes = new DLLwi(Element.sizefn)
 
     /*
     this.start = Element.createStart(this)
@@ -671,7 +671,7 @@ class InsertionSet{
   // the first step is to move all iset related code into this class
 
   constructor(){
-    this.bst = new wiBST((x,y)=>(x.user-y.user))
+    this.bst = new BSTwi((x,y)=>(x.user-y.user))
   }
 
   /* insertNode(m,s) inserts the node m into an ordered set s of nodes
@@ -689,7 +689,7 @@ class InsertionSet{
 }
 
 // these allow me access to the class from the Javascript console
-window.msetDLL = msetDLL
+window.DLLmset = DLLmset
 window.Element = Element
 window.Node = Node
 window.InsertionSet = InsertionSet

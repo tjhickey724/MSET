@@ -1,6 +1,6 @@
-export {msetDLL as default}
-import {wiDLL} from "./wiDLL.js"
-import {wiBST} from "./wiBST.js"
+export {DLLmset as default}
+import {DLLwi} from "./DLLwi.js"
+import {BSTwi} from "./BSTwi.js"
 
 /* ***********************************************************************
  * CORE MSET Demo Implementation in JavaScript
@@ -16,7 +16,7 @@ import {wiBST} from "./wiBST.js"
  * which allows any number of people to insert and remove JSON elements
  * from a shared list.
  *
- * The msetDLL has two main methods
+ * The DLLmset has two main methods
  *  insert(pos,element)
  *  delete(pos)
  *  which can be called by the client
@@ -28,13 +28,13 @@ import {wiBST} from "./wiBST.js"
  */
 
 
-class msetDLL{
+class DLLmset{
   constructor(u,network){
     this.user = u;
     this.count = 0;
     this.size=0;
     this.root = new Node(0,0);
-    this.strings = new wiDLL(Element.sizefn);
+    this.strings = new DLLwi(Element.sizefn);
     this.nodes = {};
     this.nodes[[0,0]] = this.root;
     this.opqueue = [];  // dequeue of ops that haven't been applied
@@ -66,7 +66,7 @@ class msetDLL{
 
   copy(){
     const elts = this.toList()
-    const newMSET = new msetDLL()
+    const newMSET = new DLLmset()
     for(let i in elts){
       newMSET.insert(i,elts[i])
     }
@@ -155,10 +155,10 @@ class msetDLL{
 
       var n = this.nodes[vm]; // O(log(N))
       var s = n.iset[q];
-      var m = msetDLL.createCharNode(un,c);  // O(1)
+      var m = DLLmset.createCharNode(un,c);  // O(1)
       var e = m.elt[0];
       var f = n.start;
-      //var k = msetDLL.insertNode(m,s);  // O(log(N))
+      //var k = DLLmset.insertNode(m,s);  // O(log(N))
       var k = s.insertNode(m);
 
       // now we sew m into the doubly linked lists!!!
@@ -446,7 +446,7 @@ class InsertionSet{
   // the first step is to move all iset related code into this class
 
   constructor(){
-    this.bst = new wiBST((x,y)=>(x.user-y.user))
+    this.bst = new BSTwi((x,y)=>(x.user-y.user))
   }
 
   /* insertNode(m,s) inserts the node m into an ordered set s of nodes
@@ -464,7 +464,7 @@ class InsertionSet{
 }
 
 // these allow me access to the class from the Javascript console
-window.msetDLL = msetDLL
+window.DLLmset = DLLmset
 window.Element = Element
 window.Node = Node
 window.InsertionSet = InsertionSet

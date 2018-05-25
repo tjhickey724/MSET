@@ -1,28 +1,49 @@
-export {wiDLL}
+export {DLLwi}
 /********************************************************
- * Here is an AVL implementation of weighted treelist nodes
- */
+  Here is an AVL implementation of weighted treelist nodes
+
+  SImplest case is to use it as a Doubly Linked List Implementation
+  in which you can also find the node an a given index and look up
+  the index of a node, both in log(N) time
+
+  const dll = new DLLwi()
+  dll.insert(0,5)
+  dll.insert(1,'pi')
+  dll.insert(2,[2,3,4])
+  dll.insert(0,'start')
+  dll.insert(dll.size(),'end')
+  dll.insert(4,{a:1,b:2})
+  console.log(dll.toList())
+  //which returns  ["start", 5, "pi", [2,3,4], {a:1,b:2}, "end"]
+  dll.delete(1)
+  dll.delete(4)
+  dll.delete(0)
+  console.log(dll.toList())
+  // which return ["pi", [2,3,4], {a:1,b:2}]
+  const n1 = dll.nth(1)
+  n1.data.push(5)
+  const n2 = n1.next
+  n1.data.c=3
+  console.log(dll.toList())
 
 
-/********************************************************
- *
- * sizefn(elt) returns a json object which specifies the sizes of the element
- *    with respect to various user-defined features. It must return an object
- *    of the form:
- *       {count:n0, p1:n2, ...., p2:n2}
- *    where the ni are positive numbers. The property count is mandatory,
- *    but the other pi are optional. Also, the sizefn should give a value to the
- *    null object (and any falsey value) which is 0 for all features. The
- *    default sizefn is
- *       (x)=>(x?{count:1}:{count:0})
- *
+  sizefn(elt) returns a json object which specifies the sizes of the element
+     with respect to various user-defined features. It must return an object
+     of the form:
+        {count:n0, p1:n2, ...., p2:n2}
+    where the ni are positive numbers. The property count is mandatory,
+     but the other pi are optional. Also, the sizefn should give a value to the
+     null object (and any falsey value) which is 0 for all features. The
+     default sizefn is
+        (x)=>(x?{count:1}:{count:0})
+
   */
 
 const startmarker="startmarker"
 const endmarker="endmarker"
 
 
-class wiDLL {
+class DLLwi {
   constructor(sizefn){
     // initialize the sizefn
     this.sizefn = (sizefn || ((x)=>({count:1})))
@@ -58,7 +79,7 @@ class wiDLL {
       insertBefore, insertAfter will only be allowed if they preserve the order
       and insert will use an O(log(N)) balanced binary insertion tree
       If there is no comparator then the insert function will always add at the
-      end of the list.  Actually, this should be an subclass of WIDLL ...
+      end of the list.  Actually, this should be an subclass of DLLwi ...
     */
     this.comparator = false
 
@@ -70,16 +91,19 @@ class wiDLL {
   }
 
   insert(pos,elt){
-    console.dir(this)
+    if (elt==undefined){
+      throw new Error("DLLwi insert must be called with 2 parameters: pos and elt")
+    }
+    //console.dir(this)
     const size = this.tln.size.count
     if (pos == size) {
       return this.last.insertBefore(elt, this)
     } else if (pos>size || pos<0){
       throw new Error("trying to insert at pos "+pos+" in a list of size "+s)
     } else {
-      console.log('insert')
-      console.dir([elt,pos,size,this])
-      console.log(this.tln.toStringIndent(5))
+      //console.log('insert')
+      //console.dir([elt,pos,size,this])
+      //console.log(this.tln.toStringIndent(5))
       const listNode = TreeList.nth(pos,this.tln,'count')
 
       if (this.comparator && this.comparator(listNode.data,elt)>0) {
@@ -91,13 +115,16 @@ class wiDLL {
   }
 
   delete(pos){
+    if (pos==undefined){
+      throw new Error("DLLwi delete must be called with one element, pos, the position to delete")
+    }
     const size = this.size()
     if (pos < 0 || pos>=size){
       throw new Error("trying to delete element at pos "+pos+" in a list of size "+s)
     }
     const listNode = this.tln.nth(pos,'count')
-    console.log('just found the listnode to delete '+listNode.data)
-    console.dir(listNode)
+    //console.log('just found the listnode to delete '+listNode.data)
+    //console.dir(listNode)
     const z = listNode.delete(this);
     return z
   }
@@ -161,10 +188,6 @@ class ListNode{
 
   toString(){
     return "ListNode("+this.data.toString() +")"
-  }
-
-  toStringIndent(k){
-    return " ".repeat(k)+ this.data.toString()
   }
 
   indexOf(feature){
@@ -368,69 +391,44 @@ class TreeList {
 
   static delete(oldNode){
     let oldT = oldNode.tln;
+    window.debugging.oldT = oldT
     //console.log('in DELETE '+oldNode.data)
     //console.dir(oldNode)
+    //console.log(oldT.toStringIndent(5))
     if ((oldT.left==null) && (oldT.right==null)) {
       // if p is a leaf, just remove it and rebalance the parent
-      //console.log("just removing the node and rebalancing parent")
+      //console.log("delete case 1: just remove the node and rebalance parent")
       const q = oldT.parent
       if (q.left==oldT) { //remove oldT from tree
         q.left=null
       } else {
         q.right = null
       }
+      //console.log("parent of deleted node: \n"+q.toStringIndent(5))
       q.rebalance()
-      return q.avlRebalance()
-    } else { // move either the previous or next
-      //console.log("replacing node.data with prev value")
+      return q.parent.avlRebalance()
+    } else if ((oldT.left==null)||(oldT.right==null)){
+      // if it has only one child, move the child up
+      //console.log("delete case 2: replacing node.data with prev value")
+      let child = oldT.left?oldT.left:oldT.right
+      //console.log("moving child up")
+      oldT.listNode = child.listNode  // copy child value to root
+      oldT.listNode.tln = oldT // reset the tln link
 
-        let prevT = oldNode.prev.tln
-        if (prevT.parent!=null) {
-          //console.log("moving prev up")
-          oldT.listNode = prevT.listNode  // copy prev value to root
-          oldT.listNode.tln = oldT // reset the tln link
-          if (prevT.left!=null) { // if prev has a child
-            prevT.listNode = prevT.left.listNode // move it up
-            prevT.listNode.tln = prevT // reset the tln link
-            prevT.left = null // remove the left child
-            prevT.rebalance()
-            return prevT.avlRebalance() // and rebalance
-          } else {
-            let q = prevT.parent
-            if (q.left==prevT) {
-              q.left=null
-            } else {
-              q.right=null
-            }
-            q.rebalance()
-            return q.avlRebalance()
-          }
-        } else {
-          //console.log("prev is root, so moving next up");
-          //console.dir(oldNode);
-          let nextT = oldNode.next.tln;
-          oldT.listNode = nextT.listNode  // copy next value to root
-          oldT.listNode.ltn = oldT
-          if (nextT.right!=null) { // if next has a child
-            nextT.listNode = nextT.right.listNode // move it up
-            nextT.listNode.ltn = nextT //reset its ltn link
-            nextT.right = null // remove the right child
-            nextT.rebalance()
-            return nextT.avlRebalance() // and rebalance
-          } else {
-            let q = nextT.parent
-            if (q.left==nextT) { // remove nextT from the tree
-              q.left=null
-            } else {
-              q.right=null
-            }
-            q.rebalance()
-            return q.avlRebalance()
-          }
+      oldT.rebalance()
+      return oldT.avlRebalance()
+    } else {
+      // it has two children, so move the successor up and delete the successor
 
-        }
-      }
-
+      let next = oldT.listNode.next
+      let nextT = next.tln
+      //console.log("delete case 3 replacing listNode with "+nextT.listNode.data)
+      const tmp = oldT.listNode
+      oldT.listNode = nextT.listNode  // copy child value to root
+      const result = TreeList.delete(nextT.listNode)
+      oldT.listNode.tln = oldT
+      return result
+    }
   }
 
   binaryInsert(elt,comparator){
@@ -489,12 +487,12 @@ class TreeList {
   avlRebalance(){
     // rebalance the tree above this, assuming this is balanced
     //console.log("\n\n\n\n*******\nin avlRebalance: ")
-    //console.log(this.toStringIndent(5))
+    //console.log("BEFORE: "+this.toStringIndent(5))
     //console.log(" in ")
     let rebalancedTree = null
     //if (this.parent) console.log(this.parent.toStringIndent(5))
     const p = this.parent
-    if (!p) return this
+    //if (!p) return this
     // first we check to see if this is unbalanced, and if so we call avlRebalance
     // on one of its children...
     if (this.unbalanced()){
@@ -506,27 +504,36 @@ class TreeList {
         //console.log('BALANCING ON RIGHT')
         rebalancedTree =  this.right.avlRebalance()
       }
-    } else if (!p.unbalanced()) {
+    } else if (!p ) {
+      //console.log("This is the root and it is balanced.. returning")
+      return this
+    }else if (!p.unbalanced() ) {
+      //console.log("This is balanced! moving to parent")
       return this.parent.avlRebalance()
     } else { // rotate to
+      //console.log("this is balance but parent is not")
       if (p.left==this) {
         if (this.leftHeavy()){ //LL
+          //console.log("LL")
           p.rightRotate()
         } else {                //LR
+          //console.log("LR")
           this.leftRotate()
           p.rightRotate()
         }
       } else {
         if (this.rightHeavy()){   //RR
+          //console.log("RR")
           p.leftRotate();
         } else {                  //RL
+          //console.log("RL")
           this.rightRotate();
           p.leftRotate();
         }
       }
       rebalancedTree =  this.avlRebalance()  // as the node moved to its parent position
     }
-    //console.log('REBALANCED TREE:\n'+rebalancedTree.toStringIndent(5))
+    //console.log('PARTLY REBALANCED TREE:\n'+rebalancedTree.toStringIndent(5))
     return rebalancedTree
   }
 
@@ -628,6 +635,6 @@ class TreeList {
 
 }
 
-window.wiDLL = wiDLL
+window.DLLwi = DLLwi
 window.ListNode = ListNode
 window.TreeList = TreeList
