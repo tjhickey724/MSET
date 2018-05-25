@@ -209,20 +209,21 @@ class ListNode{
     }
 
   insertAfter(a){
-    if (window.debugging){console.log("in Insert After")}
+    //if (window.debugging){console.log("in Insert After")}
     if (this.data===endmarker){
       throw new Error("you can't insert after the endmarker")
     }
     var x = new ListNode(a,this.dll);
 
     var tmp = this.next;
-    if (window.debugging) console.dir(['insertAfter-1',x,tmp])
+    //if (window.debugging) console.dir(['insertAfter-1',x,tmp])
     this.next=x;
     x.prev = this;
     x.next = tmp;
     x.next.prev = x;
     this.dll.tln = TreeList.insert(x) // the top node could change
-    if (window.debugging) console.dir(['insertAfter-2',x,tmp])
+    //if (window.debugging) console.dir(['insertAfter-2',x,tmp])
+    //if (window.debugging) throw new Error("")
     return x;
   }
 
@@ -293,35 +294,58 @@ class TreeList {
   }
 
   nth(n,feature){
+    const d=false
     // find the nth element in the tree using weighted elements
     // find the element at position n in the DLL spanned by tln
     //console.log('in TreeList.nth '+n+' '+feature)
     //console.dir(this)
     const eltSize = this.listNode.size[feature]
+    const leftSize = this.left?this.left.size[feature]:0
+    const rightSize = this.right?this.right.size[feature]:0
     //console.log('eltSize= '+eltSize)
+    //console.log(this.toStringIndent(5))
     if(n==0){
       //console.log('n=0 case')
-      if (this.left && (this.left.size[feature]>0)){
+      if (leftSize>0) {
         return this.left.nth(0,feature)
-      } else if (this.listNode.size[feature]==0) {
+      } else if (eltSize==0) {
         return this.right.nth(0,feature)
       } else {
         return this.listNode
       }
-    } else if ((!(this.left) || (this.left.size[feature]==0)) && (n>=eltSize)){ // nothing on the left
-        //console.log('nothing on left, n>0')
-        return this.right.nth(n-eltSize,feature)
-    } else if (n<this.left.size[feature]){
-        //console.log('moving to left')
+    } else {
+
+      if (n<leftSize){
+        //console.log('going to left')
         return this.left.nth(n,feature)
-    } else if ((n<(this.left.size[feature]+eltSize))){
+      } else if (n-leftSize<eltSize){
         //console.log('found it')
         return this.listNode
+      } else {
+        //console.log("moving to right")
+        return this.right.nth(n-leftSize-eltSize,feature)
+      }
+
+    }
+    /*
+    if (!this.left && (n>=eltSize)){ // nothing on the left
+        console.log('no left branch, go to the right')
+        return this.right.nth(n-eltSize,feature)
+    } else if (this.left && (this.left.size[feature]==0) && (n>=eltSize)) { // nothing on the left
+        console.log('nothing on left, n>0, go to the right')
+        return this.right.nth(n-eltSize,feature)
+    } else if (this.left && (n<this.left.size[feature])){
+        console.log('moving to left')
+        return this.left.nth(n,feature)
+    } else if ((n<(this.left.size[feature]+eltSize))){
+        console.log('found it')
+        return this.listNode
     } else {
-        //console.log('moving to the right')
-        //console.log(JSON.stringify([n,this.left.size[feature],eltSize]))
+        console.log('moving to the right')
+        console.log(JSON.stringify([n,this.left.size[feature],eltSize]))
         return this.right.nth(n-this.left.size[feature]-eltSize,feature)
     }
+    */
   }
 
   static insert(newNode){
@@ -527,6 +551,7 @@ class TreeList {
     // I need to add height fields and use AVL ..
     //console.log('entering rebalance')
     //console.dir(this)
+
     const nullSize = {}
     for(let x in this.listNode.size){
       nullSize[x]=0
