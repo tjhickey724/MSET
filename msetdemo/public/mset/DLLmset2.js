@@ -54,8 +54,8 @@ class DLLmset{
     this.emptyNetwork = {hide:(x)=>null,insert:(x)=>null,extend:(x)=>null}
     this.network = network || this.emptyNetwork
 
-    this.insertCallback = function(k,elt,user){console.log("insert("+k+","+elt+","+user+")")}
-    this.deleteCallback = function(k,elt,user){console.log("delete("+k+","+elt+","+user+")")}
+    this.insertCallback = function(k,elt,user){return; console.log("insert("+k+","+elt+","+user+")")}
+    this.deleteCallback = function(k,elt,user){return; console.log("delete("+k+","+elt+","+user+")")}
 
 
     // the rest of this constructor initializes the
@@ -194,8 +194,8 @@ class DLLmset{
           //console.log("just split s")
           //console.dir(s)
       } else {
-          console.dir([n,q])
-          console.log(n.subnodes.toString(' ','count'))
+          //console.dir([n,q])
+          //console.log(n.subnodes.toString(' ','count'))
           window.debugging.n=n
           s = n.subnodes.nth(q,'edit') // return subnode containing offset q
           //console.log('looking up subnode containing the qth element')

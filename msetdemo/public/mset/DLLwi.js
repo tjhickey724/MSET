@@ -39,21 +39,50 @@ export {DLLwi}
 
   */
 
+
+class Debug{
+  constructor(){
+    this.debugging = {}
+  }
+  log(n,a){
+    if (this.debugging[n]){
+      console.log("in "+n+": \n"+a)
+    }
+  }
+
+  dir(n,a){
+    if (this.debugging[n]){
+      console.log("in "+n)
+      console.dir(a)
+    }
+  }
+}
+
+const debug = new Debug()
+debug.debugging = {any:false}
+
 const startmarker="startmarker"
 const endmarker="endmarker"
+
+
 
 
 class DLLwi {
   constructor(sizefn){
     // initialize the sizefn
     this.sizefn = (sizefn || ((x)=>({count:1})))
+    this.isAVL = true // used to get the AVL version of DLL
+
+
     // make sure it ignores the start and end markers
     this.emptySize = this.sizefn(null)
-    for(let x in this.emptySize){
+    for(let x in this.emptySize){ // everything but count should be zero anyway
       this.emptySize[x]=0
     }
+    this.listSize = this.emptySize // keep track of list size
 
-    // initialize the start and end markers
+
+    // initialize the start and end markers to the emptySize
     this.first = new ListNode(startmarker,this);
     this.first.size= this.emptySize
     this.last = new ListNode(endmarker,this);
@@ -83,49 +112,59 @@ class DLLwi {
     */
     this.comparator = false
 
+    debug.log('any',"In DLLwi constructor, this = ")
+    debug.dir('any',this)
+
   }
 
   size(feature) {
     feature = feature || 'count'
-    return this.tln.size[feature] // don't count the start and end markers
+    return this.listSize[feature]
+    //return this.tln.size[feature] // don't count the start and end markers
   }
 
-  insert(pos,elt){
+  insert(pos,elt,feature){
+    feature = feature || 'count'
+    debug.log('insert','INSERTING: '+JSON.stringify([pos,elt,feature,this.listSize]))
     if (elt==undefined){
       throw new Error("DLLwi insert must be called with 2 parameters: pos and elt")
     }
     //console.dir(this)
-    const size = this.tln.size.count
+    const size = this.listSize[feature]
     if (pos == size) {
+      debug.log("insert","case of pos==size = "+size)
       return this.last.insertBefore(elt, this)
     } else if (pos>size || pos<0){
-      throw new Error("trying to insert at pos "+pos+" in a list of size "+s)
+      throw new Error("trying to insert at pos "+pos+" in a list of size "+size)
     } else {
-      //console.log('insert')
-      //console.dir([elt,pos,size,this])
+      debug.log("insert","finding nth element then inserting: n="+pos+" size= "+size)
+      debug.dir([elt,pos,size,this])
       //console.log(this.tln.toStringIndent(5))
-      const listNode = TreeList.nth(pos,this.tln,'count')
-
-      if (this.comparator && this.comparator(listNode.data,elt)>0) {
-        throw new Error("Attempt to insert violates the order of the list")
-      }
+      const listNode = this.nth(pos,'count') //TreeList.nth(pos,this.tln,'count')
+      debug.log("insert","found the nth element, now inserting before")
       const z = listNode.insertBefore(elt,this);
       return z
     }
   }
 
-  delete(pos){
+  delete(pos,feature){
+    feature = feature || 'count'
     if (pos==undefined){
       throw new Error("DLLwi delete must be called with one element, pos, the position to delete")
     }
-    const size = this.size()
+    const size = this.listSize[feature]
     if (pos < 0 || pos>=size){
-      throw new Error("trying to delete element at pos "+pos+" in a list of size "+s)
+      throw new Error("trying to delete element at pos "+pos+" in a list of size "+size)
     }
-    const listNode = this.tln.nth(pos,'count')
+    let listNode = null
+      listNode = this.nth(pos,feature)
+    this.listSize = ListNode.subtractSizes(this.listSize,listNode.size)
+
+
     //console.log('just found the listnode to delete '+listNode.data)
     //console.dir(listNode)
-    const z = listNode.delete(this);
+    const z = listNode.delete()
+
     return z
   }
 
@@ -149,7 +188,6 @@ class DLLwi {
     let s=[]
     for(let d = this.first.next; d != this.last; d=d.next) {
       if (this.sizefn(d.data)[feature]>0) {
-      //  s.push(d.data.userData)
        s.push(d.data)
       }
     }
@@ -157,8 +195,22 @@ class DLLwi {
   }
 
   nth(n,feature){
+    if (!this.isAVL) {
+      return this.nthSlow(n, feature)
+    }
     feature = feature || 'count'
     return TreeList.nth(n,this.tln,feature)
+  }
+
+  nthSlow(n,feature){
+    feature = feature || 'count'
+    let pos = this.first
+    let i=0
+    while ((i<=n) && (pos!=this.last)){
+      pos = pos.next
+      i += this.sizefn(pos.data)[feature]
+    }
+    return pos
   }
 
 }
@@ -173,7 +225,7 @@ class ListNode{
   constructor(v,dll){
     this.prev = null
     this.next =null
-    this.data = v
+    this.hiddenData = v // we access this with getters and setters ..
     this.dll=dll
     this.tln=null // this will get instantiated when the node is inserted in the list
     //console.dir(v)
@@ -183,6 +235,20 @@ class ListNode{
     } else {
       this.size = dll.emptySize
     }
+
+  }
+
+  get data(){
+    return this.hiddenData
+  }
+
+  set data(val){
+    this.hiddenData =val
+    this.size = dll.sizefn(val)
+    if (this.dll.avl){
+      this.tln.rebalance()
+    }
+
   }
 
 
@@ -222,31 +288,35 @@ class ListNode{
         throw new Error("you can't insert before the startmarker")
       }
       var x = new ListNode(a,this.dll);
+
       var tmp = this.prev;
       this.prev=x;
       x.next = this;
       x.prev = tmp;
       x.prev.next = x;
-      this.dll.tln = TreeList.insert(x)
+      if (this.dll.isAVL){
+        this.dll.tln = TreeList.insert(x)
+      }
+      this.dll.listSize = ListNode.addSizes(this.dll.listSize,this.dll.sizefn(a))
       return x;
     }
 
+
   insertAfter(a){
-    //if (window.debugging){console.log("in Insert After")}
     if (this.data===endmarker){
       throw new Error("you can't insert after the endmarker")
     }
     var x = new ListNode(a,this.dll);
 
     var tmp = this.next;
-    //if (window.debugging) console.dir(['insertAfter-1',x,tmp])
     this.next=x;
     x.prev = this;
     x.next = tmp;
     x.next.prev = x;
-    this.dll.tln = TreeList.insert(x) // the top node could change
-    //if (window.debugging) console.dir(['insertAfter-2',x,tmp])
-    //if (window.debugging) throw new Error("")
+    if (this.dll.isAVL){
+      this.dll.tln = TreeList.insert(x)
+    }
+    this.dll.listSize = ListNode.addSizes(this.dll.listSize,this.dll.sizefn(a))
     return x;
   }
 
@@ -260,9 +330,31 @@ class ListNode{
       const n = this.next // could be endmarker
       p.next=n
       n.prev=p
-      this.dll.tln = TreeList.delete(this)
+      if (this.dll.isAVL){
+        this.dll.tln = TreeList.delete(this)
+      }
       return this.data
     }
+  }
+
+  static addSizes(s1,s2){
+    let newSize={}
+    for (let x in s1){
+      newSize[x] = s1[x]+s2[x]
+    }
+    debug.log('any','in addSizes [s1,s2,s1+s2]= '
+              + JSON.stringify([s1,s2,newSize]))
+    return newSize
+  }
+
+  static subtractSizes(s1,s2){
+    let newSize={}
+    for (let x in s1){
+      newSize[x] = s1[x]-s2[x]
+    }
+    debug.log('any','in subtractSizes [s1,s2,s1+s2]= '
+              + JSON.stringify([s1,s2,newSize]))
+    return newSize
   }
 
 }
@@ -293,6 +385,12 @@ class TreeList {
 
   }
 
+  treeSize(){
+    let leftSize = this.left?this.left.treeSize():0
+    let rightSize = this.right?this.right.treeSize():0
+    return leftSize+rightSize+1
+  }
+
 
 
   toStringIndent(k){
@@ -317,18 +415,18 @@ class TreeList {
   }
 
   nth(n,feature){
-    const d=false
+
     // find the nth element in the tree using weighted elements
     // find the element at position n in the DLL spanned by tln
-    //console.log('in TreeList.nth '+n+' '+feature)
-    //console.dir(this)
+    debug.log('nth','in TreeList.nth '+n+' '+feature)
+    debug.dir('nth',this)
     const eltSize = this.listNode.size[feature]
     const leftSize = this.left?this.left.size[feature]:0
     const rightSize = this.right?this.right.size[feature]:0
-    //console.log('eltSize= '+eltSize)
-    //console.log(this.toStringIndent(5))
+    debug.log('nth','eltSize= '+eltSize)
+    debug.log('nth',this.toStringIndent(5))
     if(n==0){
-      //console.log('n=0 case')
+      debug.log('nth','n=0 case')
       if (leftSize>0) {
         return this.left.nth(0,feature)
       } else if (eltSize==0) {
@@ -339,90 +437,109 @@ class TreeList {
     } else {
 
       if (n<leftSize){
-        //console.log('going to left')
+        debug.log('nth','going to left')
         return this.left.nth(n,feature)
       } else if (n-leftSize<eltSize){
-        //console.log('found it')
+        debug.log('nth','found it')
         return this.listNode
       } else {
-        //console.log("moving to right")
+        debug.log('nth',"moving to right")
         return this.right.nth(n-leftSize-eltSize,feature)
       }
 
     }
-    /*
-    if (!this.left && (n>=eltSize)){ // nothing on the left
-        console.log('no left branch, go to the right')
-        return this.right.nth(n-eltSize,feature)
-    } else if (this.left && (this.left.size[feature]==0) && (n>=eltSize)) { // nothing on the left
-        console.log('nothing on left, n>0, go to the right')
-        return this.right.nth(n-eltSize,feature)
-    } else if (this.left && (n<this.left.size[feature])){
-        console.log('moving to left')
-        return this.left.nth(n,feature)
-    } else if ((n<(this.left.size[feature]+eltSize))){
-        console.log('found it')
-        return this.listNode
-    } else {
-        console.log('moving to the right')
-        console.log(JSON.stringify([n,this.left.size[feature],eltSize]))
-        return this.right.nth(n-this.left.size[feature]-eltSize,feature)
-    }
-    */
   }
 
   static insert(newNode){
     // insert the DLL node into the tree, assuming left/right neighbors are in tree
-    const size = newNode.data.size
-    if (newNode.prev.tln.right){
-      // insert before the next element
+    const size = newNode.size
+    if (!newNode.prev.tln.right){
+      newNode.tln = new TreeList(null,null,newNode.prev.tln,size,newNode)
+      newNode.prev.tln.right = newNode.tln
+    } else if (!newNode.next.tln.left){
       newNode.tln = new TreeList(null,null,newNode.next.tln,size,newNode)
       newNode.next.tln.left = newNode.tln
     } else {
-      newNode.tln =new TreeList(null,null,newNode.prev.tln,size,newNode)
-      newNode.prev.tln.right = newNode.tln
+      // insert before the next element
+      newNode.tln = new TreeList(null,null,newNode.next.tln,size,newNode)
+      newNode.next.tln.left = newNode.tln
     }
 
     newNode.tln.rebalance()
+    console.log("after insert "+newNode.data + " after "+newNode.prev.data)
+    console.log(newNode.dll.tln.toStringIndent(5))
     const z = newNode.tln.parent.avlRebalance()
+    console.log("after insert rebalance")
+    console.log(newNode.dll.tln.toStringIndent(5))
 
     return z
   }
 
   static delete(oldNode){
+    // we assume that the node has already been deleted from the DLL
+    // and now we are just adjusting the tree
     let oldT = oldNode.tln;
     window.debugging.oldT = oldT
-    //console.log('in DELETE '+oldNode.data)
-    //console.dir(oldNode)
-    //console.log(oldT.toStringIndent(5))
+    debug.log('delete','in DELETE data='+oldNode.data)
+    debug.dir('delete',oldNode)
+    debug.log('delete',oldT.toStringIndent(5))
     if ((oldT.left==null) && (oldT.right==null)) {
       // if p is a leaf, just remove it and rebalance the parent
-      //console.log("delete case 1: just remove the node and rebalance parent")
+      debug.log('delete',"delete case 1: just remove the node and rebalance parent")
       const q = oldT.parent
       if (q.left==oldT) { //remove oldT from tree
         q.left=null
       } else {
         q.right = null
       }
-      //console.log("parent of deleted node: \n"+q.toStringIndent(5))
+      debug.log('delete',"parent of deleted node: \n"+q.toStringIndent(5))
       q.rebalance()
-      return q.parent.avlRebalance()
+      //return q.avlRebalance()
+
+      if (q.parent) {
+        debug.log('delete',oldNode.dll.tln.toStringIndent(5))
+        return q.parent.avlRebalance()
+      } else {
+        debug.log('delete',oldNode.dll.tln.toStringIndent(5))
+        return q.avlRebalance()
+      }
     } else if ((oldT.left==null)||(oldT.right==null)){
       // if it has only one child, move the child up
-      //console.log("delete case 2: replacing node.data with prev value")
-      let child = oldT.left?oldT.left:oldT.right
-      //console.log("moving child up")
-      oldT.listNode = child.listNode  // copy child value to root
-      oldT.listNode.tln = oldT // reset the tln link
+      debug.log('delete',"delete case 2: replacing node.data with prev value")
+
+      debug.log('delete',"moving child up")
+      if (oldT.left){
+        if (!oldT.parent) {
+          oldT = oldT.left
+        } else {
+          if (oldT.parent.left == oldT){
+            oldT.parent.left = oldT.left
+          } else {
+            oldT.parent.right = oldT.left
+          }
+        }
+      }else {
+        if (!oldT.parent) {
+          oldT = oldT.right
+        } else {
+          if (oldT.parent.left == oldT){
+            oldT.parent.left = oldT.right
+          } else {
+            oldT.parent.right = oldT.right
+          }
+        }
+      }
+
 
       oldT.rebalance()
+      debug.log('delete',oldNode.dll.tln.toStringIndent(5))
       return oldT.avlRebalance()
     } else {
       // it has two children, so move the successor up and delete the successor
 
       let next = oldT.listNode.next
       let nextT = next.tln
-      //console.log("delete case 3 replacing listNode with "+nextT.listNode.data)
+      debug.log('delete',"delete case 3 replacing listNode with "+nextT.listNode.data)
       const tmp = oldT.listNode
       oldT.listNode = nextT.listNode  // copy child value to root
       const result = TreeList.delete(nextT.listNode)
@@ -483,12 +600,20 @@ class TreeList {
 
   }
 
+  isAVLunbalanced(){
+    return
+      this.unbalanced() ||
+      (this.left || this.left.unbalanced()) ||
+      (this.right || this.right.unbalanced())
+  }
+
 
   avlRebalance(){
     // rebalance the tree above this, assuming this is balanced
     //console.log("\n\n\n\n*******\nin avlRebalance: ")
     //console.log("BEFORE: "+this.toStringIndent(5))
     //console.log(" in ")
+    window.debugging.avl=this
     let rebalancedTree = null
     //if (this.parent) console.log(this.parent.toStringIndent(5))
     const p = this.parent
@@ -497,7 +622,7 @@ class TreeList {
     // on one of its children...
     if (this.unbalanced()){
       //console.log("THIS is UNBALANCED!!")
-      if (this.leftheavy) {
+      if (this.leftHeavy()) {
         //console.log('BALANCING ON LEFT')
         rebalancedTree = this.left.avlRebalance()
       } else {
@@ -575,6 +700,8 @@ class TreeList {
     for (let x in this.size){
       this.size[x] = leftSize[x]+rightSize[x]+eltSize[x]
     }
+    //this.size = ListNode.addSizes(eltSize,ListNode.addSizes(leftSize,rightSize))
+
     //console.log('updating the size')
     //console.dir([this,leftSize,rightSize,eltSize,nullSize])
     //this.size = leftSize+rightSize+1
@@ -585,6 +712,7 @@ class TreeList {
       this.parent.rebalance()
     }
   }
+
 
   rightRotate(){
     const z = this
