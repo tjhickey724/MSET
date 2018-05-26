@@ -295,7 +295,7 @@ class ListNode{
       x.prev = tmp;
       x.prev.next = x;
       if (this.dll.isAVL){
-        this.dll.tln = TreeList.insert(x)
+        this.dll.tln = TreeList.insertBefore(a.tln,x)
       }
       this.dll.listSize = ListNode.addSizes(this.dll.listSize,this.dll.sizefn(a))
       return x;
@@ -314,7 +314,7 @@ class ListNode{
     x.next = tmp;
     x.next.prev = x;
     if (this.dll.isAVL){
-      this.dll.tln = TreeList.insert(x)
+      this.dll.tln = TreeList.insertAfter(a.tln,x)
     }
     this.dll.listSize = ListNode.addSizes(this.dll.listSize,this.dll.sizefn(a))
     return x;
@@ -374,11 +374,18 @@ class TreeList {
   // of all elements to the left of p. Each TreeList node has a size
   // which is the sum of the sizes of all DLL nodes in the tree.
 
+  // The methods here are implemented without the assumption that
+  // the listNode objects are doubly linked lists. We assume those
+  // links have been made or will be made by others and so this
+  // treats them simply as values to be moved around as if they were
+  // numbers or strings ...
+  // we do assume that they have a size listNode.size
+  // which we use in nth
+
 
   constructor(left,right,parent,size,listNode){
     this.left=left
     this.right=right
-    this.size=size  //this is a tuple {count:1,p1:n1,...,pk:nk}
     this.parent=parent
     this.listNode = listNode
     this.height = 1
@@ -402,7 +409,7 @@ class TreeList {
       return  rightTree+
                 ("\n"+" ".repeat(k)+
                   (this.listNode.data.toString()+
-                   "[s="+JSON.stringify(this.size)+
+                   "[s="+JSON.stringify(this.listNode.size)+
                    ", h="+this.height
                    )+
                  "]\n")+
@@ -421,8 +428,8 @@ class TreeList {
     debug.log('nth','in TreeList.nth '+n+' '+feature)
     debug.dir('nth',this)
     const eltSize = this.listNode.size[feature]
-    const leftSize = this.left?this.left.size[feature]:0
-    const rightSize = this.right?this.right.size[feature]:0
+    const leftSize = this.left?this.left.listNode.size[feature]:0
+    const rightSize = this.right?this.right.listNode.size[feature]:0
     debug.log('nth','eltSize= '+eltSize)
     debug.log('nth',this.toStringIndent(5))
     if(n==0){
@@ -450,32 +457,84 @@ class TreeList {
     }
   }
 
-  static insert(newNode){
-    // insert the DLL node into the tree, assuming left/right neighbors are in tree
-    const size = newNode.size
-    if (!newNode.prev.tln.right){
-      newNode.tln = new TreeList(null,null,newNode.prev.tln,size,newNode)
-      newNode.prev.tln.right = newNode.tln
-    } else if (!newNode.next.tln.left){
-      newNode.tln = new TreeList(null,null,newNode.next.tln,size,newNode)
-      newNode.next.tln.left = newNode.tln
+  prevTreeNode(){
+    // find the previous TreeList node
+    // by finding the rightmost descendent of the left child
+    //
+    let node = this
+    if (node.left) {
+      node = node.left
+      while(node.right){
+        node = node.right
+      }
+    } else if (node.parent && (node.parent.right==node)){
+      node = node.parent
     } else {
-      // insert before the next element
-      newNode.tln = new TreeList(null,null,newNode.next.tln,size,newNode)
-      newNode.next.tln.left = newNode.tln
+      while (node.parent && (node.parent.left== node)){
+        node = node.parent
+      }
     }
-
-    newNode.tln.rebalance()
-    console.log("after insert "+newNode.data + " after "+newNode.prev.data)
-    console.log(newNode.dll.tln.toStringIndent(5))
-    const z = newNode.tln.parent.avlRebalance()
-    console.log("after insert rebalance")
-    console.log(newNode.dll.tln.toStringIndent(5))
-
-    return z
+    return node
   }
 
+  nextTreeNode(){
+    // find the previous TreeList node
+    // by finding the rightmost descendent of the left child
+    let node = this
+    if (node.right) {
+      node = node.right
+      while(node.left){
+        node = node.left
+      }
+    } else if (node.parent && (node.parent.left==node)){
+      node = node.parent
+    } else {
+      while (node.parent && (node.parent.right== node)){
+        node = node.parent
+      }
+    }
+    return node
+  }
+
+  static insertBefore(oldNode,newNode){
+    // this must rebalance the tree and return the root of the new AVL tree
+
+    let node = oldNode.left
+    if (node) {
+      let prevNode = oldNode.prevTreeNode()
+      node = new TreeList(null,null,prevNode,null,newNode)
+      prevNode.right = node
+    } else {
+      node = new TreeList(null,null,oldNode,null,newNode)
+      oldNode.left = node
+    }
+    node.rebalance()
+    let root = node.avlRebalance()
+    node.listNode.tln = node
+    return root
+  }
+
+  static insertAfter(oldNode,newNode){
+    // this must rebalance the tree and return the root of the new AVL tree
+
+    let node = oldNode.right
+    if (node) {
+      let nextNode = oldNode.nextTreeNode()
+      node = new TreeList(null,null,nextNode,null,newNode)
+      nextNode.left = node
+    } else {
+      node = new TreeList(null,null,oldNode,null,newNode)
+      oldNode.right = node
+    }
+    node.rebalance()
+    node.avlRebalance()
+  }
+
+
+
   static delete(oldNode){
+    // this must rebalance the tree and return the root of the new AVL tree
+  
     // we assume that the node has already been deleted from the DLL
     // and now we are just adjusting the tree
     let oldT = oldNode.tln;
@@ -689,8 +748,8 @@ class TreeList {
       nullSize[x]=0
     }
 
-    const leftSize = (this.left?this.left.size:nullSize)
-    const rightSize = (this.right?this.right.size:nullSize)
+    const leftSize = (this.left?this.left.listNode.size:nullSize)
+    const rightSize = (this.right?this.right.listNode.size:nullSize)
     const leftHeight = (this.left?this.left.height:0)
     const rightHeight = (this.right?this.right.height:0)
     //console.dir(this.listNode)
