@@ -1,4 +1,4 @@
-import DLLmset from './DLLmset2.js'
+import {DLLmset} from './DLLmset2.js'
 export {MSET as default}
 
 

@@ -86,6 +86,7 @@ class DLLmset{
   }
 
 
+
   toString(separator,feature){
     separator = separator || ''
     return this.strings.toString(separator,'std')
@@ -171,12 +172,12 @@ class DLLmset{
    */
 
   treeinsert(vm,q,un,c){
-      //console.log('in treeinsert:'+JSON.stringify([vm,q,un,c]))
-      //console.dir(this)
+      console.log('in treeinsert:'+JSON.stringify([vm,q,un,c]))
+      console.dir(this)
       //console.log(this.strings.tln.toStringIndent(5))
       const n = this.nodes[vm] // O(1) with a hashtable Implementation
       let s= null
-      if (n.isRoot){ //}(q==0)&&(n.elts.length==0)){
+      if (n.isRoot&&q==0){ //}(q==0)&&(n.elts.length==0)){
         // this is the case where we are the first to insert in the top of the tree
         // which is owned by the superuser 0
         // we just insert directly into the iset of the node
@@ -186,10 +187,12 @@ class DLLmset{
         // we will make a new subnode and insert at the beginning of that
           s = n.subnodes.nth(q-1,'edit')  // this returns a listNode, we may want elements instead
           //console.dir(s)
+          let inNodeOffset = q-s.indexOf('edit')
 
-          let e = s.data.split(s.data.size)
+          let e = s.data.split(inNodeOffset)
+          console.dir(e)
           //console.dir(e)
-          s = e.right.listNode
+          s = e.right.listSubnode
           //console.log('just split last subnode in node'+this.strings.tln.toStringIndent(5))
           //console.log("just split s")
           //console.dir(s)
@@ -293,7 +296,8 @@ class DLLmset{
    *  and it updates M to reflect this change ...
    */
   treeextend(nodeid,c){
-      //console.log("inside treeextend: "+JSON.stringify([nodeid,c]))
+      console.log("inside treeextend: "+JSON.stringify([nodeid,c]))
+      console.dir(this)
       var n = this.nodes[nodeid];
       //console.dir(n)
       //console.dir(c)
@@ -307,14 +311,20 @@ class DLLmset{
       const insertionPos = f.listNode.indexOf('std')
       var g = f.listNode.prev.data; // this is the previous subnode, which we will extend!
 
-      //console.dir(g)
+      console.log('updating g')
+      console.dir(g)
       g.size = g.size+c.length
-      g.listNode.size = {std:g.size,rev:g.size,edit:g.size,count:g.size}
+      g.listNode.elementSize = {std:g.size,rev:g.size,edit:g.size,count:g.size}
+      g.listSubnode.elementSize = g.listNode.size
       g.userData = g.treeNode.elts.slice(g.first,g.first+g.size)
-      g.listNode.tln.rebalance()
+      console.log(JSON.stringify([g.size,c.length,g.listNode.size,g.userData]))
+      //f.listNode.prev.data = g // this should update the weights!!
+      g.listNode.tln.updateWeights()
+      g.listSubnode.tln.updateWeights()
       // I need to update the listnode in the AVL tree
       //console.log('at the end of treeextend')
       //console.dir(g)
+      console.log(g.listNode.dll.tln.toStringIndent(5))
       this.insertCallback(insertionPos,c,n.user)
       return n;
   }
@@ -416,10 +426,12 @@ class DLLmset{
   }
 
   insertList(k,c) {
+      console.log('insertList '+k+' '+c)
       // the goal of this method is to make the appropriate call to treeinsert or treeextend
       // but not to actually modify the tree...
       let un=null
       if (this.size==0) {
+        console.log('case0')
         un = [this.user,this.count++]
         // CASE 0:  no-nonmarkers in the list, so tree must be empty
 
@@ -428,6 +440,7 @@ class DLLmset{
         this.network.insert([0,0],0,un,c)
       }
       else if (k==0) {
+        console.log('case1')
 
         // CASE 1: inserting at the beginning of the string
 
@@ -438,6 +451,7 @@ class DLLmset{
         this.treeinsert(e.nodeid,0,un,c);
 
       } else { // k>0
+        console.log('case2')
           // in the remaining cases we're inserting after a visible character
           // so, get the visible, non-marker elt e at position k-1
           const ecell=this.strings.nth(k-1,"std") //O(log(N))
@@ -450,20 +464,26 @@ class DLLmset{
           // we need many more cases here ... or maybe not,
           // maybe the splitting happens in treeinsert ....
           var fcell=ecell.next;
+          console.dir([k,ecell,fcell,fcell.data.treeNode.user,this.user])
           if ((offsetInCell<ecell.data.size) || (!fcell.data.marker)){
+            console.log('case2a')
               // CASE 2a: inserting between two non-marker elements
               // here is the case where we insert between two characters in a Subnode
               un = [this.user,this.count++];
               this.network.insert(ecell.data.nodeid, ecell.data.first+offsetInCell,un,c);
               this.treeinsert(ecell.data.nodeid, ecell.data.first+offsetInCell,un,c);
           } else if (fcell.data.marker && (fcell.data == fcell.data.treeNode.end)) {
+
               // CASE 3: the next element is an end marker
               if (fcell.data.treeNode.user==this.user) {
+                console.log('case3a')
                   // case 3a: it the user owns the node then extend
                   this.network.extend(fcell.data.nodeid, c);
                   this.treeextend(fcell.data.nodeid,c);
               }
               else {
+                console.log('case3b')
+
                 un = [this.user, this.count++];
                 // case 3b: otherwise insert a new node here
                 console.dir(fcell)
@@ -471,6 +491,7 @@ class DLLmset{
                 this.treeinsert(    fcell.data.nodeid, fcell.data.treeNode.elts.length, un, c);
               }
           } else {
+            console.log('case4')
 
                 // CASE 4: the cell must be a start marker
 
@@ -528,8 +549,8 @@ class Element{
     const newEltSize = Element.sizefn(this)
     this.listNode.size = newEltSize
     this.listSubnode.size = newEltSize
-    this.listNode.tln.rebalance()
-    this.listSubnode.tln.rebalance()
+    this.listNode.tln.updateWeights()
+    this.listSubnode.tln.updateWeights()
   }
 
   split(p){
@@ -566,7 +587,8 @@ class Element{
       return this.userData
     } else if (this.vis) {
       //console.dir(['b',this.first,this.size,this.treeNode.elts.slice(this.first,this.first+this.size)])
-      return "("+this.treeNode.elts.slice(this.first,this.first+this.size)+") "
+      return "("+this.treeNode.elts.slice(this.first,this.first+this.size)
+                +":"+this.first+":"+this.size+") "
     } else {
       //console.dir(['c',this.first,this.size,"{"+this.treeNode.elts.slice(this.first,this.first+this.size)+"}"])
       return "[["+this.treeNode.elts.slice(this.first,this.first+this.size)+"]] "
