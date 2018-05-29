@@ -764,7 +764,7 @@ AND MAKE IT CLEAR AND EASY TO VALIDATE!!
 
   updateWeights(){
     // update the weights for the current node an all its ancestors
-    console.log('updating weights')
+    //console.log('updating weights')
     let node = this
     let newSize={}
     const nullSize = {}
@@ -780,11 +780,11 @@ AND MAKE IT CLEAR AND EASY TO VALIDATE!!
       for (let x in nullSize){
         newSize[x] = leftSize[x]+rightSize[x]+eltSize[x]
       }
-      console.log(JSON.stringify([eltSize,leftSize,rightSize,newSize]))
-      console.dir(node)
+      //console.log(JSON.stringify([eltSize,leftSize,rightSize,newSize]))
+      //console.dir(node)
 
       node.sublistSize = newSize
-      node = node.parentOrig
+      node = node.parent
     }
 
   }

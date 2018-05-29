@@ -27,50 +27,56 @@ on a list of size N
 function JSONcompare(test,a,b){
   let sa = JSON.stringify(a)
   let sb = JSON.stringify(b)
-  console.log(test+' '+ (sa==sb)+" \n"+sa+"\n"+sb)
+  if (sa!=sb){
+      console.log(test+' '+ (sa==sb)+" \n"+sa+"\n"+sb)
+      throw new Error("JSON comparison ")
+  }
+  return (sa==sb)
 }
 
 
+function testBasicInsert(){
+  console.log("this is a test file!")
+  let u = new DLLmset(3,undefined,['a','b','c','d'])
+  console.log(u.toString())
+  console.dir(u)
+  window.u = u
+
+  console.log("initial \n"+u.strings.tln.toStringIndent(5))
+
+  u.insert(1,'SIGMA')
+  console.log(u.toString())
+  console.dir(u)
+
+  console.log("inserted SIGMA at start \n"+u.strings.tln.toStringIndent(5))
+
+  u.insert(3,'MU')
+  console.log(u.toString())
+  console.dir(u)
+
+  console.log("inserted MU in middle \n"+u.strings.tln.toStringIndent(5))
+
+  u.insert(6,'EPSILON')
+  console.log(u.toString())
+  console.dir(u)
+
+  console.log("inserted EPSILON at end \n"+u.strings.tln.toStringIndent(5))
+
+  console.log("deleting u(2)")
+  u.delete(2)
+  console.dir(u.toList())
+  console.dir(u)
+
+  console.log("removed 2nd element \n"+u.strings.tln.toStringIndent(5))
 
 
+  console.log(u.toString())
+  console.dir(u)
+  console.log(u.strings.toString(' ','count'))
 
-console.log("this is a test file!")
-let u = new DLLmset(3,undefined,['a','b','c','d'])
-console.log(u.toString())
-console.dir(u)
-window.u = u
-
-console.log("initial \n"+u.strings.tln.toStringIndent(5))
-
-u.insert(1,'SIGMA')
-console.log(u.toString())
-console.dir(u)
-
-console.log("inserted SIGMA at start \n"+u.strings.tln.toStringIndent(5))
-
-u.insert(3,'MU')
-console.log(u.toString())
-console.dir(u)
-
-console.log("inserted MU in middle \n"+u.strings.tln.toStringIndent(5))
-
-u.insert(6,'EPSILON')
-console.log(u.toString())
-console.dir(u)
-
-console.log("inserted EPSILON at end \n"+u.strings.tln.toStringIndent(5))
-
-console.log("deleting u(2)")
-u.delete(2)
-console.dir(u.toList())
-console.dir(u)
-
-console.log("removed 2nd element \n"+u.strings.tln.toStringIndent(5))
+}
 
 
-console.log(u.toString())
-console.dir(u)
-console.log(u.strings.toString(' ','count'))
 
 
 function randN(N){
@@ -81,50 +87,101 @@ function randN(N){
 
 window.randN= randN
 
-let v1 = new DLLmset(3,undefined,['a'])
-let v2 = new DLLwi()
-v2.insert(0,'a')
-console.log(v1.toList())
-console.log(v2.toList())
-
-for(let j=0;j<3;j++) {
-  v1.insert(j,j)
-  v2.insert(j,j)
+function testSimpleInsert(){
+  let v1 = new DLLmset(3,undefined,['a'])
+  let v2 = new DLLwi()
+  v2.insert(0,'a')
   console.log(v1.toList())
   console.log(v2.toList())
-  console.log(v1.toList('edit'))
-  console.log(v1.strings.tln.toStringIndent(5))
 
+  for(let j=0;j<3;j++) {
+    v1.insert(j,j)
+    v2.insert(j,j)
+    //console.log(v1.toList())
+    //console.log(v2.toList())
+    //console.log(v1.toList('edit'))
+    //console.log(v1.strings.tln.toStringIndent(5))
+
+  }
+  console.log(v1.toList())
+  console.log(v2.toList())
 }
-console.log(v1.toList())
-console.log(v2.toList())
 
-throw new Error()
+
 
 function createRandLists(N){
-  let letters = "abcdefgjhijklmnopqrstuvwxyz".split("")
-  let v1 = new DLLmset(3,undefined,letters)
+  let v1 = new DLLmset(3)//,undefined,letters)
   let v2 = new DLLwi()
-  for (let j in letters){
-    v2.insert(j,letters[j])
-  }
+
   //let v3 = new DLLwi(); v3.isAVL=false
   for(let i=0; i<N; i++){
-    let z1 = randN(v1.size)
-    v1.insert(z1,i)
-    v2.insert(z1,i)
+    let z1 = randN(v1.size+1)
+    //console.log("inserting "+i+" at pos "+z1)
+    v1.insert(z1,2*i+1)
+    v2.insert(z1,2*i+1)
+    //console.log(v1.strings.tln.toStringIndent(5))
     //v3.insert(z1,i)
     if (!JSONcompare('Insertion',v1.toList(),v2.toList())){
-      console.log("Error in DLLwi insert! "+i+" "+z1+" "+N)
-      console.dir([v1,v2,i,z1])
+      //console.log("Error in DLLwi insert! "+i+" "+z1+" "+N)
+      //console.dir([v1,v2,i,z1])
       throw new Error("insertion error")
     }
   }
   return {v1:v1,v2:v2}
 }
 
-const listSize = 2
-vs = createRandLists(listSize)
-window.vs = vs
-console.log('created a list of size '+v1.size())
-console.log(vs.v1.toList())
+function testInsert1(){
+  const listSize = 20
+  const vs = createRandLists(listSize)
+  window.vs = vs
+  console.log('created a list of size '+vs.v1.size)
+  console.log(vs.v1.toList())
+}
+
+function testInsertDelete(){
+  const listSize=1
+  const reps = 10
+  const vs = createRandLists(listSize)
+
+  console.log(vs.v1.toList())
+  console.log(vs.v1.toList('edit'))
+  console.log(vs.v1.strings.tln.toStringIndent(5))
+
+  for(let i=0;i<reps;i++){
+    let z1= randN(vs.v1.size)
+    console.log('\n***** Step '+i+'\ninserting elt at position '+z1)
+    vs.v1.insert(z1,2*i)
+    vs.v2.insert(z1,2*i)
+
+    console.log(vs.v1.toList())
+    console.log(vs.v2.toList())
+    console.log(vs.v1.toList('edit'))
+    console.log(vs.v1.strings.tln.toStringIndent(5))
+
+    if (!JSONcompare('Insertion error',vs.v1.toList(),vs.v2.toList())){
+      console.log("Error in DLLwi insert! "+i+" "+z1+" "+N)
+      console.dir([vs.v1,vs.v2,i,z1])
+      throw new Error("insertion error")
+    }
+
+    let z2= randN(vs.v2.size())
+    console.log('deleting elt at position '+z2)
+    vs.v1.delete(z2)
+    vs.v2.delete(z2)
+
+    console.log(vs.v1.toList())
+    console.log(vs.v2.toList())
+    console.log(vs.v1.toList('edit'))
+    console.log(vs.v1.strings.tln.toStringIndent(5))
+
+    if (!JSONcompare('Deletion',vs.v1.toList(),vs.v2.toList())){
+      console.log("Error in DLLwi insert! "+i+" "+z1+" "+N)
+      console.dir([vs.v1,vs.v2,i,z1])
+      throw new Error("insertion error")
+    }
+  }
+  console.log("Test was successful with listSize="+listSize+" and reps="+reps)
+
+}
+
+testInsertDelete()
