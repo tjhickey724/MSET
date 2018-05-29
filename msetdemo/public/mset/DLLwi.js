@@ -201,7 +201,7 @@ class ListNode{
     this.hiddenData =val
     this.elementSize = dll.sizefn(val)
     if (this.dll.avl){
-      this.tln.updateHeightWeights()
+      this.tln.updateWeights()  // update the sublistSize for node and all ancestors
     }
 
   }
@@ -474,7 +474,7 @@ class TreeList {
   }
 
   insertBefore(newNode){
-    // this must (updateHeightWeights) the tree and return the root of the new AVL tree
+    // this returns the root of the new AVL tree
 
     let node = this.left
     if (node) {
@@ -485,7 +485,7 @@ class TreeList {
       node = new TreeList(null,null,this,newNode)
       this.left = node
     }
-    node.updateHeightWeights()
+    //node.updateHeightWeights()
     let root = node.avlRebalance()
     node.listNode.tln = node
     return root
@@ -503,7 +503,7 @@ class TreeList {
       node = new TreeList(null,null,this,newNode)
       this.right = node
     }
-    node.updateHeightWeights()
+    //node.updateHeightWeights()
     let root = node.avlRebalance()
     node.listNode.tln = node
     return root
@@ -549,7 +549,7 @@ AND MAKE IT CLEAR AND EASY TO VALIDATE!!
         parent.right = null
       }
       treeNode.parent = null
-      parent.updateHeightWeights() // update the heights and weights of ancestors
+      //parent.updateHeightWeights() // update the heights and weights of ancestors
       return parent.avlRebalance()
     } else if ((treeNode.left==null)||(treeNode.right==null)){
       // if it has only one child, move the child up
@@ -569,7 +569,7 @@ AND MAKE IT CLEAR AND EASY TO VALIDATE!!
       child.parent = parent
 
       treeNode.parent = null
-      parent.updateHeightWeights();
+      //parent.updateHeightWeights();
       return parent.avlRebalance()
 
     } else {
@@ -598,7 +598,7 @@ AND MAKE IT CLEAR AND EASY TO VALIDATE!!
         if (child){
           child.parent = parent
         }
-        treeNode.updateHeightWeights()
+        //treeNode.updateHeightWeights()
         return treeNode.avlRebalance()
 
       } else {
@@ -612,7 +612,7 @@ AND MAKE IT CLEAR AND EASY TO VALIDATE!!
         if (child){
           child.parent = parent
         }
-        parent.updateHeightWeights()
+        //parent.updateHeightWeights()
         return parent.avlRebalance()
       }
     }
@@ -630,8 +630,11 @@ AND MAKE IT CLEAR AND EASY TO VALIDATE!!
       // We assume this is called on a newly inserted node or
       // on the parent of a leaf node that has been deleted
       // it will return the root of the newly balanced avl tree
+      // we can assume that the left and right subtrees are balanced
+
     debug.log('avl','rebalancing subtree with root '+this.listNode)
-    let rebalancedTree = null
+
+    this.updateNodeHeightWeight() // update the sublistSize and height fields
 
     const p = this.parent  // could be null
     debug.log('avl','getting parent: '+(p?p.listNode:null))
@@ -639,13 +642,17 @@ AND MAKE IT CLEAR AND EASY TO VALIDATE!!
     // this will only happen in the case of a deletion
     // when we call rebalance on the parent of the deleted leaf
     // and in this case, its child is balanced
+    // our strategy is to call avlRebalance on the larger subtree
+    // if it is unbalanced and otherwise to assume that it is balanced
+    // but its parent might not be and that our node is heavier than its sibling.
+    // We will then balance the parent and recurse up to the root ..
 
     if (this.unbalanced()){
       debug.log('avl','calling AVL on unbalanced parent of a deleted node')
-      if (this.left) {
-        rebalancedTree = this.left.avlRebalance()
+      if (this.leftHeavy()) {
+        return this.left.avlRebalance()
       } else {
-        rebalancedTree =  this.right.avlRebalance()
+        return this.right.avlRebalance()
       }
     } else if (!p ) {
       debug.log('avl','this = root of the tree and the tree is now balanced')
@@ -657,10 +664,19 @@ AND MAKE IT CLEAR AND EASY TO VALIDATE!!
     // then continue up the tree. If it is already balanced we are done!
     if (!p.unbalanced() ) {
       debug.log('avl','parent is balanced so tree is to and returning root')
-      rebalancedTree =  this.parent.avlRebalance()
+      return  this.parent.avlRebalance()
       //return this.root()
     } else {
-      debug.log('avl','parent subtree is unbalanced:')
+      if (p.leftHeavy() && (p.right==this)) {
+        debug.log('avl','left sibling is heavier, switching to that side')
+        return this.parent.left.avlRebalance()
+      } else if (p.rightHeavy() && (p.left==this)){
+        debug.log('avl','right sibling is heavier, switching to that side')
+        return this.parent.right.avlRebalance()
+      }
+      debug.log('avl','parent subtree is unbalanced and this is the heavier child:')
+      // we perform the appropriate rotations, which update the heights and sizes
+      // and makes the parent of this node one of its children!
       if (p.left==this) {
         if (this.leftHeavy()){ //LL
           debug.log('avl',"LL")
@@ -681,9 +697,8 @@ AND MAKE IT CLEAR AND EASY TO VALIDATE!!
         }
       }
       debug.log('avl','PARTLY REBALANCED TREE:\n'+this.toStringIndent(5))
-      rebalancedTree =  this.avlRebalance()  // as the node moved to its parent position
+      return  this.avlRebalance()  // as the node moved to its parent position
     }
-    return rebalancedTree
   }
 
   root(){
@@ -712,7 +727,74 @@ AND MAKE IT CLEAR AND EASY TO VALIDATE!!
     return (leftHeight-rightHeight>1)||(rightHeight-leftHeight>1)
   }
 
+  updateNodeHeightWeight(){
+    const node = this
+
+    const leftHeight = (node.left?node.left.height:0)
+    const rightHeight = (node.right?node.right.height:0)
+    const newHeight =  Math.max(leftHeight, rightHeight)+1
+
+    if (newHeight>20) throw new Error("height>20!!")
+    if (Math.abs(leftHeight-rightHeight)>2) {
+      console.dir(node)
+      console.log(node.listNode.dll.tln.toStringIndent(5))
+      throw new Error("heights seriously unbalanced!!")
+    }
+
+    const nullSize = {}
+    for(let x in node.listNode.elementSize){
+      nullSize[x]=0
+    }
+
+    const leftSize = (node.left?node.left.sublistSize:nullSize)
+    const rightSize = (node.right?node.right.sublistSize:nullSize)
+    const eltSize = node.listNode.elementSize;
+
+    let newSize={}
+    for (let x in nullSize){
+      newSize[x] = leftSize[x]+rightSize[x]+eltSize[x]
+    }
+
+    node.height = newHeight
+    node.sublistSize = newSize
+  }
+
+  updateWeights(){
+    // update the weights for the current node an all its ancestors
+    const node = this
+    let newSize={}
+    const nullSize = {}
+    for(let x in node.listNode.elementSize){
+      nullSize[x]=0
+    }
+
+    while(node){
+      const leftSize = (node.left?node.left.sublistSize:nullSize)
+      const rightSize = (node.right?node.right.sublistSize:nullSize)
+      const eltSize = node.listNode.elementSize;
+      newSize={}
+      for (let x in nullSize){
+        newSize[x] = leftSize[x]+rightSize[x]+eltSize[x]
+      }
+
+      node.sublistSize = newSize
+      node = node.parentOrig
+    }
+
+  }
+
+
   updateHeightWeights(){
+    let node=this
+
+    while(node){
+      node.updateNodeHeightWeight()
+      node=node.parent()
+    }
+  }
+
+
+  updateHeightWeights2(){
     let node = this
     let k=1
     let vals=[]
@@ -725,8 +807,8 @@ AND MAKE IT CLEAR AND EASY TO VALIDATE!!
       if (node.height>100){
         console.log('too tall')
         console.dir(node)
-        node.printStringIndent()
-        console.log(node.toStringIndent(5))
+        //node.printStringIndent()
+        //console.log(node.toStringIndent(5))
         throw new Error("too tall")
       }
       vals.push(node.listNode?node.listNode.hiddenData:'deleted')
@@ -791,7 +873,8 @@ AND MAKE IT CLEAR AND EASY TO VALIDATE!!
     z.parent = y
     z.left = t3
     if (t3) t3.parent = z
-    z.updateHeightWeights()
+    z.updateNodeHeightWeight()
+    y.updateNodeHeightWeight()
     return y
   }
 
@@ -813,7 +896,8 @@ AND MAKE IT CLEAR AND EASY TO VALIDATE!!
     z.parent = y
     z.right = t2
     if (t2) t2.parent = z
-    z.updateHeightWeights()
+    z.updateNodeHeightWeight()
+    y.updateNodeHeightWeight()
     return y
   }
 
@@ -840,7 +924,7 @@ class Debug{
 }
 
 const debug = new Debug()
-debug.debugging = {any:false,delete:true,nth:true}
+debug.debugging = {any:false}
 
 
 window.DLLwi = DLLwi
