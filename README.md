@@ -12,7 +12,7 @@ This repository has several very useful Javascript modules which can be found in
 * DLLwi  doubly linked lists with weights and indexing
 * BSTwi  binary search trees with weights and fast indexing and DLL access 
 
-The DLLmset module is very useful as a single user implementation of Doubly Linked Lists as it allows one initialize a DLL in one step using a (potentially very large) array, and then the execution time O(log(k)), where k is the number k of edit operations performed so far since the last garbage collection and is independent of the size of the list. DLLmset also has a garbage collection operation that takes time proportional to the size of the list
+The DLLmset module is very useful as a single user implementation of Doubly Linked Lists as it allows one initialize a DLL in one step using a (potentially very large) array. The execution time for each edit operation (insertion or deletion at an arbitrary position in the list) takes time O(log(k)), where k is the number k of edit operations performed so far since the last garbage collection and is independent of the size of the list. The DLLmset garbage collection operation takes time proportional to the size of the list but makes the editing operations as efficient as array operations again (and they slowly degrade as O(log(k)) after k edit operations).
 
 The msetdemo folder is a nodejs app for the CollabEd demo. You can run the demo (assuming node is installed by)
 ```shell
