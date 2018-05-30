@@ -1,8 +1,8 @@
-# Optimal Collaborative Editing in Javascript
+# MSET: Optimal Collaborative Editing in Javascript
 
 This is initial work on building an optimally efficient real-time fully distributed non-locking collaborative editor. 
 It is based on the MSET approach developed by Tim Hickey and Kenroy Granville for use in the GrewpEdit application
-in 2005.
+in 2005. MSET stands for Monotone Shared Edit Trees.
 
 This repository has several very useful Javascript modules
 
