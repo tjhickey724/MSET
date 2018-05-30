@@ -42,7 +42,7 @@ More precisely, the complexity is as follows where dll is a DLLmset object, arra
 
 * O(1)  dll = new DLLmset(array)
 * O(1)  dll.first, dll.last,  node.next(), node.prev()
-* O(1)  node.insertAfter(e), node.insertBefore(e), node.delete()
+* O(k)  node.insertAfter(e), node.insertBefore(e), node.delete()
 * O(k)  node = dll.nth(m)  where k is the number of edit operations performed on the dll since the last garbage collection
 * O(k)  node.index()
 * O(n)  node.garbageCollect()  where n is the number of non-deleted objects in the list
@@ -63,7 +63,7 @@ and k is the number of single element editing operations performed so far. Inser
 
 * O(1)  dll = new DLLwi()
 * O(1)  dll.first, dll.last,  node.next(), node.prev()
-* O(1)  node.insertAfter(e), node.insertBefore(e), node.delete()
+* O(k)  node.insertAfter(e), node.insertBefore(e), node.delete()
 * O(k)  node = dll.nth(m)  where k is the number of edit operations performed on the dll
 * O(k)  node.index()
 
