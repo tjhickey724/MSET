@@ -349,15 +349,24 @@ class DLLmset{
       //console.dir([n,this])
       //console.log(n.subnodes.tln.toStringIndent(5))
       //console.dir(n.subnodes.toList('rev'))
-      const subNode = n.subnodes.nth(q,"rev").data
+      const subNodePosition = n.subnodes.nth(q,"rev")
+      //console.dir(subNodePosition)
+
+      const subNode = subNodePosition.data
       const offset = q-subNode.first
       const size = subNode.size
+      const deletionPosition = subNodePosition.data.listNode.indexOf("std")+offset
+      const deletionElement = n.elts[q]
+      //console.log('delete: '+deletionPosition+" "+deletionElement)
+
       if (offset==0){
         if (subNode.size==1){
+          //console.log('treehide case 1')
           // the entire subnode will be hidden, so set the vis flag and
           // rebalance the listNode and listSubnode to change the weights in ancesters
           subNode.hide()
         } else {
+          //console.log('treehide case 2')
           // the deleted object is the first in a node with >=2 elements
           // split the subnode after element 0
           // remove the old node from both lists and add the new nodes
@@ -365,11 +374,13 @@ class DLLmset{
           nodes.left.hide()
         }
       } else if (offset==size-1) {
+        //console.log('treehide case 3')
         // the deleted object is the last element of the node
         // split right before it, remove old node, insert two new nodes
         const nodes = subNode.split(size-1)
         nodes.right.hide()
       } else {
+        //console.log('treehide case 4')
         // the deleted objects has elements before and after it in the subnode
         // so we need to split the subnode into three parts, hide the middle one
         // remove the old node and insert the two new nodes
@@ -382,6 +393,8 @@ class DLLmset{
         const right = nodes2.right
         middle.hide()
       }
+
+      this.deleteCallback(deletionPosition,deletionElement,u)
       return n;
   }
 

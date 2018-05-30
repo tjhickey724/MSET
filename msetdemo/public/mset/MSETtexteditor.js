@@ -159,7 +159,7 @@ function editorCallbacks(op,pos,elt,user,me){
   switch(op){
     case "init": document.getElementById('ta1').readOnly = false;  break;
     case "insert":
-      //console.log(JSON.stringify([ta1.readOnly,'insert',pos,elt,user,me]))
+      //console.log("insert callback\n"+JSON.stringify([ta1.readOnly,'insert',pos,elt,user,me]))
       if (user==me) return
       ta1.readOnly=true
       theString = ta1.value
@@ -174,7 +174,7 @@ function editorCallbacks(op,pos,elt,user,me){
       ta1.readOnly = false
       break
     case "delete":
-      //console.log(JSON.stringify([ta1.readOnly,'delete',pos,elt,user,me]))
+      //console.log("in delete callback\n"+JSON.stringify([ta1.readOnly,'delete',pos,elt,user,me]))
       if (user==me) return
       ta1.readOnly=true
       //console.log(JSON.stringify([ta1.readOnly,'delete',pos,elt,user,me]))
