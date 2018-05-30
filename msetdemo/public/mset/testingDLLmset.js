@@ -115,7 +115,7 @@ function createRandLists(N){
 
   //let v3 = new DLLwi(); v3.isAVL=false
   for(let i=0; i<N; i++){
-    let z1 = randN(v1.size+1)
+    let z1 = randN(v1.size()+1)
     //console.log("inserting "+i+" at pos "+z1)
     v1.insert(z1,2*i+1)
     v2.insert(z1,2*i+1)
@@ -134,13 +134,11 @@ function testInsert1(){
   const listSize = 20
   const vs = createRandLists(listSize)
   window.vs = vs
-  console.log('created a list of size '+vs.v1.size)
+  console.log('created a list of size '+vs.v1.size())
   console.log(vs.v1.toList())
 }
 
-function testInsertDelete(){
-  const listSize=2
-  const reps = 1000
+function testInsertDelete(listSize,reps){
   const vs = createRandLists(listSize)
 /*
   console.log(vs.v1.toList())
@@ -148,7 +146,7 @@ function testInsertDelete(){
   console.log(vs.v1.strings.tln.toStringIndent(5))
 */
   for(let i=0;i<reps;i++){
-    let z1= randN(vs.v2.size()+1)
+    let z1= randN(vs.v1.size()+1)
     //console.log('\n***** Step '+i+'\ninserting elt at position '+z1)
     vs.v1.insert(z1,2*i)
     vs.v2.insert(z1,2*i)
@@ -163,8 +161,7 @@ function testInsertDelete(){
       console.dir([vs.v1,vs.v2,i,z1])
       throw new Error("insertion error")
     }
-
-    let z2= randN(vs.v2.size())
+    let z2= randN(vs.v1.size())
     //console.log('deleting elt at position '+z2)
     let elt = vs.v1.strings.nth(z2,'std')
     vs.v1.delete(z2)
@@ -187,4 +184,19 @@ function testInsertDelete(){
 
 }
 
-testInsertDelete()
+function testMultiInsert(){
+  const v = new DLLmset(4,undefined,[0,1,2,3,4,5,6,7,8,9])
+  console.dir(v.strings.toList('edit'))
+  console.log(v.strings.tln.toStringIndent(0))
+  v.delete(4)
+  console.dir(v.strings.toList('edit'))
+  console.log(v.strings.tln.toStringIndent(0))
+  v.insert(6,[10,11,12])
+  console.dir(v.strings.toList('edit'))
+  console.log(v.strings.tln.toStringIndent(0))
+  console.dir(v.strings.toList())
+}
+
+testInsertDelete(20,1000)
+
+//testMultiInsert()

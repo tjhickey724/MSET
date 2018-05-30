@@ -43,7 +43,7 @@ class DLLmset{
     elements = elements || []
     this.user = u;
     this.count = 0;
-    this.size=0;
+
     this.root = new Node(0,0,elements);
 
     this.strings = new DLLwi(Element.sizefn);
@@ -76,6 +76,11 @@ class DLLmset{
 
   treeHeight(){
     return this.strings.tln.height
+  }
+
+  size(feature){
+    feature = feature || 'std'
+    return this.strings.tln.sublistSize[feature]
   }
 
   copy(){
@@ -281,7 +286,7 @@ class DLLmset{
       //console.log(this.strings.tln.toStringIndent(5))
       // and insert the new node into the hashtable
       this.nodes[un]=m; // add the new node to the hash table
-      this.size++;
+
       this.insertCallback(node2.indexOf("std"),c,un[0]) // ILL HAVE TO CHECK WHAT INDEXOF RETURNS
 
       //console.log("AFTER INSERT "+this.strings.toString(' ','count'))
@@ -435,8 +440,9 @@ class DLLmset{
       // the goal of this method is to make the appropriate call to treeinsert or treeextend
       // but not to actually modify the tree...
       let un=null
-      if (this.size==0) {
-        //console.log('case0')
+      if (this.strings.tln.sublistSize['rev']==0) {
+        //console.log('case 0: this.size='+this.size)
+        //console.dir(this)
         un = [this.user,this.count++]
         // CASE 0:  no-nonmarkers in the list, so tree must be empty
 
@@ -445,7 +451,7 @@ class DLLmset{
         this.network.insert([0,0],0,un,c)
       }
       else if (k==0) {
-        //console.log('case1')
+        //console.log('case 1: k='+k)
 
         // CASE 1: inserting at the beginning of the string
 
@@ -480,7 +486,7 @@ class DLLmset{
               this.treeinsert(ecell.data.nodeid, ecell.data.first+offsetInCell,un,c);
           } else if (fcell.data.marker && (fcell.data == fcell.data.treeNode.end)) {
 
-              // CASE 3: the next element is an end marker
+               //CASE 3: the next element is an end marker
               if (fcell.data.treeNode.user==this.user) {
                 //console.log('case3a')
                   // case 3a: it the user owns the node then extend
