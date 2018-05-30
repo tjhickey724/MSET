@@ -4,7 +4,7 @@ This is initial work on building an optimally efficient real-time fully distribu
 It is based on the MSET approach developed by Tim Hickey and Kenroy Granville for use in the GrewpEdit application
 in 2005. MSET stands for Monotone Shared Edit Trees.
 
-This repository has several very useful Javascript modules
+This repository has several very useful Javascript modules which can be found in the msetdemo/public/mset folder
 
 * CollabEd - the client side for collaboratively editing a textarea with any number of clients 
 * DDLLmset distributed doubly linked lists with weights and indexing and log(k) time per each edit operation
@@ -13,6 +13,14 @@ This repository has several very useful Javascript modules
 * BSTwi  binary search trees with weights and fast indexing and DLL access 
 
 The DLLmset module is very useful as a single user implementation of Doubly Linked Lists as it allows one initialize a DLL in one step using a (potentially very large) array, and then the execution time O(log(k)), where k is the number k of edit operations performed so far since the last garbage collection and is independent of the size of the list. DLLmset also has a garbage collection operation that takes time proportional to the size of the list
+
+The msetdemo folder is a nodejs app for the CollabEd demo. You can run the demo (assuming node is installed by)
+```shell
+cd msetdemo
+npm install
+npm start
+```
+then open up several browser window (on one or more machines) to the page http://localhost:4000/mset2 and you can test the Collaborative Editor. 
 
 # class CollabEd
 ### -- Colloboratively Editable Textareas with local editing and provably correct convergence
