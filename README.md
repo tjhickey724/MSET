@@ -6,14 +6,34 @@ in 2005.
 
 This repository has several very useful Javascript modules
 
-# class DLLindexed
-This is a class which implements a doubly linked list of Javascript objects in which you can access the nth element in time O(log(N)) where N is the size of the list .. you can also add new elements before or after any listnode in constant time. This is an optimally efficient algorithm, no algorithm can take less than O(log(N)) and still implement the addBefore, addAfter, and nth methods. 
+# class DLLwi
+This is a class which implements a doubly linked list of Javascript objects in which you can access the nth element in time O(log(N)) where N is the size of the list .. you can also add new elements before or after any listnode in constant time. This is an optimally efficient algorithm, no algorithm can take less than O(log(N)) and still implement the addBefore, addAfter, and nth methods. It also allows you to define a family of size functions on the list elements and to use this function to find the nth element.
 
-I'll eventually write some real documentation, but for now here are some code snippets showing how to use the DLLindexed class
+constructor
+In the simplest case we just create an empty doubly linked list with the default constructor
 ```javascript
-const dll = new DLLindexed()
+> dll = new DLLwi()
+> console.log("The DLL has size "+dll.size()+" and its elements are ("+dll.toString()+")")
+The DLL has size 0 and its elements are ()
 ```
-creates a new indexed doubly link list.
+The DLL is comprised of ListNode objects, n, which store the elements that are inserted into this list in their n.data field
+The first and last ListNodes are accessible as fields of dll and you can move forward and backward in the
+list using the next and prev properties of the ListNode elements
+```javascript
+> console.log(dll.first.data)
+startmarker
+```
+You can look up the ListNode at position k and insert elements before or after any ListNode
+```javascript
+> fiveNode = dll.last.insertBefore('five')
+> sixNode = fiveNode.insertAfter('six')
+> z = dll.nth(1).data
+> dll.toList()
+["five", "six"]
+> dll.insertList(0,['one','two','three','four'])
+> dll.toList()
+["one", "two", "three", "four", "five", "six"]
+```
 
 The nodes in the DLL are of type ListNode and the actual elements of the list are in the value field of those nodes.
 There are special marker nodes at the beginning and end of the list which you can access with the fields first and last
