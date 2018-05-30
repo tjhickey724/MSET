@@ -20,7 +20,7 @@ cd msetdemo
 npm install
 npm start
 ```
-then open up several browser window (on one or more machines) to the page http://localhost:4000/mset2 and you can test the Collaborative Editor. 
+then open several browser windows (on one or more machines) to the page http://localhost:4000/mset2 and you can test the Collaborative Editor. 
 
 # class CollabEd
 ### -- Colloboratively Editable Textareas with local editing and provably correct convergence
