@@ -1,4 +1,4 @@
-# MSET
+# MSET Optimally efficient real-time fully distributed non-locking collaborative editing in Java Script
 
 This is initial work on building an optimally efficient real-time fully distributed non-locking collaborative editor. 
 It is based on the MSET approach developed by Tim Hickey and Kenroy Granville for use in the GrewpEdit application
@@ -6,8 +6,19 @@ in 2005.
 
 This repository has several very useful Javascript modules
 
+The DLLmset module is very useful as a single user implementation of Doubly Linked Lists as it allows one initialize a DLL in one step using a (potentially very large) array, and then the execution time O(log(k)), where k is the number k of edit operations performed so far since the last garbage collection and is independent of the size of the list. DLLmset also has a garbage collection operation that takes time proportional to the size of the list
+
 # class DLLwi  -- Doubly Linked Lists with weights and indexing
 This is a class which implements a doubly linked list of Javascript objects in which you can access the nth element in time O(log(N)) where N is the size of the list .. you can also add new elements before or after any listnode in constant time. This is an optimally efficient algorithm, no algorithm can take less than O(log(N)) and still implement the addBefore, addAfter, and nth methods. It also allows you to define a family of size functions on the list elements and to use this function to find the nth element.
+
+Here is the complexity of the operations where node is a DLL node 
+and k is the number of single element editing operations performed so far. Inserting a list of elements or deleting a range of elements takes time proportional to the number of elements inserted or deleted.
+
+* O(1)  dll = new DLLwi()
+* O(1)  dll.first, dll.last,  node.next(), node.prev()
+* O(1)  node.insertAfter(e), node.insertBefore(e), node.delete()
+* O(k)  node = dll.nth(m)  where k is the number of edit operations performed on the dll
+* O(k)  node.index()
 
 constructor
 In the simplest case we just create an empty doubly linked list with the default constructor
@@ -90,16 +101,29 @@ The following example shows that it can be used to maintain partial sums of a li
 ```
 We use this in the MSET code to simultaneously store the current list of objects, the list of objects and deleted objects, and a list of objects, deleted objects, and marker elements, and to quickly index elements in these lists.
 
-# class MSETtree
-This is a class which implements an optimally efficient non-blocking fully distributed version of the DLLindexed class in which any number of clients can simultaneously edit a DLLindexed list while broadcasting their operations to all other clients and receiving operations from all other clients. If everyone stops editing the system rapidly converges to a DLL which is exactly the same on all clients. 
+# class DLLmset
+This is another implementation of doubly linked lists, but this one can be initialized in time O(1) with an array of data objects and the complexity of O(log(k)) where k is the number of edit operations performed and is independent of the size of the list. 
 
-The current implementation requires a central server, but it will be fairly easy to modify this so that it works in a fully peer-to-peer environment. Each operation requires time at most O(log(N)) assuming the operations where N is the total number of operations that have been applied to the DLL so far and this is optimal.  In a peer-to-peer topology, some operations need to be cached until the operations they depend on have been received, but each individual operation still requires only log(N) time to complete and the cached operations can be stored in a hashtable where the key is the operation they are waiting for.
-This minimizes the time required to process the cache when new operations arrive.
+More precisely, the complexity is as follows where dll is a DLLmset object, array is a list of objects, node is a DLLmset node
 
-Deleting is implemented by "hiding" an element so it is still available using a different view, but is removed from the main view. I'll write more about this later ...
+* O(1)  dll = new DLLmset(array)
+* O(1)  dll.first, dll.last,  node.next(), node.prev()
+* O(1)  node.insertAfter(e), node.insertBefore(e), node.delete()
+* O(k)  node = dll.nth(m)  where k is the number of edit operations performed on the dll since the last garbage collection
+* O(k)  node.index()
+* O(n)  node.garbageCollect()  where n is the number of non-deleted objects in the list
+
+If we assume that the size of the list remains bounded by N and that garbage collections are done after every A editing steps, then the complexity of the nth and index operations is bounded by k =log(N)-log(log(N)) if A is chosen to be N/k
+
+The API for DLLmset is identical to that of DLLwi. The only difference is the performance.
+
+# class DDLLmset  Distributed Doubly Linked Lists
+This class implements an optimally efficient non-blocking fully distributed version of the DLL API in which any number of clients can simultaneously edit a DLL while broadcasting their operations all other clients and receiving operations from all other clients. If everyone stops editing the system rapidly converges to a DLL which is exactly the same on all clients. This class can also be used to implement a non-blocking thread-safe DLL where all threads can insert and delete at will and their local copies will all converge if editing stops for long enough to let all message that are in transit be delivered.
+
+If a central server is used then DDLL can efficiently implement a synchronized garbage colletion which takes time O(n) but which reduces the edit operation time to O(k) where k is the number of edit operations after the garbage colletion. In the central server model, the server simply assigns unique IDs to clients when they join and  sends them the sequence of editing operations generated so far on the document. It then receives editing operations from clients and broadcasts them to all clients (while pushing them onto a list).
 
 
-# class MSETsocket
-This is a class which provides the client side code needed to collaboratively edit a textarea. It requires a simple server that will broadcast operations to all clients and which will assign a unique userid to each client who joins the editing session. 
+# class MSETtexteditor
+This provides the client side code needed to collaboratively edit a textarea. It requires a simple server that will broadcast operations to all clients and which will assign a unique userid to each client who joins the editing session. 
 
-I'll write more about this later ...
+
