@@ -88,7 +88,9 @@ class DLLwi {
       throw new Error("DLLwi insert must be called with 2 parameters: pos and elt")
     }
 
-
+    if (!this.isAVL) {
+      return this.insertSlow(pos,elt,feature)
+    }
 
     const size = this.tln.sublistSize[feature]
     if (pos>size || pos<0){
@@ -108,6 +110,7 @@ class DLLwi {
 
   deleteRange(start,n,feature){
     // remove the n elements starting at position start
+
     if (n+start >= this.size()) {
       throw new Error("Error in deleterange: you can not delete past the end of the list")
     } else if ((n<0) || (start<0)) {
@@ -124,6 +127,11 @@ class DLLwi {
     if (pos==undefined){
       throw new Error("DLLwi delete must be called with one element, pos, the position to delete")
     }
+
+    if (!this.isAVL) {
+      return this.deleteSlow(pos,feature)
+    }
+
     const size = this.tln.sublistSize[feature]
     if (pos < 0 || pos>=size){
       throw new Error("trying to delete element at pos "+pos+" in a list of size "+size)
@@ -190,6 +198,38 @@ class DLLwi {
       i += this.sizefn(pos.data)[feature]
     }
     return pos
+  }
+
+  insertSlow(n,elt,feature){
+    feature = feature || 'count'
+    let pos = this.first
+    let i=0
+    while ((i<n) && (pos!=this.last)){
+      pos = pos.next
+      i += this.sizefn(pos.data)[feature]
+    }
+    if (i<n) {
+      throw new Error("Error in insert: trying to insert beyond the end of the list")
+    } else if (pos==this.last){
+      this.last.insertBefore(elt)
+    } else {
+      pos.insertAfter(elt)
+    }
+  }
+
+  deleteSlow(n,feature){
+    feature = feature || 'count'
+    let pos = this.first
+    let i=0
+    while ((i<=n) && (pos!=this.last)){
+      pos = pos.next
+      i += this.sizefn(pos.data)[feature]
+    }
+    if (pos==this.last) {
+      throw new Error("Error in delete: trying to delete beyond the end of the list")
+    } else {
+      pos.delete()
+    }
   }
 
 }

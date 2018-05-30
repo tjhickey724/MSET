@@ -1,12 +1,12 @@
 import {DLLmset} from './DLLmset.js'
-export {MSET as default}
+export {DDLL}
 
 
 console.log("loading MSET")
 // this creates the socket to the server and the MSET tree
 // and add listeners to the textareas ...
 
-class MSET {
+class DDLL {
   constructor(namespace,documentId,callback){
     this.socket = io(namespace)
     this.documentId = documentId
@@ -189,5 +189,5 @@ class Network{
 }
 
 
-window.MSET=MSET
+window.DDLL=DDLL
 window.Network = Network

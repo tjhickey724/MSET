@@ -1,5 +1,5 @@
-import {DLLmset} from './DLLmset2.js'
-import {DLLwi} from './DLLwi.js'
+import {DLLmset} from '/mset/DLLmset.js'
+import {DLLwi} from '/mset/DLLwi.js'
 
 /*
 DLLwi correctness testing
@@ -44,8 +44,10 @@ function createRandLists(N){
   v2.isAVL= false
   for(let i=0; i<N; i++){
     let z1 = randN(i+1)
+    //console.log("inserting "+i+" at position "+z1+" in "+JSON.stringify(v2.toList()))
     v1.insert(z1,i)
     v2.insert(z1,i)
+    //console.log("to get "+JSON.stringify(v1.toList())+"\n")
     if (!JSONcompare('Insertion',v1.toList(),v2.toList())){
       console.log("Error in DLLwi insert! "+i+" "+z1+" "+N)
       console.dir([v1,v2,i,z1])
@@ -72,7 +74,7 @@ function runDeleteTests(lists,N){
   }
 }
 let listSize =20
-let reps = 100000
+let reps = 100
 console.log("running insertion/deletion tests "+Date())
 window.vlists = createRandLists(listSize)
 console.log("created two lists of size "+listSize)

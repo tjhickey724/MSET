@@ -1,5 +1,5 @@
-import {DLLmset} from './DLLmset2.js'
-import {DLLwi} from './DLLwi.js'
+import {DLLmset} from '/mset/DLLmset2.js'
+import {DLLwi} from '/mset/DLLwi.js'
 
 function JSONcompare(test,a,b){
   let sa = JSON.stringify(a)

@@ -1,5 +1,5 @@
-import {DLLmset} from './DLLmset2.js'
-import {DLLwi} from './DLLwi.js'
+import {DLLmset} from '/mset/DLLmset.js'
+import {DLLwi} from '/mset/DLLwi.js'
 
 /*
 DLLmset correctness testing
@@ -197,6 +197,6 @@ function testMultiInsert(){
   console.dir(v.strings.toList())
 }
 
-//testInsertDelete(20,1000)
+testInsertDelete(20,20)
 
 //testMultiInsert()
