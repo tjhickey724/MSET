@@ -139,25 +139,25 @@ function testInsert1(){
 }
 
 function testInsertDelete(){
-  const listSize=1
-  const reps = 10
+  const listSize=2
+  const reps = 100
   const vs = createRandLists(listSize)
-
+/*
   console.log(vs.v1.toList())
   console.log(vs.v1.toList('edit'))
   console.log(vs.v1.strings.tln.toStringIndent(5))
-
+*/
   for(let i=0;i<reps;i++){
-    let z1= randN(vs.v1.size)
+    let z1= randN(vs.v2.size()+1)
     console.log('\n***** Step '+i+'\ninserting elt at position '+z1)
     vs.v1.insert(z1,2*i)
     vs.v2.insert(z1,2*i)
-
+/*
     console.log(vs.v1.toList())
     console.log(vs.v2.toList())
     console.log(vs.v1.toList('edit'))
     console.log(vs.v1.strings.tln.toStringIndent(5))
-
+*/
     if (!JSONcompare('Insertion error',vs.v1.toList(),vs.v2.toList())){
       console.log("Error in DLLwi insert! "+i+" "+z1+" "+N)
       console.dir([vs.v1,vs.v2,i,z1])
@@ -168,12 +168,12 @@ function testInsertDelete(){
     console.log('deleting elt at position '+z2)
     vs.v1.delete(z2)
     vs.v2.delete(z2)
-
+/*
     console.log(vs.v1.toList())
     console.log(vs.v2.toList())
     console.log(vs.v1.toList('edit'))
     console.log(vs.v1.strings.tln.toStringIndent(5))
-
+*/
     if (!JSONcompare('Deletion',vs.v1.toList(),vs.v2.toList())){
       console.log("Error in DLLwi insert! "+i+" "+z1+" "+N)
       console.dir([vs.v1,vs.v2,i,z1])

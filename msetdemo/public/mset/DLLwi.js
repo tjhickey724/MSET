@@ -31,7 +31,7 @@ class DLLwi {
     this.sizefn = (sizefn || ((x)=>({count:1})))
     // create an emptySize which has size 0 for all features
     this.emptySize = createEmptySize(this.sizefn)
-    this.listSize = this.emptySize
+    //this.listSize = this.emptySize
 
     this.isAVL = true // use to get the AVL version of DLL
 
@@ -52,12 +52,15 @@ class DLLwi {
     // the rest of this only matters if isAVL is true..
     const endTree = new TreeList(null,null,null,this.last)
     this.last.tln = endTree
+    endTree.sublistSize = this.emptySize
 
     const startTree = new TreeList(null,null,null,this.first)
+    this.first.tln = startTree
+    startTree.sublistSize = this.emptySize
     startTree.right = endTree
     endTree.parent = startTree
     this.tln = startTree
-    this.first.tln = startTree
+
 
     debug.log('any',"In DLLwi constructor, this = ")
     debug.dir('any',this)
@@ -66,21 +69,21 @@ class DLLwi {
 
   size(feature) {
     feature = feature || 'count'
-    return this.listSize[feature]
+    return this.tln.sublistSize[feature]
     //return this.tln.size[feature] // don't count the start and end markers
   }
 
   insert(pos,elt,feature){
     feature = feature || 'count'
     debug.dir('insert',this)
-    debug.log('insert','INSERTING: '+JSON.stringify([pos,elt,feature,this.listSize]))
+    debug.log('insert','INSERTING: '+JSON.stringify([pos,elt,feature,this.tln.sublistSize]))
     if ((pos==undefined) || (elt==undefined)){
       throw new Error("DLLwi insert must be called with 2 parameters: pos and elt")
     }
 
 
 
-    const size = this.listSize[feature]
+    const size = this.tln.sublistSize[feature]
     if (pos>size || pos<0){
       throw new Error("trying to insert at pos "+pos+" in a list of size "+size)
     } else if (pos == size) {
@@ -101,7 +104,7 @@ class DLLwi {
     if (pos==undefined){
       throw new Error("DLLwi delete must be called with one element, pos, the position to delete")
     }
-    const size = this.listSize[feature]
+    const size = this.tln.sublistSize[feature]
     if (pos < 0 || pos>=size){
       throw new Error("trying to delete element at pos "+pos+" in a list of size "+size)
     }
@@ -109,7 +112,7 @@ class DLLwi {
     debug.dir('delete',this)
 
     let listNode = this.nth(pos,feature)
-    this.listSize = ListNode.subtractSizes(this.listSize,listNode.elementSize)
+    //this.listSize = ListNode.subtractSizes(this.listSize,listNode.elementSize)
 
     const z = listNode.delete()
 
@@ -146,6 +149,15 @@ class DLLwi {
       return this.nthSlow(n, feature)
     }
     feature = feature || 'count'
+    if (n<0) {
+      throw new Error("nth must be called with positive numbers, not "+n)
+    } else if (n>=this.size(feature)){
+      console.dir([n,feature,this])
+      console.log(this.tln.toStringIndent(5))
+      console.log(this.toList('count').map((x)=>(x.toString())))
+      throw new Error("nth must be called with a number smaller than the size:"+
+          "n="+n+" but size("+feature+")="+this.size(feature))
+    }
     return TreeList.nth(n,this.tln,feature)
   }
 
@@ -256,7 +268,7 @@ class ListNode{
       if (this.dll.isAVL){
         this.dll.tln = this.tln.insertBefore(x)
       }
-      this.dll.listSize = ListNode.addSizes(this.dll.listSize,this.dll.sizefn(a))
+      //this.dll.listSize = ListNode.addSizes(this.dll.listSize,this.dll.sizefn(a))
       return x;
     }
 
@@ -275,7 +287,7 @@ class ListNode{
     if (this.dll.isAVL){
       this.dll.tln = this.tln.insertAfter(x)
     }
-    this.dll.listSize = ListNode.addSizes(this.dll.listSize,this.dll.sizefn(a))
+    //this.dll.listSize = ListNode.addSizes(this.dll.listSize,this.dll.sizefn(a))
     return x;
   }
 
@@ -402,6 +414,7 @@ class TreeList {
   }
 
   nth(n,feature){
+
 
     // find the nth element in the tree using weighted elements
     // find the element at position n in the DLL spanned by tln

@@ -98,7 +98,8 @@ class DLLmset{
 
   toList(feature){
     feature = feature || 'std'
-    return [].concat.apply([],(this.toListInternal(feature).map((x)=>(x.userData))))
+    return [].concat.apply([],
+        (this.toListInternal(feature).map((x)=>((x.vis||x.marker)?x.userData:'['+x.userData+']'))))
   }
 
   toListInternal(feature){
@@ -241,7 +242,7 @@ class DLLmset{
         } else { // q>0
               // if the node is not inserted at the beginning of the parent node
               // so there is a subnode that preceeds it
-              f=n.subnodes.nth(q-1,'std');
+              f=n.subnodes.nth(q-1,'rev');
               f=f.data.listNode
               //console.log('f is the previous subnode')
               //console.dir(f)
@@ -460,6 +461,7 @@ class DLLmset{
           const ecell=this.strings.nth(k-1,"std") //O(log(N))
           const ecellOffset = ecell.indexOf("std")
           const offsetInCell = k-ecellOffset
+
           // if offsetInCell<cellsize then we insert between 2 characters
           // if it == cellSize, then we either extend
           // and get the element after the ecell
@@ -543,15 +545,20 @@ class Element{
   }
 
   hide(){
+    //console.log(this.vis+" vis -> false")
     this.vis=false
     this.rebalance()
   }
 
   rebalance(){
     // this should be called when the size of a node is changed
-    const newEltSize = Element.sizefn(this)
-    this.listNode.size = newEltSize
-    this.listSubnode.size = newEltSize
+    //console.log("in rebalance")
+    //console.log('before: '+JSON.stringify(this.listNode.elementSize))
+    //console.dir(this)
+    const newEltSize = this.eltSize() //Element.sizefn(this)
+    //console.log('after:  '+JSON.stringify(this.listNode.elementSize))
+    this.listNode.elementSize = newEltSize
+    this.listSubnode.elementSize = newEltSize
     this.listNode.tln.updateWeights()
     this.listSubnode.tln.updateWeights()
   }
@@ -609,7 +616,9 @@ class Element{
     const std = (this.vis)?this.size:0  // markers are not visible!
     const rev = (this.marker)?0:this.size
     const edit = this.size
-    return {std,rev:rev,edit:edit,count:1}
+    //console.dir(this)
+    //console.log(JSON.stringify([this.vis,this.size,this.marker, std,rev,edit]))
+    return {std:std,rev:rev,edit:edit,count:1}
   }
 
   static sizefn(element){
