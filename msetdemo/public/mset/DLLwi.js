@@ -73,6 +73,13 @@ class DLLwi {
     //return this.tln.size[feature] // don't count the start and end markers
   }
 
+  insertList(pos,elts,feature){
+
+    let node = (pos<this.size(feature))?this.nth(pos,feature):this.last
+    elts.forEach((e)=>(node.insertBefore(e)))
+    return node
+  }
+
   insert(pos,elt,feature){
     feature = feature || 'count'
     debug.dir('insert',this)
@@ -96,6 +103,19 @@ class DLLwi {
       debug.log("insert","found the nth element"+listNode.data+" now inserting before "+this.data)
       const z = listNode.insertBefore(elt);
       return z
+    }
+  }
+
+  deleteRange(start,n,feature){
+    // remove the n elements starting at position start
+    if (n+start >= this.size()) {
+      throw new Error("Error in deleterange: you can not delete past the end of the list")
+    } else if ((n<0) || (start<0)) {
+      throw new Error("Error in deleteRange(s,n): both s and n must be non-negative")
+    } else {
+      for(let i=0;i<n;i++){
+        this.delete(start,feature)
+      }
     }
   }
 
@@ -211,12 +231,11 @@ class ListNode{
 
   set data(val){
     this.hiddenData =val
-    return val
     this.elementSize = this.dll.sizefn(val)
-    if (this.hiddenData.dll.isAVL){
+    if (this.dll.isAVL){
       console.log("updating the weights after setting the data")
       console.dir([val,this])
-      this.updateWeights()  // update the sublistSize for node and all ancestors
+      this.tln.updateWeights()  // update the sublistSize for node and all ancestors
     }
 
   }

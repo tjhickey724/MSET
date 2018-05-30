@@ -1,4 +1,4 @@
-export {DLLmset as default}
+export {DLLmset}
 import {DLLwi} from "./DLLwi.js"
 import {BSTwi} from "./BSTwi.js"
 
@@ -10,17 +10,27 @@ import {BSTwi} from "./BSTwi.js"
  * in time O(log(n)) where n is the total number of operations applied to
  * the list so far. This is asymptotically optimal.
  *
+ * This version uses "Subnodes" instead of single object Elements in the
+ * underlying DLL, because of this it has the same efficiency as an array
+ * initially and degrades by O(log(k)) where k is the number of insertions
+ * and deletions performed on the DLL. It can be initialized with an array
+ * of any size containing any kind of javascript objects!
+ *
  * The main applications this was built for was
  *  -- a collaborative text editor
  * but we also have a demo of a collaborative JSON list editor
  * which allows any number of people to insert and remove JSON elements
  * from a shared list.
  *
- * The DLLmset has two main methods
+ * The DLLmset class has four main methods
  *  insert(pos,element)
  *  delete(pos)
- *  which can be called by the client
- *  they use the network to send messages to the peers
+ *  nth(pos)  -- return the nth element in the
+ *  copy() -- return a copy of the DLL backed by a single array
+ *            this is a kind of garbage collection...
+ *
+ * This can be used by a single user, or by multiple users on multiple computers
+ * or in multiple threads. To use it with multiple users you need the MSET class
  * It also receives remote operations from the network and applies it to the tree
  * It requires a Network object and a Socket object,
  * which afre passed in when the tree is created...
@@ -29,11 +39,13 @@ import {BSTwi} from "./BSTwi.js"
 
 
 class DLLmset{
-  constructor(u,network){
+  constructor(u,network,elements){
+    elements = elements || []
     this.user = u;
     this.count = 0;
-    this.size=0;
-    this.root = new Node(0,0);
+
+    this.root = new Node(0,0,elements);
+
     this.strings = new DLLwi(Element.sizefn);
     this.nodes = {};
     this.nodes[[0,0]] = this.root;
@@ -42,36 +54,42 @@ class DLLmset{
     this.emptyNetwork = {hide:(x)=>null,insert:(x)=>null,extend:(x)=>null}
     this.network = network || this.emptyNetwork
 
-    this.insertCallback = function(k,elt,user){console.log("insert("+k+","+elt+","+user+")")}
-    this.deleteCallback = function(k,elt,user){console.log("delete("+k+","+elt+","+user+")")}
+    this.insertCallback = function(k,elt,user){return; console.log("insert("+k+","+elt+","+user+")")}
+    this.deleteCallback = function(k,elt,user){return; console.log("delete("+k+","+elt+","+user+")")}
 
 
     // the rest of this constructor initializes the
     // instance variables defined above ...
-    var n = this.strings.first;
-    var e1,e2;
-    e1 = Element.createStart(this.root);
-    e2 = Element.createEnd(this.root);
-    n = n.insertAfter(e1,this.strings);
-    e1.listNode=n
-    n = n.insertAfter(e2,this.strings);
-    e2.listNode=n
-    this.root.start = e1;
-    this.root.end = e2;
+    // We add the three elements to the main DLL list
+    const start = this.root.start
+    const elts = this.root.subnodes.first.next.data
+    const end = this.root.end
+    start.listNode = this.strings.first.insertAfter(start)
+    elts.listNode = start.listNode.insertAfter(elts)
+    elts.listSubnode = this.root.subnodes.first.next
+    end.listNode = elts.listNode.insertAfter(end)
+
+    this.root.isRoot=true
+    window.u = this
+
   }
 
   treeHeight(){
     return this.strings.tln.height
   }
 
+  size(feature){
+    feature = feature || 'std'
+    return this.strings.tln.sublistSize[feature]
+  }
+
   copy(){
     const elts = this.toList()
     const newMSET = new DLLmset()
-    for(let i in elts){
-      newMSET.insert(i,elts[i])
-    }
+    newMSET.insertAll(i,elts) // have to write insertALL
     return newMSET
   }
+
 
 
   toString(separator,feature){
@@ -84,7 +102,13 @@ class DLLmset{
   }
 
   toList(feature){
-    return this.strings.toList('std')
+    feature = feature || 'std'
+    return [].concat.apply([],
+        (this.toListInternal(feature).map((x)=>((x.vis||x.marker)?x.userData:'['+x.userData+']'))))
+  }
+
+  toListInternal(feature){
+    return this.strings.toList(feature)
   }
     /*
      * This method takes a tree op from the queue, checks to see if it can be applied
@@ -128,6 +152,8 @@ class DLLmset{
     /* this method take a tree edit operation object
      which it obtains from the network and applies it to the tree
      returning the result. We assume that the target is in the tree!
+     in this case the insert and extend can insert a list of characters
+     we should also modify delete to delete a set of characters ..
     */
   applyTreeOp(treeOp){
       var n;
@@ -136,7 +162,7 @@ class DLLmset{
       } else if (treeOp.op == "extend") {
           n = this.treeextend(treeOp.nodeid, treeOp.c);
       } else if (treeOp.op == "delete") {
-          n = this.treehide(treeOp.nodeid, treeOp.q, treeOp.u);
+          n = this.treehide(treeOp.nodeid, treeOp.q, treeOp.u, treeOp.size);
       }
       return n; // this has yet to be written ...
   }
@@ -152,42 +178,122 @@ class DLLmset{
    */
 
   treeinsert(vm,q,un,c){
+      //console.log('in treeinsert:'+JSON.stringify([vm,q,un,c]))
+      //console.dir(this)
+      //console.log(this.strings.tln.toStringIndent(5))
+      const n = this.nodes[vm] // O(1) with a hashtable Implementation
+      let s= null
+      if (n.isRoot&&q==0){ //}(q==0)&&(n.elts.length==0)){
+        // this is the case where we are the first to insert in the top of the tree
+        // which is owned by the superuser 0
+        // we just insert directly into the iset of the node
+        s = n.subnodes.first.next // get the first subnode
+      } else if ((q==n.elts.length) && (q>0)) {
+        // we are inserting at the end of a node we don't own (else it would be tree extend)
+        // we will make a new subnode and insert at the beginning of that
+          s = n.subnodes.nth(q-1,'edit')  // this returns a listNode, we may want elements instead
+          //console.dir(s)
+          let inNodeOffset = q-s.indexOf('edit')
 
-      var n = this.nodes[vm]; // O(log(N))
-      var s = n.iset[q];
-      var m = DLLmset.createCharNode(un,c);  // O(1)
-      var e = m.elt[0];
-      var f = n.start;
-      //var k = DLLmset.insertNode(m,s);  // O(log(N))
-      var k = s.insertNode(m);
+          let e = s.data.split(inNodeOffset)
+          //console.dir(e)
+          //console.dir(e)
+          s = e.right.listSubnode
+          //console.log('just split last subnode in node'+this.strings.tln.toStringIndent(5))
+          //console.log("just split s")
+          //console.dir(s)
+      } else {
+          //console.dir([n,q])
+          //console.log(n.subnodes.toString(' ','count'))
+          window.debugging.n=n
+          s = n.subnodes.nth(q,'edit') // return subnode containing offset q
+          //console.log('looking up subnode containing the qth element')
+          //console.dir(s)
+      }
+      //console.dir([s,q,s.indexOf('std')])
+      window.debugging.data={s,q,n,t:this}
+      const s_offset = q - s.indexOf('edit')
+      const s_size = s.data.size;
+      //console.log(JSON.stringify([s_offset,s_size]))
 
-      // now we sew m into the doubly linked lists!!!
-      if (k==0){
-        // this is the case where the node is at the front of the iset
-        if (q==0) {
-            // here the node is inserted at pos q=0 in the parent node
-            f=n.start;
-        } else { // q>0
-            // if the node is not inserted at the beginning of the parent node
-            f=n.elt[q-1];
+
+      // in this conditional, we create the node m = (un,c)
+      // and find insert it into the appropriate iset
+      // after the conditional we see the node m in where we sew it in after
+      let m = DLLmset.createCharNode(un,c);  // O(1)
+      //console.log("***** m=")
+      //console.dir(m)
+      let f=null
+      let k=null
+
+      if (s_offset==0){
+        // then we need to insert in the InsertionSet at the left of this node
+        // and we may need to create it
+        if (!s.data.iset){
+          s.data.iset = new InsertionSet()
+          //console.log("creating new iset")
         }
-      } else { // here the node is not the first in its iset
-        //f = s[k-1].end; // O(log(N))
-        f = s.get(k-1).end
+        k = s.data.iset.insertNode(m)
+        //console.log("k= "+k)
+        if (k>0){
+          f = s.data.iset.get(k-1).end.listNode
+          //console.log('f is end of previous iset entry')
+          //console.dir(f)
+        } else if (q==0) {
+              // here the node is inserted at pos q=0 in the parent node
+              f=n.start.listNode;
+              //console.log('f is start of the whole dll')
+              //console.dir(f)
+        } else { // q>0
+              // if the node is not inserted at the beginning of the parent node
+              // so there is a subnode that preceeds it
+              f=n.subnodes.nth(q-1,'rev');
+              f=f.data.listNode
+              //console.log('f is the previous subnode')
+              //console.dir(f)
+        }
+      } else { // (s_offset <= s_size){
+        // we are inserting in the middle of the subnode and need to split it
+        //console.dir(s)
+        let st = s.data.split(s_offset) // split subnode s and return the right half
+        //console.dir(['after split',st,this])
+        k = st.right.iset.insertNode(m)  // get its empty iset (which is created by split)
+        //console.log("just inserted the right half of split node:")
+        //console.dir(st)
+        f = st.left.listNode // sew it in after the subnode on the left (which remains s)
+        //console.log('f is left half of the split subnode')
+        //console.dir(f)
+
       }
 
-      // next we insert the three new elements into the list
-      const node1 = f.listNode.insertAfter(m.start);
+
+      // next we insert the three new elements into the main list
+      //console.dir(f)
+      //console.log(this.strings.tln.toStringIndent(5))
+
+      // window.debugging= true
+      const node1 = f.insertAfter(m.start);
       m.start.listNode=node1
-      const node2 = node1.insertAfter(m.elt[0]);
-      m.elt[0].listNode = node2
+      //console.dir(m.start)
+      //console.log('**** just inserted start symbol <6:0 '+this.strings.tln.toStringIndent(5))
+      //console.dir([this,node1,m,f])
+
+      const node2 = node1.insertAfter(m.subnodes.first.next.data);
+      m.subnodes.first.next.data.listNode = node2
       const node3 = node2.insertAfter(m.end); // O(log(N))
       m.end.listNode = node3
+      //console.dir(m)
+      //console.log(this.strings.tln.toStringIndent(5))
       // and insert the new node into the hashtable
-      this.nodes[un]=m;
-      this.size++;
-      this.insertCallback(node2.indexOf("std"),c,un[0])
+      this.nodes[un]=m; // add the new node to the hash table
+
+      this.insertCallback(node2.indexOf("std"),c,un[0]) // ILL HAVE TO CHECK WHAT INDEXOF RETURNS
+
+      //console.log("AFTER INSERT "+this.strings.toString(' ','count'))
+      //console.log(this.strings.tln.toStringIndent(5))
       return m;
+
+
   }
 
 
@@ -196,37 +302,99 @@ class DLLmset{
    *  and it updates M to reflect this change ...
    */
   treeextend(nodeid,c){
-      var n = this.nodes[nodeid];  // O(log(N))
-      var e = Element.createChar(c,n);  // O(1)
-      var d = n.elt.length;
-      var f = n.end;
-      var insertionPos = f.listNode.indexOf("std")
-      //console.log("in treeextend:"+JSON.stringify([d,insertionPos]))
-      //console.dir([n,this])
-      //console.log(this.strings.tln.toStringIndent(5))
-      this.strings.toString(' ','count')
-      e.offset = d;
-      n.elt[d]=e;
-      n.iset[d+1]= new InsertionSet();;
-      e.listNode = f.listNode.insertBefore(e); // O(log(N))
-      this.size++;
+      //console.log("inside treeextend: "+JSON.stringify([nodeid,c]))
+      //console.dir(this)
+      var n = this.nodes[nodeid];
+      //console.dir(n)
+      //console.dir(c)
+      n.elts = n.elts.concat(c)
+      //console.dir(['te1',n])
+      const f = n.end;
+
+
+
+      //console.dir(f)
+      const insertionPos = f.listNode.indexOf('std')
+      var g = f.listNode.prev.data; // this is the previous subnode, which we will extend!
+
+      //console.log('updating g')
+      //console.dir(g)
+      g.size = g.size+c.length
+      g.listNode.elementSize = {std:g.size,rev:g.size,edit:g.size,count:g.size}
+      g.listSubnode.elementSize = g.listNode.elementSize
+      g.userData = g.treeNode.elts.slice(g.first,g.first+g.size)
+      //console.log(JSON.stringify([g.size,c.length,g.listNode.size,g.userData]))
+      //f.listNode.prev.data = g // this should update the weights!!
+      //console.log('updating g.listNode in treeExtend')
+      g.listNode.tln.updateWeights()
+      //console.log('updating g.listSubnode in treeExtend')
+      //console.dir(g)
+      g.listSubnode.tln.updateWeights()
+      // I need to update the listnode in the AVL tree
+      //console.log('at the end of treeextend')
+      //console.dir(g)
+      //console.log(g.listNode.dll.tln.toStringIndent(5))
       this.insertCallback(insertionPos,c,n.user)
       return n;
   }
+
 
   /* treehide(M,nodeid,q)
    *  this hides the character c with offset q in the node with the specified nodeid
    *  and it updates M to reflect this change ...
    */
   treehide(nodeid,q,u) {
-      var n = this.nodes[nodeid] // O(log(N))
-      var e = n.elt[q]
-      var offset = e.listNode.indexOf("std")
-      e.vis=false
-      e.userData = e.userData
-      e.listNode.size.std = 0  // it is not longer visible
-      e.listNode.tln.rebalance()
-      this.deleteCallback(offset,e.userData,u) // u is the one who deleted e.userData
+      const n = this.nodes[nodeid] // O(log(N))
+      //console.log("in treehide "+JSON.stringify([nodeid,q,u]))
+      //console.dir([n,this])
+      //console.log(n.subnodes.tln.toStringIndent(5))
+      //console.dir(n.subnodes.toList('rev'))
+      const subNodePosition = n.subnodes.nth(q,"rev")
+      //console.dir(subNodePosition)
+
+      const subNode = subNodePosition.data
+      const offset = q-subNode.first
+      const size = subNode.size
+      const deletionPosition = subNodePosition.data.listNode.indexOf("std")+offset
+      const deletionElement = n.elts[q]
+      //console.log('delete: '+deletionPosition+" "+deletionElement)
+
+      if (offset==0){
+        if (subNode.size==1){
+          //console.log('treehide case 1')
+          // the entire subnode will be hidden, so set the vis flag and
+          // rebalance the listNode and listSubnode to change the weights in ancesters
+          subNode.hide()
+        } else {
+          //console.log('treehide case 2')
+          // the deleted object is the first in a node with >=2 elements
+          // split the subnode after element 0
+          // remove the old node from both lists and add the new nodes
+          const nodes = subNode.split(1)
+          nodes.left.hide()
+        }
+      } else if (offset==size-1) {
+        //console.log('treehide case 3')
+        // the deleted object is the last element of the node
+        // split right before it, remove old node, insert two new nodes
+        const nodes = subNode.split(size-1)
+        nodes.right.hide()
+      } else {
+        //console.log('treehide case 4')
+        // the deleted objects has elements before and after it in the subnode
+        // so we need to split the subnode into three parts, hide the middle one
+        // remove the old node and insert the two new nodes
+        //console.dir(subNode)
+        //const nodes = subNode.split(q)
+        const nodes = subNode.split(offset)
+        const left = nodes.left
+        const nodes2 = nodes.right.split(1)
+        const middle = nodes2.left
+        const right = nodes2.right
+        middle.hide()
+      }
+
+      this.deleteCallback(deletionPosition,deletionElement,u)
       return n;
   }
 
@@ -235,19 +403,13 @@ class DLLmset{
    * this requires creating the 3 corresponding elements and settingup the node.
    */
   static createCharNode(nodeid,c){
-      var n = new Node(nodeid[0],nodeid[1]);
-      var e1 = Element.createStart(n);
-      var e2 = Element.createChar(c,n);
-      var e3 = Element.createEnd(n);
-      n.start   = e1;
-      n.elt[0] = e2;
-      n.end     = e3;
-      n.iset[0] =  new InsertionSet()
-      n.iset[1] =  new InsertionSet()
+      var n = new Node(nodeid[0],nodeid[1],c);
       return n;
   }
 
   nextNonMarker(listnode){
+    // we can assume that listnode is a marker cell
+    // and we should return the index of the next nonmarker in the string....
     const index = listnode.indexOf("rev")
     const result= this.strings.nth(index,"rev")
     return result
@@ -263,70 +425,98 @@ class DLLmset{
    * following the algorithm in the paper
    */
 
+  /**
+    For now we implemention delete a single element at a time.
+    Later we will add deletion of a range of elements (which will be more efficient!)
+  */
   delete(k) {
-      var listNode = this.strings.nth(k,"std")
-      var e = listNode.data
-      //var e = this.strings.nth(k,"std").data;  // O(log(N))
-
-      e.vis=false;
-      listNode.size.std = 0  // it is not longer visible
-      listNode.tln.rebalance()
-      this.network.hide(e.nodeid,e.offset,this.user); // un is used to prevent broadcast from going back to user
+      const listNode = this.strings.nth(k,"std") // find the subnode containing kth element
+      const eltsBeforeNode = listNode.indexOf("std")
+      const subNode = listNode.data
+      const nodeid = subNode.nodeid
+      const offset = (k - eltsBeforeNode + subNode.first)
+      //console.log("in delete "+k)
+      //console.dir([listNode,eltsBeforeNode,subNode,nodeid,offset,k,this])
+      this.treehide(nodeid,offset,this.user)
+      this.network.hide(nodeid,offset,this.user)
+      //e.vis=false;
+      //listNode.size.std = 0  // it is not longer visible
+      //listNode.tln.rebalance()
   }
 
   insert(k,c) {
-      var un;
-      if (this.size==0) {
-        un = [this.user,this.count++];
+    return this.insertList(k,[c])
+  }
+
+  insertList(k,c) {
+      //console.log('insertList '+k+' '+c)
+      // the goal of this method is to make the appropriate call to treeinsert or treeextend
+      // but not to actually modify the tree...
+      let un=null
+      if (this.strings.tln.sublistSize['rev']==0) {
+        //console.log('case 0: this.size='+this.size)
+        //console.dir(this)
+        un = [this.user,this.count++]
         // CASE 0:  no-nonmarkers in the list, so tree must be empty
 
         // insert new node into the root of the empty tree
-        this.treeinsert([0,0],0,un,c);
-        this.network.insert([0,0],0,un,c);
+        this.treeinsert([0,0],0,un,c)
+        this.network.insert([0,0],0,un,c)
       }
       else if (k==0) {
+        //console.log('case 1: k='+k)
 
         // CASE 1: inserting at the beginning of the string
 
         //  strategy - insert before the first non-marker character
-        un = [this.user,this.count++];
-        var e = this.strings.nth(0,"rev").data; //O(log(N))
+        un = [this.user,this.count++]
+        const e = this.strings.nth(0,"rev").data; //O(log(N))
         this.network.insert(e.nodeid,0,un,c);
         this.treeinsert(e.nodeid,0,un,c);
 
       } else { // k>0
+        //console.log('case2')
           // in the remaining cases we're inserting after a visible character
           // so, get the visible, non-marker elt e at position k-1
-          var ecell=this.strings.nth(k-1,"std"); //O(log(N))
+          const ecell=this.strings.nth(k-1,"std") //O(log(N))
+          const ecellOffset = ecell.indexOf("std")
+          const offsetInCell = k-ecellOffset
+
+          // if offsetInCell<cellsize then we insert between 2 characters
+          // if it == cellSize, then we either extend
           // and get the element after the ecell
+          // here we need to check to see if we should split the node...
+          // we need many more cases here ... or maybe not,
+          // maybe the splitting happens in treeinsert ....
           var fcell=ecell.next;
-          if (!fcell.data.marker) {
-
-              // CASE 2: inserting between two non-marker elements
-
-              // if the next elt is a non-marker insert there
-              var un = [this.user,this.count++];
-
-              this.network.insert(fcell.data.nodeid, fcell.data.offset,un,c);
-              this.treeinsert(fcell.data.nodeid,fcell.data.offset,un,c);
-
+          //console.dir([k,ecell,fcell,fcell.data.treeNode.user,this.user])
+          if ((offsetInCell<ecell.data.size) || (!fcell.data.marker)){
+            //console.log('case2a')
+              // CASE 2a: inserting between two non-marker elements
+              // here is the case where we insert between two characters in a Subnode
+              un = [this.user,this.count++];
+              this.network.insert(ecell.data.nodeid, ecell.data.first+offsetInCell,un,c);
+              this.treeinsert(ecell.data.nodeid, ecell.data.first+offsetInCell,un,c);
           } else if (fcell.data.marker && (fcell.data == fcell.data.treeNode.end)) {
 
-              // CASE 3: the next element is an end marker
-
+               //CASE 3: the next element is an end marker
               if (fcell.data.treeNode.user==this.user) {
+                //console.log('case3a')
                   // case 3a: it the user owns the node then extend
                   this.network.extend(fcell.data.nodeid, c);
                   this.treeextend(fcell.data.nodeid,c);
               }
               else {
+                //console.log('case3b')
+
                 un = [this.user, this.count++];
                 // case 3b: otherwise insert a new node here
-
-                this.network.insert(fcell.data.nodeid, fcell.data.treeNode.elt.length, un, c);
-                this.treeinsert(fcell.data.nodeid,fcell.data.treeNode.elt.length,un,c);
+                //console.dir(fcell)
+                this.network.insert(fcell.data.nodeid, fcell.data.treeNode.elts.length, un, c);
+                this.treeinsert(    fcell.data.nodeid, fcell.data.treeNode.elts.length, un, c);
               }
           } else {
+            //console.log('case4')
 
                 // CASE 4: the cell must be a start marker
 
@@ -347,70 +537,134 @@ class DLLmset{
 /* ***********************************************************************
  * Here is an implementation of Elements for the MSET data type
  * The elements are the core objects that wrap the values stored in our DLL
- * Eventually, we will allow this.userData to be a list of "values" sharing the same visibility
+ * An element is a subsequence of objects in the DLL which have the same visibility
+ * and in which insertions are only allowed at the left. An insertion at the right
+ * will be done in the node to the right (and if this Element is the last in the node,
+ * then we will need to create a new last node (or maybe not ...)
+ * When inserting into the middle of an element, the element must be split
+ * Likewise when deleting a subrange of an element, the element must be split unless
+ * the entire element will be deleted in which case the flag is just changed.
  */
 
 class Element{
 
- constructor (sym,vis,marker) {
-    this.userData = sym; // this is the value of the element which can be any Javascript object
+ constructor (first,size,vis,marker,treeNode,isLast) {
+    this.first = first
+    this.size = size
+    this.iset = null // we create an InsertionSet at the left if needed ...
     this.vis=vis;  // boolean -- true if it is visible, false if hidden
     this.marker=marker; // boolean -- true if it is a marker symbol, false otherwise
-    this.treeNode=null; // link to the treeNode containing this element
-    this.nodeid=null; // id of this.treeNode
-    this.offset=null; // offset of the element in this.treeNode
+    this.treeNode=treeNode; // link to the treeNode containing this element
+    //this.nodeid=null; // id of this.treeNode, this is redundant as treeNode has it
     this.listNode=null; // link to the Doubly Linked List element containing this element
+    this.listSubnode=null;
+    this.isLast = isLast // true when the element is the last in the node,  we don't need this..
+    //console.dir(['in new Element',first,size,vis,marker,treeNode,isLast])
+    this.userData = treeNode.elts.slice(first,first+size)  // DEBUGGING!!
+    this.nodeid = [treeNode.user,treeNode.count]
   }
 
+  hide(){
+    //console.log(this.vis+" vis -> false")
+    this.vis=false
+    this.rebalance()
+  }
+
+  rebalance(){
+    // this should be called when the size of a node is changed
+    //console.log("in rebalance")
+    //console.log('before: '+JSON.stringify(this.listNode.elementSize))
+    //console.dir(this)
+    const newEltSize = this.eltSize() //Element.sizefn(this)
+    //console.log('after:  '+JSON.stringify(this.listNode.elementSize))
+    this.listNode.elementSize = newEltSize
+    this.listSubnode.elementSize = newEltSize
+    this.listNode.tln.updateWeights()
+    this.listSubnode.tln.updateWeights()
+  }
+
+  split(p){
+    // split the subnode into two at the current offset
+    // remove the old subnode and insert the two new subnodes into both lists
+    //We split by removing the node and replacing it with two new nodes!
+    let mLeft = new Element(  this.first,           p,  true, false, this.treeNode, this.isLast)
+    let mRight  = new Element(this.first+p, this.size-p,  true, false, this.treeNode, this.isLast)
+    let prevListNode = this.listNode.prev
+    let prevListSubnode = this.listSubnode.prev
+    this.listNode.delete()
+    this.listSubnode.delete()
+
+    mLeft.listNode  = prevListNode.insertAfter(mLeft)
+
+    mRight.listNode   = mLeft.listNode.insertAfter(mRight)
+
+    mLeft.listSubnode = prevListSubnode.insertAfter(mLeft)
+    mRight.listSubnode   = mLeft.listSubnode.insertAfter(mRight)
+
+    mRight.iset = new InsertionSet()
+
+    return {left:mLeft,right:mRight}
+  }
+
+
+
+  // REWRITE THIS AS toString() ...
   toString(){
-    if (this.vis || this.marker) {
+    //onsole.log("inside toString of Element")
+    //console.dir(this)
+    if (this.marker){
+      //console.dir(['a',this.userData])
       return this.userData
-    } {
-      return "["+this.userData+"]"
+    } else if (this.vis) {
+      //console.dir(['b',this.first,this.size,this.treeNode.elts.slice(this.first,this.first+this.size)])
+      return "("+this.treeNode.elts.slice(this.first,this.first+this.size)
+                +":"+this.first+":"+this.size+") "
+    } else {
+      //console.dir(['c',this.first,this.size,"{"+this.treeNode.elts.slice(this.first,this.first+this.size)+"}"])
+      return "[["+this.treeNode.elts.slice(this.first,this.first+this.size)+"]] "
     }
 
   }
 
-  toStringLong() {
+  // REWRITE THIS
+  toStringLong2() {
     return "{"+this.userData+","+this.vis+","+this.marker+","+this.nodeid+","+this.offset+"}";
   }
 
+
   eltSize(){
-    const std = (this.vis)?1:0
-    const rev = (this.marker)?0:1
-    const edit = 1
-    return {std,rev:rev,edit:edit,count:1}
+    const std = (this.vis)?this.size:0  // markers are not visible!
+    const rev = (this.marker)?0:this.size
+    const edit = this.size
+    //console.dir(this)
+    //console.log(JSON.stringify([this.vis,this.size,this.marker, std,rev,edit]))
+    return {std:std,rev:rev,edit:edit,count:1}
   }
 
   static sizefn(element){
     return element?element.eltSize():{count:0,std:0,rev:0,edit:0}
   }
 
-  static createChar(c,n){
-      var e = new Element(c,true,false);
-      e.treeNode=n;
-      e.nodeid=[n.user, n.count];
-      e.offset = 0;
-      return e;
-  }
-
   static createStart(n){
-      var startsym = "<"+n.user+":"+n.count;
-
-      var e = new Element(startsym,false,true);
-      e.treeNode = n;
-      e.nodeid = [n.user, n.count];
-      e.offset = "start";
-      return e;
+      var startsym = "<"+n.user+":"+n.count
+      var e = new Element('start',0,false,true,n,false)
+      e.userData = startsym
+      e.treeNode = n
+      e.nodeid = [n.user, n.count]
+      e.offset="start"
+      e.size=1
+      return e
   }
 
   static createEnd(n){
-      var endsym = n.user+":"+n.count+">";
-      var e = new Element(endsym,false,true);
-      e.treeNode = n;
-      e.nodeid = [n.user, n.count];
-      e.offset = "end";
-      return e;
+      var endsym = n.user+":"+n.count+">"
+      var e = new Element('end',0,false,true,n,false)
+      e.userData = endsym
+      e.treeNode = n
+      e.nodeid = [n.user, n.count]
+      e.offset = "end"
+      e.size=1
+      return e
   }
 
 } // end of Element class
@@ -422,16 +676,42 @@ class Element{
 
 /* ************************************************************
  * Here is an implementation of a Node in the MSET tree
+ * It represnet
  */
 
+
+
 class Node{
-  constructor(u,n) {
+  constructor(u,n,elements) {
     this.user=u;
     this.count=n;
-    this.elt=[];
-    this.iset=[];
-    this.iset[0]= new InsertionSet();
+    this.elts= elements || [];
+    this.subnodes = new DLLwi(Element.sizefn)
+
+    /*
+    this.start = Element.createStart(this)
+    this.start.listSubnode = this.subnodes.first.insertAfter(this.start)
+    let eltSubnode = new Element(0,this.elts.length,true,false,this,true)
+    eltSubnode.listSubnode = this.start.listSubnode.insertAfter(eltSubnode)
+    this.end = Element.createEnd(this)
+    this.end.listSubnode = eltSubnode.listSubnode.insertAfter(this.end)
+   */
+
+    this.start = Element.createStart(this)
+    this.end = Element.createEnd(this)
+    let eltSubnode = new Element(0,this.elts.length,true,false,this,true)
+    window.debugging.newNode=this
+    eltSubnode.listSubnode = this.subnodes.first.insertAfter(eltSubnode)
+
+
+
+
   }
+
+  toString(){
+    return "node("+this.subnodes.toString("|",'count')+","+")"
+  }
+
 }
 
 
@@ -468,3 +748,4 @@ window.DLLmset = DLLmset
 window.Element = Element
 window.Node = Node
 window.InsertionSet = InsertionSet
+window.debugging={}

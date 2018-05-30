@@ -197,6 +197,6 @@ function testMultiInsert(){
   console.dir(v.strings.toList())
 }
 
-testInsertDelete(20,1000)
+//testInsertDelete(20,1000)
 
 //testMultiInsert()

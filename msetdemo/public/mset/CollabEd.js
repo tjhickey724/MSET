@@ -1,8 +1,8 @@
 import MSET from './MSET.js'
-export {MSETtexteditor as default}
+export {CollabEd as default}
 
 
-class MSETtexteditor {
+class CollabEd {
 
   constructor(namespace, taId, taId2, documentId){
     this.documentId = (documentId || 'default')
@@ -191,4 +191,4 @@ function editorCallbacks(op,pos,elt,user,me){
   }
 }
 
-window.MSETtexteditor = MSETtexteditor
+window.CollabEd = CollabEd
