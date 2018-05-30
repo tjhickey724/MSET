@@ -6,6 +6,11 @@ in 2005. MSET stands for Monotone Shared Edit Trees.
 
 This repository has several very useful Javascript modules
 
+* DLLwi  doubly linked lists with weights and indexing
+* DLLmset doubly linked lists with weights and indexing and execution time independent of the list size
+* DDLLmset distributed doubly linked lists with weights and indexing and log(k) time per each edit operation
+* CollabEd - the client side for collaboratively editing a textarea with any number of clients 
+
 The DLLmset module is very useful as a single user implementation of Doubly Linked Lists as it allows one initialize a DLL in one step using a (potentially very large) array, and then the execution time O(log(k)), where k is the number k of edit operations performed so far since the last garbage collection and is independent of the size of the list. DLLmset also has a garbage collection operation that takes time proportional to the size of the list
 
 # class DLLwi  -- Doubly Linked Lists with weights and indexing
@@ -123,7 +128,7 @@ This class implements an optimally efficient non-blocking fully distributed vers
 If a central server is used then DDLL can efficiently implement a synchronized garbage colletion which takes time O(n) but which reduces the edit operation time to O(k) where k is the number of edit operations after the garbage colletion. In the central server model, the server simply assigns unique IDs to clients when they join and  sends them the sequence of editing operations generated so far on the document. It then receives editing operations from clients and broadcasts them to all clients (while pushing them onto a list).
 
 
-# class MSETtexteditor
+# class CollabEd
 This provides the client side code needed to collaboratively edit a textarea. It requires a simple server that will broadcast operations to all clients and which will assign a unique userid to each client who joins the editing session. 
 
 
