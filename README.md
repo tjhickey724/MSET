@@ -6,14 +6,47 @@ in 2005. MSET stands for Monotone Shared Edit Trees.
 
 This repository has several very useful Javascript modules
 
-* DLLwi  doubly linked lists with weights and indexing
-* DLLmset doubly linked lists with weights and indexing and execution time independent of the list size
-* DDLLmset distributed doubly linked lists with weights and indexing and log(k) time per each edit operation
 * CollabEd - the client side for collaboratively editing a textarea with any number of clients 
+* DDLLmset distributed doubly linked lists with weights and indexing and log(k) time per each edit operation
+* DLLmset doubly linked lists with weights and indexing and execution time independent of the list size
+* DLLwi  doubly linked lists with weights and indexing
 
 The DLLmset module is very useful as a single user implementation of Doubly Linked Lists as it allows one initialize a DLL in one step using a (potentially very large) array, and then the execution time O(log(k)), where k is the number k of edit operations performed so far since the last garbage collection and is independent of the size of the list. DLLmset also has a garbage collection operation that takes time proportional to the size of the list
 
-# class DLLwi  -- Doubly Linked Lists with weights and indexing
+# class CollabEd
+### -- Colloboratively Editable Textareas with local editing and provably correct convergence
+This provides the client side code needed to collaboratively edit a textarea. It requires a simple server that will broadcast operations to all clients and which will assign a unique userid to each client who joins the editing session. 
+
+
+# class DDLLmset  
+### -- Distributed Doubly Linked Lists with log(k)-time indexing after O(N) time garbage collections)
+This class implements an optimally efficient non-blocking fully distributed version of the DLL API in which any number of clients can simultaneously edit a DLL while broadcasting their operations all other clients and receiving operations from all other clients. If everyone stops editing the system rapidly converges to a DLL which is exactly the same on all clients. This class can also be used to implement a non-blocking thread-safe DLL where all threads can insert and delete at will and their local copies will all converge if editing stops for long enough to let all message that are in transit be delivered.
+
+If a central server is used then DDLL can efficiently implement a synchronized garbage colletion which takes time O(n) but which reduces the edit operation time to O(k) where k is the number of edit operations after the garbage colletion. In the central server model, the server simply assigns unique IDs to clients when they join and  sends them the sequence of editing operations generated so far on the document. It then receives editing operations from clients and broadcasts them to all clients (while pushing them onto a list).
+
+
+# class DLLmset
+### -- Doubly Linked Lists of size N with log(k)-time indexing independent of the list size, after O(N) garbage collection
+This is another implementation of doubly linked lists, but this one can be initialized in time O(1) with an array of data objects and the complexity of O(log(k)) where k is the number of edit operations performed and is independent of the size of the list. 
+
+More precisely, the complexity is as follows where dll is a DLLmset object, array is a list of objects, node is a DLLmset node
+
+* O(1)  dll = new DLLmset(array)
+* O(1)  dll.first, dll.last,  node.next(), node.prev()
+* O(1)  node.insertAfter(e), node.insertBefore(e), node.delete()
+* O(k)  node = dll.nth(m)  where k is the number of edit operations performed on the dll since the last garbage collection
+* O(k)  node.index()
+* O(n)  node.garbageCollect()  where n is the number of non-deleted objects in the list
+
+If we assume that the size of the list remains bounded by N and that garbage collections are done after every A editing steps, then the complexity of the nth and index operations is bounded by k =log(N)-log(log(N)) if A is chosen to be N/k
+
+The API for DLLmset is identical to that of DLLwi. The only difference is the performance.
+
+
+
+
+# class DLLwi  
+### -- Doubly Linked Lists os size N with weights and log(N) indexing 
 This is a class which implements a doubly linked list of Javascript objects in which you can access the nth element in time O(log(N)) where N is the size of the list .. you can also add new elements before or after any listnode in constant time. This is an optimally efficient algorithm, no algorithm can take less than O(log(N)) and still implement the addBefore, addAfter, and nth methods. It also allows you to define a family of size functions on the list elements and to use this function to find the nth element.
 
 Here is the complexity of the operations where node is a DLL node 
@@ -109,29 +142,5 @@ The following example shows that it can be used to maintain partial sums of a li
 ```
 We use this in the MSET code to simultaneously store the current list of objects, the list of objects and deleted objects, and a list of objects, deleted objects, and marker elements, and to quickly index elements in these lists.
 
-# class DLLmset
-This is another implementation of doubly linked lists, but this one can be initialized in time O(1) with an array of data objects and the complexity of O(log(k)) where k is the number of edit operations performed and is independent of the size of the list. 
-
-More precisely, the complexity is as follows where dll is a DLLmset object, array is a list of objects, node is a DLLmset node
-
-* O(1)  dll = new DLLmset(array)
-* O(1)  dll.first, dll.last,  node.next(), node.prev()
-* O(1)  node.insertAfter(e), node.insertBefore(e), node.delete()
-* O(k)  node = dll.nth(m)  where k is the number of edit operations performed on the dll since the last garbage collection
-* O(k)  node.index()
-* O(n)  node.garbageCollect()  where n is the number of non-deleted objects in the list
-
-If we assume that the size of the list remains bounded by N and that garbage collections are done after every A editing steps, then the complexity of the nth and index operations is bounded by k =log(N)-log(log(N)) if A is chosen to be N/k
-
-The API for DLLmset is identical to that of DLLwi. The only difference is the performance.
-
-# class DDLLmset  Distributed Doubly Linked Lists
-This class implements an optimally efficient non-blocking fully distributed version of the DLL API in which any number of clients can simultaneously edit a DLL while broadcasting their operations all other clients and receiving operations from all other clients. If everyone stops editing the system rapidly converges to a DLL which is exactly the same on all clients. This class can also be used to implement a non-blocking thread-safe DLL where all threads can insert and delete at will and their local copies will all converge if editing stops for long enough to let all message that are in transit be delivered.
-
-If a central server is used then DDLL can efficiently implement a synchronized garbage colletion which takes time O(n) but which reduces the edit operation time to O(k) where k is the number of edit operations after the garbage colletion. In the central server model, the server simply assigns unique IDs to clients when they join and  sends them the sequence of editing operations generated so far on the document. It then receives editing operations from clients and broadcasts them to all clients (while pushing them onto a list).
-
-
-# class CollabEd
-This provides the client side code needed to collaboratively edit a textarea. It requires a simple server that will broadcast operations to all clients and which will assign a unique userid to each client who joins the editing session. 
 
 
