@@ -10,6 +10,7 @@ This repository has several very useful Javascript modules
 * DDLLmset distributed doubly linked lists with weights and indexing and log(k) time per each edit operation
 * DLLmset doubly linked lists with weights and indexing and execution time independent of the list size
 * DLLwi  doubly linked lists with weights and indexing
+* BSTwi  binary search trees with weights and fast indexing and DLL access 
 
 The DLLmset module is very useful as a single user implementation of Doubly Linked Lists as it allows one initialize a DLL in one step using a (potentially very large) array, and then the execution time O(log(k)), where k is the number k of edit operations performed so far since the last garbage collection and is independent of the size of the list. DLLmset also has a garbage collection operation that takes time proportional to the size of the list
 
@@ -142,5 +143,9 @@ The following example shows that it can be used to maintain partial sums of a li
 ```
 We use this in the MSET code to simultaneously store the current list of objects, the list of objects and deleted objects, and a list of objects, deleted objects, and marker elements, and to quickly index elements in these lists.
 
+# class BSTwi  
+### -- Binary Search trees with weight-based indexing
+
+This class extends DLLwi and allows one to maintain a sorted list of elements which one can access the kth element in time O(log(N)) and one can find the index of an element in O(log(N)) steps. This allows one to use weighted elements.
 
 
