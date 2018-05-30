@@ -44,7 +44,10 @@ There are special marker nodes at the beginning and end of the list which you ca
 
 You can add elements before or after any DLL node using the insertBefore and insertAfter methods
 ```javascript
-> dll.first.insertAfter(7).insertAfter([1,2,3]).insertAfter({a:1,b:2}).insertBefore('penultimate')
+> dll.first.insertAfter(7)
+           .insertAfter([1,2,3])
+           .insertAfter({a:1,b:2})
+           .insertBefore('penultimate')
 > console.log(JSON.stringify(dll.toList()))
 [7,[1,2,3],"penultimate",{"a":1,"b":2}]
 ```
