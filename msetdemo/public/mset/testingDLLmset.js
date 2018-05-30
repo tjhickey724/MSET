@@ -29,7 +29,7 @@ function JSONcompare(test,a,b){
   let sb = JSON.stringify(b)
   if (sa!=sb){
       console.log(test+' '+ (sa==sb)+" \n"+sa+"\n"+sb)
-      throw new Error("JSON comparison ")
+      //throw new Error("JSON comparison ")
   }
   return (sa==sb)
 }
@@ -140,7 +140,7 @@ function testInsert1(){
 
 function testInsertDelete(){
   const listSize=2
-  const reps = 100
+  const reps = 1000
   const vs = createRandLists(listSize)
 /*
   console.log(vs.v1.toList())
@@ -149,7 +149,7 @@ function testInsertDelete(){
 */
   for(let i=0;i<reps;i++){
     let z1= randN(vs.v2.size()+1)
-    console.log('\n***** Step '+i+'\ninserting elt at position '+z1)
+    //console.log('\n***** Step '+i+'\ninserting elt at position '+z1)
     vs.v1.insert(z1,2*i)
     vs.v2.insert(z1,2*i)
 /*
@@ -159,13 +159,14 @@ function testInsertDelete(){
     console.log(vs.v1.strings.tln.toStringIndent(5))
 */
     if (!JSONcompare('Insertion error',vs.v1.toList(),vs.v2.toList())){
-      console.log("Error in DLLwi insert! "+i+" "+z1+" "+N)
+      console.log("Error in DLLwi insert! "+i+" "+z1+" "+reps)
       console.dir([vs.v1,vs.v2,i,z1])
       throw new Error("insertion error")
     }
 
     let z2= randN(vs.v2.size())
-    console.log('deleting elt at position '+z2)
+    //console.log('deleting elt at position '+z2)
+    let elt = vs.v1.strings.nth(z2,'std')
     vs.v1.delete(z2)
     vs.v2.delete(z2)
 /*
@@ -175,9 +176,11 @@ function testInsertDelete(){
     console.log(vs.v1.strings.tln.toStringIndent(5))
 */
     if (!JSONcompare('Deletion',vs.v1.toList(),vs.v2.toList())){
-      console.log("Error in DLLwi insert! "+i+" "+z1+" "+N)
+      console.log("Error in DLLwi insert! "+i+" "+z1+" "+reps)
       console.dir([vs.v1,vs.v2,i,z1])
-      throw new Error("insertion error")
+      console.log(vs.v1.strings.tln.toStringIndent(1))
+      window.debugging.elt=elt
+      throw new Error("deletion error")
     }
   }
   console.log("Test was successful with listSize="+listSize+" and reps="+reps)

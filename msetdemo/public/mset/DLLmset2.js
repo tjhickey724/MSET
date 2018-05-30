@@ -368,8 +368,9 @@ class DLLmset{
         // the deleted objects has elements before and after it in the subnode
         // so we need to split the subnode into three parts, hide the middle one
         // remove the old node and insert the two new nodes
-        console.dir(subNode)
-        const nodes = subNode.split(q)
+        //console.dir(subNode)
+        //const nodes = subNode.split(q)
+        const nodes = subNode.split(offset)
         const left = nodes.left
         const nodes2 = nodes.right.split(1)
         const middle = nodes2.left
@@ -417,7 +418,7 @@ class DLLmset{
       const nodeid = subNode.nodeid
       const offset = (k - eltsBeforeNode + subNode.first)
       //console.log("in delete "+k)
-      //console.dir([listNode,eltsBeforeNode,subNode,nodeid,offset])
+      //console.dir([listNode,eltsBeforeNode,subNode,nodeid,offset,k,this])
       this.treehide(nodeid,offset,this.user)
       this.network.hide(nodeid,offset,this.user)
       //e.vis=false;
