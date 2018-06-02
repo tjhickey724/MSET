@@ -21,7 +21,7 @@ class BSTwi extends DLLwi {
   }
 
   get(k){
-    return this.nth(k).val
+    return this.nth(k).data
   }
 
 

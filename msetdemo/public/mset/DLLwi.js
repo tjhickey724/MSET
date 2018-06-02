@@ -62,8 +62,8 @@ class DLLwi {
     this.tln = startTree
 
 
-    debug.log('any',"In DLLwi constructor, this = ")
-    debug.dir('any',this)
+    //debug.log('any',"In DLLwi constructor, this = ")
+    //debug.dir('any',this)
 
   }
 
@@ -82,8 +82,8 @@ class DLLwi {
 
   insert(pos,elt,feature){
     feature = feature || 'count'
-    debug.dir('insert',this)
-    debug.log('insert','INSERTING: '+JSON.stringify([pos,elt,feature,this.tln.sublistSize]))
+    //debug.dir('insert',this)
+    //debug.log('insert','INSERTING: '+JSON.stringify([pos,elt,feature,this.tln.sublistSize]))
     if ((pos==undefined) || (elt==undefined)){
       throw new Error("DLLwi insert must be called with 2 parameters: pos and elt")
     }
@@ -96,13 +96,13 @@ class DLLwi {
     if (pos>size || pos<0){
       throw new Error("trying to insert at pos "+pos+" in a list of size "+size)
     } else if (pos == size) {
-      debug.log("insert","case of pos==size = "+size)
+      //debug.log("insert","case of pos==size = "+size)
       return this.last.insertBefore(elt)
     } else {
-      debug.log("insert","finding nth element then inserting: n="+pos+" size= "+size)
-      debug.dir([elt,pos,size,this])
+      //debug.log("insert","finding nth element then inserting: n="+pos+" size= "+size)
+      //debug.dir([elt,pos,size,this])
       const listNode = this.nth(pos,'count')
-      debug.log("insert","found the nth element"+listNode.data+" now inserting before "+this.data)
+      //debug.log("insert","found the nth element"+listNode.data+" now inserting before "+this.data)
       const z = listNode.insertBefore(elt);
       return z
     }
@@ -136,8 +136,8 @@ class DLLwi {
     if (pos < 0 || pos>=size){
       throw new Error("trying to delete element at pos "+pos+" in a list of size "+size)
     }
-    debug.log('delete','in ListNode.delete '+pos+" "+feature)
-    debug.dir('delete',this)
+    //debug.log('delete','in ListNode.delete '+pos+" "+feature)
+    //debug.dir('delete',this)
 
     let listNode = this.nth(pos,feature)
     //this.listSize = ListNode.subtractSizes(this.listSize,listNode.elementSize)
@@ -299,6 +299,7 @@ class ListNode{
     }
 
     while (tln.parent){
+      indexOfCounter++
       if (tln.parent.right == tln) {
         const leftSize = 0
         if (tln.parent.left) {
@@ -373,8 +374,7 @@ class ListNode{
     for (let x in s1){
       newSize[x] = s1[x]+s2[x]
     }
-    debug.log('any','in addSizes [s1,s2,s1+s2]= '
-              + JSON.stringify([s1,s2,newSize]))
+    //debug.log('any','in addSizes [s1,s2,s1+s2]= '+ JSON.stringify([s1,s2,newSize]))
     return newSize
   }
 
@@ -383,16 +383,19 @@ class ListNode{
     for (let x in s1){
       newSize[x] = s1[x]-s2[x]
     }
-    debug.log('any','in subtractSizes [s1,s2,s1+s2]= '
-              + JSON.stringify([s1,s2,newSize]))
+    //debug.log('any','in subtractSizes [s1,s2,s1+s2]= '+ JSON.stringify([s1,s2,newSize]))
     return newSize
   }
 
 }
 
 
-
-
+let avlCounter=0  // counts number of AVL operations
+let updateWeightsCounter = 0
+let nthCounter = 0
+let indexOfCounter=0
+window.avlInfo=(()=>({a:avlCounter,u:updateWeightsCounter,n:nthCounter,i:indexOfCounter}))
+window.avlReset= function(){avlCounter=0;updateWeightsCounter=0;nthCounter=0;indexOfCounter=0}
 
 class TreeList {
   // This is an indexing tree built on top of the Doubly Linked List
@@ -451,7 +454,7 @@ class TreeList {
 
   toStringIndent(k){
     // pretty print the tree for debugging purposes
-
+    throw new Error("don't all String Indent!!")
 
 
       const leftTree = (!this.left?(" ".repeat(k+4)+"null[0]"):(this.left.toStringIndent(k+4)))
@@ -473,19 +476,19 @@ class TreeList {
   }
 
   nth(n,feature){
-
+    nthCounter++
 
     // find the nth element in the tree using weighted elements
     // find the element at position n in the DLL spanned by tln
-    debug.log('nth','in TreeList.nth '+n+' '+feature)
-    debug.dir('nth',this)
+    //log('nth','in TreeList.nth '+n+' '+feature)
+    //debug.dir('nth',this)
     const eltSize = this.listNode.elementSize[feature]
     const leftSize = this.left?this.left.sublistSize[feature]:0
     const rightSize = this.right?this.right.sublistSize[feature]:0
-    debug.log('nth','eltSize= '+eltSize)
-    debug.log('nth',this.toStringIndent(5))
+    //debug.log('nth','eltSize= '+eltSize)
+    //debug.log('nth',this.toStringIndent(5))
     if(n==0){
-      debug.log('nth','n=0 case')
+      //debug.log('nth','n=0 case')
       if (leftSize>0) {
         return this.left.nth(0,feature)
       } else if (eltSize==0) {
@@ -496,13 +499,13 @@ class TreeList {
     } else {
 
       if (n<leftSize){
-        debug.log('nth','going to left')
+        //debug.log('nth','going to left')
         return this.left.nth(n,feature)
       } else if (n-leftSize<eltSize){
-        debug.log('nth','found it')
+        //debug.log('nth','found it')
         return this.listNode
       } else {
-        debug.log('nth',"moving to right")
+        //debug.log('nth',"moving to right")
         return this.right.nth(n-leftSize-eltSize,feature)
       }
 
@@ -595,8 +598,8 @@ AND MAKE IT CLEAR AND EASY TO VALIDATE!!
     // we assume that node itself has already been deleted from the list
     let treeNode = this;
 
-    debug.log('delete','in DELETE case 1 ='+treeNode.listNode)
-    debug.log('delete','from '+treeNode.listNode.dll.tln.toStringIndent(5))
+    //debug.log('delete','in DELETE case 1 ='+treeNode.listNode)
+    //debug.log('delete','from '+treeNode.listNode.dll.tln.toStringIndent(5))
 
     // dll and deletedData are for debugging purposes ...
     const dll = this.listNode.dll
@@ -614,7 +617,7 @@ AND MAKE IT CLEAR AND EASY TO VALIDATE!!
 
 
     if ((treeNode.left==null) && (treeNode.right==null)) {
-      debug.log('delete',"delete case 1: just remove the node and rebalance parent")
+      //debug.log('delete',"delete case 1: just remove the node and rebalance parent")
       if (!parent){
         throw new Error("can't delete the start and end markers")
       }
@@ -628,7 +631,7 @@ AND MAKE IT CLEAR AND EASY TO VALIDATE!!
       return parent.avlRebalance()
     } else if ((treeNode.left==null)||(treeNode.right==null)){
       // if it has only one child, move the child up
-      debug.log('delete',"delete case 2: replacing node with its one child, a leaf")
+      //debug.log('delete',"delete case 2: replacing node with its one child, a leaf")
       if (!parent) {
           throw new Error("you can't delete the startmaker or endmarker: ")
       }
@@ -650,9 +653,8 @@ AND MAKE IT CLEAR AND EASY TO VALIDATE!!
     } else {
       // treeNode has two children, so move the successor up and delete the successor
       let nextT = treeNode.nextTreeNode()
-      debug.log('delete',"delete case 3 replacing "+deletedData
-                 + " with its successor "+nextT.listNode.data+ " which we delete")
-      debug.log('delete','nextT = \n'+nextT.toStringIndent(5))
+      //debug.log('delete',"delete case 3 replacing "+deletedData+ " with its successor "+nextT.listNode.data+ " which we delete")
+      //debug.log('delete','nextT = \n'+nextT.toStringIndent(5))
 
       treeNode.listNode = nextT.listNode
       treeNode.listNode.tln = treeNode
@@ -664,7 +666,7 @@ AND MAKE IT CLEAR AND EASY TO VALIDATE!!
       //         which is a left descendent of a right child of treeNode
 
       if (treeNode.right == nextT){
-        debug.log('delete','delete case 3a, successor is right child of treeNode')
+        //debug.log('delete','delete case 3a, successor is right child of treeNode')
         parent = treeNode  // which is treeNode in this case ...
         let child = nextT.right // could be null
         treeNode.right = child
@@ -677,7 +679,7 @@ AND MAKE IT CLEAR AND EASY TO VALIDATE!!
         return treeNode.avlRebalance()
 
       } else {
-        debug.log('delete','delete case 3b, successor is a left child')
+        //debug.log('delete','delete case 3b, successor is a left child')
         parent = nextT.parent
         nextT.parent = null
         let child = nextT.right
@@ -702,17 +704,18 @@ AND MAKE IT CLEAR AND EASY TO VALIDATE!!
 
 
   avlRebalance(){
+    avlCounter++
       // We assume this is called on a newly inserted node or
       // on the parent of a leaf node that has been deleted
       // it will return the root of the newly balanced avl tree
       // we can assume that the left and right subtrees are balanced
 
-    debug.log('avl','rebalancing subtree with root '+this.listNode)
+    //debug.log('avl','rebalancing subtree with root '+this.listNode)
 
     this.updateNodeHeightWeight() // update the sublistSize and height fields
 
     const p = this.parent  // could be null
-    debug.log('avl','getting parent: '+(p?p.listNode:null))
+    //debug.log('avl','getting parent: '+(p?p.listNode:null))
     // first we check to see if this is unbalanced,
     // this will only happen in the case of a deletion
     // when we call rebalance on the parent of the deleted leaf
@@ -723,14 +726,14 @@ AND MAKE IT CLEAR AND EASY TO VALIDATE!!
     // We will then balance the parent and recurse up to the root ..
 
     if (this.unbalanced()){
-      debug.log('avl','calling AVL on unbalanced parent of a deleted node')
+      //debug.log('avl','calling AVL on unbalanced parent of a deleted node')
       if (this.leftHeavy()) {
         return this.left.avlRebalance()
       } else {
         return this.right.avlRebalance()
       }
     } else if (!p ) {
-      debug.log('avl','this = root of the tree and the tree is now balanced')
+      //debug.log('avl','this = root of the tree and the tree is now balanced')
       return this
     }else
     // the invariant here is that p is a node whose children are balanced
@@ -738,40 +741,40 @@ AND MAKE IT CLEAR AND EASY TO VALIDATE!!
     // this node and possibly increase or decrease its height,
     // then continue up the tree. If it is already balanced we are done!
     if (!p.unbalanced() ) {
-      debug.log('avl','parent is balanced so tree is to and returning root')
+      //debug.log('avl','parent is balanced so tree is to and returning root')
       return  this.parent.avlRebalance()
       //return this.root()
     } else {
       if (p.leftHeavy() && (p.right==this)) {
-        debug.log('avl','left sibling is heavier, switching to that side')
+        //debug.log('avl','left sibling is heavier, switching to that side')
         return this.parent.left.avlRebalance()
       } else if (p.rightHeavy() && (p.left==this)){
-        debug.log('avl','right sibling is heavier, switching to that side')
+        //debug.log('avl','right sibling is heavier, switching to that side')
         return this.parent.right.avlRebalance()
       }
-      debug.log('avl','parent subtree is unbalanced and this is the heavier child:')
+      //debug.log('avl','parent subtree is unbalanced and this is the heavier child:')
       // we perform the appropriate rotations, which update the heights and sizes
       // and makes the parent of this node one of its children!
       if (p.left==this) {
         if (this.leftHeavy()){ //LL
-          debug.log('avl',"LL")
+          //debug.log('avl',"LL")
           p.rightRotate()
         } else {                //LR
-          debug.log('avl',"LR")
+          //debug.log('avl',"LR")
           this.leftRotate()
           p.rightRotate()
         }
       } else {
         if (this.rightHeavy()){   //RR
-          debug.log('avl',"RR")
+          //debug.log('avl',"RR")
           p.leftRotate();
         } else {                  //RL
-          debug.log('avl',"RL")
+          //debug.log('avl',"RL")
           this.rightRotate();
           p.leftRotate();
         }
       }
-      debug.log('avl','PARTLY REBALANCED TREE:\n'+this.toStringIndent(5))
+      //debug.log('avl','PARTLY REBALANCED TREE:\n'+this.toStringIndent(5))
       return  this.avlRebalance()  // as the node moved to its parent position
     }
   }
@@ -835,6 +838,7 @@ AND MAKE IT CLEAR AND EASY TO VALIDATE!!
   }
 
   updateWeights(){
+
     // update the weights for the current node an all its ancestors
     //console.log('updating weights')
     let node = this
@@ -845,6 +849,7 @@ AND MAKE IT CLEAR AND EASY TO VALIDATE!!
     }
 
     while(node){
+      updateWeightsCounter ++
       const leftSize = (node.left?node.left.sublistSize:nullSize)
       const rightSize = (node.right?node.right.sublistSize:nullSize)
       const eltSize = node.listNode.elementSize;
@@ -897,8 +902,8 @@ AND MAKE IT CLEAR AND EASY TO VALIDATE!!
       // this moves up the tree and adjusts the heights and weights of
       // the node and its ancestors
       // the name is misleading, it should be updateHeightWeight ...
-      debug.log('updateHeightWeights','entering updateHeightWeights')
-      debug.dir('updateHeightWeights',node)
+      //debug.log('updateHeightWeights','entering updateHeightWeights')
+      //debug.dir('updateHeightWeights',node)
 
       const leftHeight = (node.left?node.left.height:0)
       const rightHeight = (node.right?node.right.height:0)
@@ -919,13 +924,13 @@ AND MAKE IT CLEAR AND EASY TO VALIDATE!!
       }
 
       if ((newHeight == node.height)&&(newSize==node.sublistSize)) {
-        debug.log('updateHeightWeights','subtree is already balanced returning')
+        //debug.log('updateHeightWeights','subtree is already balanced returning')
         return
       } else {
         node.height = newHeight
         node.sublistSize = newSize
-        debug.log('updateHeightWeights','updated heights and weights of the subtree ...\n'+node.toStringIndent(5))
-        debug.dir('updateHeightWeights',node)
+        //debug.log('updateHeightWeights','updated heights and weights of the subtree ...\n'+node.toStringIndent(5))
+        //debug.dir('updateHeightWeights',node)
       }
       node = node.parent
     }

@@ -50,12 +50,12 @@ class DDLL {
 
   initSocket(){
     const thisDDLL = this;
-    console.log("initializing the socket")
+    //console.log("initializing the socket")
     this.socket.on('msetId', function(msg){
       // here we listen to the server to get our msetId
       thisDDLL.msetId=parseInt(msg.msetId);
-      console.log("responding to msetId message: "+msg.msetId+" type is "+typeof(msg.msetId))
-      console.dir(arguments)
+      //console.log("responding to msetId message: "+msg.msetId+" type is "+typeof(msg.msetId))
+      //console.dir(arguments)
       thisDDLL.msetTree = new DLLmset(thisDDLL.msetId,new Network(thisDDLL));
       thisDDLL.callback('init')
       thisDDLL.msetTree.insertCallback =
@@ -70,8 +70,8 @@ class DDLL {
     });
 
     this.socket.on('reset', function(msg){
-      console.log("applying Remote Ops of a reset!")
-      console.dir(msg)
+      //console.log("applying Remote Ops of a reset!")
+      //console.dir(msg)
       thisDDLL.applyRemoteOps(msg.oplist)
     })
 
@@ -89,7 +89,7 @@ class DDLL {
     }
 
     applyRemoteOp(msg){
-      console.log("in applyRemote Op "+msg); console.dir(msg)
+      //console.log("in applyRemote Op "+msg); console.dir(msg)
       if (msg.documentId!=this.documentId) return
       msg = msg.op
       // ignore insert and extend messages from self

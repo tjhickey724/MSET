@@ -2,7 +2,7 @@ import {DLLmset} from './DLLmset2.js'
 import {DLLwi} from './DLLwi.js'
 
 /*
-DLLwi correctness testing
+DDLLwi correctness testing
 
 This file is to test the correctness of the DLLwi Implementation
 We create two identical lists of size N, one using AVL indexing
@@ -20,6 +20,7 @@ correctly!
 
 */
 
+function testingSocket()
 
 function JSONcompare(test,a,b){
   let sa = JSON.stringify(a)

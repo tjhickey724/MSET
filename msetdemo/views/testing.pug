@@ -6,7 +6,21 @@ block content
   | Press CMD-ALT-J on Mac  <br> or F-12 on windows<br>
   | to open the Javascript console in Chrome <br>
   | (and if you aren't using Chrome, then switch!!)
-
+  br
+  | k=
+  input#kTF(type="text",value="10")
+  br
+  | numLists=
+  input#numListsTF(type="text",value="2")
+  br
+  |initSize=
+  input#initSizeTF(type="text",value="10")
+  br
+  |burstSize=
+  input#burstSizeTF(type="text",value="1")
+  br
+  button#go Go
+  #results
 
   script(src="https://code.jquery.com/jquery-1.11.1.js")
   script(src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.0/socket.io.js")

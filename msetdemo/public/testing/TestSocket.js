@@ -21,14 +21,32 @@ class TestServer{
   constructor(){
     this.socketList = []
     this.oplist=[]
+    this.delayFlag = false
+    this.delayList=[]
+  }
+
+  shuffle(){
+    shuffleList(this.delayList)
+  }
+
+  delay(){
+    //console.log('delaying ops')
+    this.delayFlag = true
+  }
+
+  release(){
+    //console.log(`sending ${this.delayList.length} delayed ops`)
+    this.delayFlag = false
+    this.delayList.forEach((x)=>(this.emit(x)))
+    this.delayList=[]
   }
 
   connect(socket){
     this.socketList.push(socket)
-    console.log('this.socketList= ')
-    console.dir(this.socketList)
+    //console.log('this.socketList= ')
+    //console.dir(this.socketList)
     let newId = this.socketList.length
-    console.log('sending msetId message with value '+newId)
+    //  console.log('sending msetId message with value '+newId)
     socket.callbacks.msetId({msetId:newId})
     socket.id = newId
     socket.callbacks.reset({oplist:this.oplist})
@@ -41,9 +59,14 @@ class TestServer{
   }
 
   emit(obj){
-    console.log("Server is broadcasting the object "+JSON.stringify(obj))
-    this.socketList.forEach((s)=>(s.callbacks.remoteOperation(obj)))
-    this.oplist.push(obj)
+    //console.log("Server is broadcasting the object "+JSON.stringify(obj))
+    if (this.delayFlag){
+      this.delayList.push(obj)
+    } else {
+      this.socketList.forEach((s)=>(s.callbacks.remoteOperation(obj)))
+      this.oplist.push(obj)
+    }
+
   }
 
 }
@@ -56,13 +79,13 @@ class TestSocket{
     {
       msetId:function(msg){
         socket.id=msg.msetId
-        console.log("just got an init message: "+msg.msetId)
+        //console.log("just got an init message: "+msg.msetId)
       },
       reset:function(ops){
-        console.log(socket.id+ " received reset with \n"+JSON.stringify(ops))
+        //console.log(socket.id+ " received reset with \n"+JSON.stringify(ops))
       },
       remoteOperation: function(op){
-        console.log(socket.id+ " received remoteOperation with \n"+JSON.stringify(op))
+        //console.log(socket.id+ " received remoteOperation with \n"+JSON.stringify(op))
       }
     }
 
@@ -70,46 +93,44 @@ class TestSocket{
   }
 
   connect(server){
-    console.log("connecting to server")
+    //console.log("connecting to server")
     this.server = server
     server.connect(this)
   }
 
   close(){
-    console.log("socket is closed")
+    //console.log("socket is closed")
     this.server.disconnect(this)
   }
 
   on(msg,callback){
-    console.log("client "+this.id+" storing callback for "+msg);console.dir([this,callback])
+    //console.log("client "+this.id+" storing callback for "+msg);console.dir([this,callback])
 
     this.callbacks[msg] = callback
   }
 
   emit(op,obj){
 
-    console.log(arguments)
+    //console.log(arguments)
     if (op=="operation"){
-      console.log(`client ${this.id} emitting obj= ${JSON.stringify(obj)} with op=${op}`)
+      //console.log(`client ${this.id} emitting obj= ${JSON.stringify(obj)} with op=${op}`)
       this.server.emit(obj)
     } else if (op=="reset"){
-      console.log(`client ${this.id} reseting with oplist= ${JSON.stringify(this.oplist)} with op=${op}`)
+      //console.log(`client ${this.id} reseting with oplist= ${JSON.stringify(this.oplist)} with op=${op}`)
       this.callbacks.reset({oplist:this.server.oplist})
     } else {
-      console.log("unknown message: "+JSON.stringify([op,obj]))
+      //console.log("unknown message: "+JSON.stringify([op,obj]))
     }
-
-
   }
-
-
-
   // socket.on('msetId',function(msetId){....})
   // socket.on('reset',function({oplist:[....]}){....})
   // socket.on('remoteOperation',function(op){....})
 
 }
 
+function shuffleList(a,b,c,d){//array,placeholder,placeholder,placeholder
+ c=a.length;while(c)b=Math.random()*(--c+1)|0,d=a[c],a[c]=a[b],a[b]=d
+}
 
 
 window.TestSocket = TestSocket

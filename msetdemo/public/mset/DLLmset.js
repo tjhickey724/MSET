@@ -236,6 +236,7 @@ class DLLmset{
         k = s.data.iset.insertNode(m)
         //console.log("k= "+k)
         if (k>0){
+          window.debugging={s:s,t:this,k:k}
           f = s.data.iset.get(k-1).end.listNode
           //console.log('f is end of previous iset entry')
           //console.dir(f)
