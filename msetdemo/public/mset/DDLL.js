@@ -1,14 +1,42 @@
 import {DLLmset} from './DLLmset.js'
-export {DDLL}
+export {DDLL,Network}
 
 
 console.log("loading MSET")
-// this creates the socket to the server and the MSET tree
-// and add listeners to the textareas ...
+// this creates an io socket on a namespace
+// and creates a new DLLmset object when it gets an 'init' message on the socket
+// The server sends an 'init' message to every new connection, followed by a
+// 'reset' message with a list of all treeops generates so far.
+// It then simply broadcasts all ops it receives from any client to all other clients.
+// and saves a copy in the list that it uses to bring late joiners up to date.
+//
+// The socket can be sending information about many different documents
+// and this only listens to the messages about the one specified by documentId
+//
+// It is also passed a callback function callback
+// When the io socket receives an 'init' message it calls
+//     callback('init')
+// It also passes the callback into DLLmset so that whenever a local insert is processed
+// DLLmset will call
+//     callback('insert',pos,elt,user,thisDDLL.msetId)
+// and when a local delete is processed it will call
+//     callback('delete',pos,elt,user,thisDDLL.msetId)
+// This callback is used to appropriately handle local inserts and deletes
+// Note that inserts and deletes from the user themself are ignored when they
+// return from the server.
+//
+// the socket is an object with three methods
+// socket.close()
+// socket.emit(obj)
+// socket.on('msetId',function(msetId){....})
+// socket.on('reset',function({oplist:[....]}){....})
+// socket.on('remoteOperation',function(op){....})
+// where it will call the appropriate function when it receives the specified message
+
 
 class DDLL {
-  constructor(namespace,documentId,callback){
-    this.socket = io(namespace)
+  constructor(socket,documentId,callback){
+    this.socket = socket
     this.documentId = documentId
     this.msetId=-1;
     this.msetTree={};
@@ -21,29 +49,34 @@ class DDLL {
   }
 
   initSocket(){
-    const thisMSET = this;
+    const thisDDLL = this;
+    console.log("initializing the socket")
     this.socket.on('msetId', function(msg){
       // here we listen to the server to get our msetId
-      thisMSET.msetId=parseInt(msg.msetId);
-      thisMSET.msetTree = new DLLmset(thisMSET.msetId,new Network(thisMSET));
-      thisMSET.callback('init')
-      thisMSET.msetTree.insertCallback =
+      thisDDLL.msetId=parseInt(msg.msetId);
+      console.log("responding to msetId message: "+msg.msetId+" type is "+typeof(msg.msetId))
+      console.dir(arguments)
+      thisDDLL.msetTree = new DLLmset(thisDDLL.msetId,new Network(thisDDLL));
+      thisDDLL.callback('init')
+      thisDDLL.msetTree.insertCallback =
           function(pos,elt,user){
-              return thisMSET.callback('insert',pos,elt,user,thisMSET.msetId)
+              return thisDDLL.callback('insert',pos,elt,user,thisDDLL.msetId)
             }
-      thisMSET.msetTree.deleteCallback =
+      thisDDLL.msetTree.deleteCallback =
           function(pos,elt,user){
-              return thisMSET.callback('delete',pos,elt,user,thisMSET.msetId)
+              return thisDDLL.callback('delete',pos,elt,user,thisDDLL.msetId)
             }
-      thisMSET.socket.emit('reset',{msetId:thisMSET.msetId,documentId:thisMSET.documentId})
+      thisDDLL.socket.emit('reset',{msetId:thisDDLL.msetId,documentId:thisDDLL.documentId})
     });
 
     this.socket.on('reset', function(msg){
-      thisMSET.applyRemoteOps(msg.oplist)
+      console.log("applying Remote Ops of a reset!")
+      console.dir(msg)
+      thisDDLL.applyRemoteOps(msg.oplist)
     })
 
     this.socket.on('remoteOperation', function(msg){
-      thisMSET.applyRemoteOp(msg);
+      thisDDLL.applyRemoteOp(msg);
 
     })
   }
@@ -56,6 +89,7 @@ class DDLL {
     }
 
     applyRemoteOp(msg){
+      console.log("in applyRemote Op "+msg); console.dir(msg)
       if (msg.documentId!=this.documentId) return
       msg = msg.op
       // ignore insert and extend messages from self
@@ -87,7 +121,19 @@ class DDLL {
 /* ************************************************************
  * This implements a network with a queue of incoming and outgoing
  * treeedit operations that can be performed by the clients ....
- * it creates a socket.io socket, and intializes it
+ * It is passed an msetSocket object s which
+ *     1) has a DLLmset object called s.msetTree
+ *     2) has a method s.sendOperationToServer(op)
+ * where the op is a JSON object taking one of the following three forms
+ *    {op:"insert", nodeid:vm, q:q, un:un, c:c};
+ *    {op:"extend", nodeid:un, c:c};
+ *    {op:"delete", nodeid:vm, q:q, u:u};
+ * where vm = [v,m] is a userid v and a node count m
+ *       un = [u,n] is the owners user id u and a node count n
+ *        q = a position in the node with id vm
+ *        c = a character to insert into the node
+ *
+ * It is called by DDLL which creates a socket.io socket, and intializes it
  * When the server responds it creates an MSETtree to manage the list
  *
  */

@@ -1,4 +1,4 @@
-import CollabEd from './CollabEd.js'
+import {CollabEd} from './CollabEd.js'
 
 // create mset sockets for the two textareas
 // they will now be collaboratively editable by

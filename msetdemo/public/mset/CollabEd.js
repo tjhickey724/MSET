@@ -1,12 +1,12 @@
 import {DDLL} from './DDLL.js'
-export {CollabEd as default}
+export {CollabEd}
 
 
 class CollabEd {
 
   constructor(namespace, taId, taId2, documentId){
     this.documentId = (documentId || 'default')
-    this.mset = new DDLL(namespace,documentId,editorCallbacks)
+    this.mset = new DDLL(io(namespace),documentId,editorCallbacks)
     this.taId = taId
     console.log("Inside the new MSET texteditor!!")
     this.ta = document.getElementById(taId)
