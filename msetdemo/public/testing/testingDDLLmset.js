@@ -68,38 +68,52 @@ document.getElementById('go').addEventListener('click',function(event){
 })
 
 
-function runTimeTests(k,numLists,initSize,burstSize){
+function runTimeTests(k0,numLists0,initSize0,burstSize0){
   let info = document.getElementById('results')
-  let tableData = "<table border='2'>\n<tr><td>NumEditOps</td><td>treeHeight</td><td>timePerOp</td><td>timePerOp/log(N) (microseconds)</td><td>TreeSize/n</td></tr>\n"
-  for(let k1=1;k1<=k;k1++){
-    numLists=k1
+  let tableData = `<table border='2'>\n<tr><td>NumEditOps (per client)</td><td>TotalTime(ms) (per client)</td>`+
+  `<td>treeHeight</td><td>TreeSize</td><td>timePerOp (microseconds)</td><td>timePerOp/log(N) (nanoseconds)</td><td>TreeSize/n (%)</td>`+
+  `<td>Reps</td><td>NumLists</td><td>initSize</td><td>burstSize</td>`+
+  `</tr>\n`
+
+  for(let j=1;j<=k0;j++){
+    let numEdits= 1000
+    let numLists = numLists0
+    let initSize = 10000*j
+    let burstSize = burstSize0
     window.avlReset()
-    let n=10
+
     let a = performance.now();
-    let incrSize = 100
-    let lists = runTestsA(k1,n*incrSize,initSize,burstSize);
-    let treeHeight = lists[0].strings.tln.height
+    let lists = runTestsA(numEdits,numLists,initSize,burstSize);
     let b = performance.now();
-    let totalTime = Math.round(1000*(b-a)) // in microseconds
-    let numEditOps = n*incrSize*2*numLists
-    let timePerOp = Math.round(totalTime/numEditOps)
+
+    console.log('finished running for j='+j)
+    let treeHeight = lists[0].strings.tln.height
     let treeSize = lists[0].toList('edit').length
-    let treeSizePerOp = treeSize/numEditOps
-    let timePerOpOverLogN = Math.round(totalTime/(Math.log(n*incrSize)*numEditOps))
+    let totalTime = Math.round(1000*(b-a)) // in microseconds
+    let numEditOps = numEdits*2*numLists*numLists
+    let timePerOp = Math.round(totalTime/numEditOps)
+    let treeSizePerOp = treeSize/numEditOps*numLists
+    let timePerOpOverLogN = (totalTime/(Math.log(numEditOps)*numEditOps))
+
     let avlInfo = window.avlInfo()
-    let avlPerOpOverNx1000 = Math.round(1000*avlInfo.a/(numEditOps*numEditOps))
-    let nthPerOpOverLogNx1000 = Math.round(1000*avlInfo.n/(numEditOps*Math.log(numEditOps)))
-    let indexPerOpOverLogNx1000 = Math.round(1000*avlInfo.i/(numEditOps*Math.log(numEditOps)))
-    let avlPerOpOverLogNx1000 = Math.round(1000*avlInfo.a/(numEditOps*Math.log(numEditOps)))
-    let updateWPerOpOverNx1000 = Math.round(1000*avlInfo.u/(numEditOps*numEditOps))
-    let s =(`n=${n} k=${k1} h=${treeHeight} time (sec)=${Math.round(totalTime/1000000)}  numEditOps=${numEditOps} `+
+    let avlPerOpOverNx1000 = Math.round(avlInfo.a/(numEditOps*numEditOps))
+    let nthPerOpOverLogNx1000 = Math.round(avlInfo.n/(numEditOps*Math.log(numEditOps)))
+    let indexPerOpOverLogNx1000 = Math.round(avlInfo.i/(numEditOps*Math.log(numEditOps)))
+    let avlPerOpOverLogNx1000 = Math.round(avlInfo.a/(numEditOps*Math.log(numEditOps)))
+    let updateWPerOpOverNx1000 = Math.round(avlInfo.u/(numEditOps*numEditOps))
+    let s =(`reps=${numEdits} numLists=${numLists} initSize=${initSize} burstSize=${burstSize} j=${j} h=${treeHeight} time (sec)=${Math.round(totalTime/1000000)}  numEditOps=${numEditOps} `+
       ` nthPerOpOverLogNx1000=${nthPerOpOverLogNx1000} indexPerOpOverLogNx1000=${indexPerOpOverLogNx1000} `+
       ` avlInfo.a=${avlInfo.a} avlPerOp/n=${avlPerOpOverNx1000}  avlPerOp/logN=${avlPerOpOverLogNx1000} `+
       `updateWPerOp/n = ${updateWPerOpOverNx1000} `+
       ` timePerOp=${timePerOp} timePerOp/LogN=${timePerOpOverLogN} `+
       ` treeSize=${treeSize} treeSizePerOp=${treeSizePerOp} \n`)
       console.log(s)
-    let data = `<tr><td>${numEditOps}</td><td>${treeHeight}</td><td>${timePerOp}</td><td>${timePerOpOverLogN}</td><td>${treeSize/numEditOps}</td><td>${k1}</td></tr>`
+    let data =
+    `<tr><td>${numEditOps/numLists}</td><td>${Math.round(totalTime/1000/numLists)}<td>${treeHeight}</td><td>${treeSize}</td>`+
+        `<td>${timePerOp}</td><td>${Math.round(1000*timePerOpOverLogN)}</td>`+
+        `<td>${Math.round(100*treeSize/numEditOps*numLists)}</td>`+
+        `<td>${numEdits}</td><td>${numLists}</td><td>${initSize}</td><td>${burstSize}</td>`+
+       `</tr>`
 
     tableData += "\n"+data
 
@@ -187,7 +201,7 @@ function range(a,b){
   return list
 }
 
-function runTestsA(numLists,numEdits,initSize,burstSize){
+function runTestsA(numEdits,numLists,initSize,burstSize){
   let server = new TestServer()
   let lists = createLists(numLists,server)
   lists[0].insertList(0,range(0,initSize))
