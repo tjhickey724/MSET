@@ -454,7 +454,7 @@ class TreeList {
 
   toStringIndent(k){
     // pretty print the tree for debugging purposes
-    throw new Error("don't all String Indent!!")
+
 
 
       const leftTree = (!this.left?(" ".repeat(k+4)+"null[0]"):(this.left.toStringIndent(k+4)))

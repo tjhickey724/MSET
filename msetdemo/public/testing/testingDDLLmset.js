@@ -76,15 +76,16 @@ function runTimeTests(k0,numLists0,initSize0,burstSize0){
   `</tr>\n`
 
   for(let j=1;j<=k0;j++){
-    let numEdits= 1000
-    let numLists = numLists0
-    let initSize = 10000*j
+    let numEdits= 2
+    let numLists = j
+    let initSize = initSize0
     let burstSize = burstSize0
     window.avlReset()
 
     let a = performance.now();
     let lists = runTestsA(numEdits,numLists,initSize,burstSize);
     let b = performance.now();
+    checkEquality(lists)
 
     console.log('finished running for j='+j)
     let treeHeight = lists[0].strings.tln.height
@@ -185,9 +186,12 @@ function createLists(N,server){
 function checkEquality(lists){
   console.log(`starting to test equality of ${lists.length} lists of size ${lists[0].length}`)
   for (let i=0;i<lists.length-1;i++){
+    console.log(`comparing list ${i} with ${i+1} `)
     if (!JSONcompare('Insertion/Deletion Tests',lists[i].toList(),lists[i+1].toList())){
       console.log(`Error in DDLL insert! i=${i}`)
       console.dir([i, lists[i],lists[i+1]])
+      window.debugging.error = [i, lists[i],lists[i+1]]
+      throw new Error()
     }
     console.log("Testing complete")
   }
@@ -232,6 +236,7 @@ function runDeleteTests(lists,N,server,burstSize){
       server.release()
     }
   }
+  server.release()
 }
 
 window.ddll = {checkEquality,runDeleteTests,createLists,runTestsA, runTimeTests}

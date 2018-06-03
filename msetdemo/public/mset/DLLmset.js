@@ -192,16 +192,21 @@ class DLLmset{
         // we are inserting at the end of a node we don't own (else it would be tree extend)
         // we will make a new subnode and insert at the beginning of that
           s = n.subnodes.nth(q-1,'edit')  // this returns a listNode, we may want elements instead
-          //console.dir(s)
-          let inNodeOffset = q-s.indexOf('edit')
+          //console.log(`in tricky case s.data.size=${s.data.size} s.data.userData='${s.data.userData}'`)
+          //console.dir([n,s])
+          if (s.data.size>0){
+            if (s.next.data=="endmarker"){
+              //we need to split this node and add an empty after it!
+              // otherwise we'll just insert in the iset of this node ...
+              let inNodeOffset = q-s.indexOf('edit')
+              let e = s.data.split(inNodeOffset)
+              s = e.right.listSubnode
+            } else {
+              s = s.next
+            }
+          }
 
-          let e = s.data.split(inNodeOffset)
-          //console.dir(e)
-          //console.dir(e)
-          s = e.right.listSubnode
-          //console.log('just split last subnode in node'+this.strings.tln.toStringIndent(5))
-          //console.log("just split s")
-          //console.dir(s)
+
       } else {
           //console.dir([n,q])
           //console.log(n.subnodes.toString(' ','count'))
@@ -565,6 +570,18 @@ class Element{
     this.nodeid = [treeNode.user,treeNode.count]
   }
 
+  toStringIndent(k){
+    let result = k+"|"+" ".repeat(k)
+          +`S(${this.first}-${this.first+this.size},vis=${this.vis})\n`
+    if (this.iset){
+      result += this.iset.toStringIndent(k+4)
+    } else {
+      result += (k+4)+"|"+" ".repeat(k+4)+"iset-EMPTY\n"
+    }
+    result += k+"|"+" ".repeat(k+4)+ "DATA: "+(this.vis?this.userData:"["+this.userData+"]")+"\n"
+    return result
+  }
+
   hide(){
     //console.log(this.vis+" vis -> false")
     this.vis=false
@@ -596,6 +613,7 @@ class Element{
     this.listSubnode.delete()
 
     mLeft.listNode  = prevListNode.insertAfter(mLeft)
+    mLeft.iset = this.iset
 
     mRight.listNode   = mLeft.listNode.insertAfter(mRight)
 
@@ -689,15 +707,6 @@ class Node{
     this.elts= elements || [];
     this.subnodes = new DLLwi(Element.sizefn)
 
-    /*
-    this.start = Element.createStart(this)
-    this.start.listSubnode = this.subnodes.first.insertAfter(this.start)
-    let eltSubnode = new Element(0,this.elts.length,true,false,this,true)
-    eltSubnode.listSubnode = this.start.listSubnode.insertAfter(eltSubnode)
-    this.end = Element.createEnd(this)
-    this.end.listSubnode = eltSubnode.listSubnode.insertAfter(this.end)
-   */
-
     this.start = Element.createStart(this)
     this.end = Element.createEnd(this)
     let eltSubnode = new Element(0,this.elts.length,true,false,this,true)
@@ -712,9 +721,30 @@ class Node{
   toString(){
     return "node("+this.subnodes.toString("|",'count')+","+")"
   }
+  toStringIndent(k){
+    let result = k+"|"+" ".repeat(k)+"<"+this.user+":"+this.count+"\n"
+    let subnodes = this.subnodes.toList()
+    for(let i=0; i<subnodes.length; i++){
+      result += subnodes[i].toStringIndent(k+4)
+    }
+    result += k+"|"+" ".repeat(k)+" "+this.user+":"+this.count+">\n"
+    return result
+  }
 
 }
 
+function compareNodes(x,y){
+  if ((x=="startmarker")||(y=="endmarker")){
+    return -1
+  } else if ((x=="endmarker") || (y=="startmarker")){
+    return 1
+  } else if ((typeof(x.user)=='number') && (typeof(y.user)=='number')){
+    return x.user-y.user
+  } else {
+    console.dir([x,y])
+    throw new Error("trying to compare nodes with no user number!")
+  }
+}
 
 class InsertionSet{
   // this is a O(log(N)) implementation of the insertion set
@@ -727,7 +757,7 @@ class InsertionSet{
   // the first step is to move all iset related code into this class
 
   constructor(){
-    this.bst = new BSTwi((x,y)=>(x.user-y.user))
+    this.bst = new BSTwi(compareNodes)
   }
 
   /* insertNode(m,s) inserts the node m into an ordered set s of nodes
@@ -741,6 +771,20 @@ class InsertionSet{
 
   get(k){
     return this.bst.get(k)
+  }
+
+  toStringIndent(k){
+    const nodes = this.bst.toList('count')
+    let result = k+"|"+" ".repeat(k)+ "iset\n"
+  /*
+    for (let i=0; i<nodes.length; i++){
+      result += nodes[i].toStringIndent(k+4) +"\n"
+    }
+    */
+    for(let i=0; i<this.bst.size(); i++){
+      result += this.bst.nth(i).data.toStringIndent(k+4) +"\n"
+    }
+    return result
   }
 }
 

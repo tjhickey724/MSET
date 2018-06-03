@@ -17,16 +17,30 @@ class BSTwi extends DLLwi {
   }
 
   insert(elt){
-    return this.tln.binaryInsert(elt, this.comparator).indexOf()
+    const result =  this.tln.binaryInsert(elt, this.comparator).indexOf()
+    if (!isOrdered(this.toList())) {
+      console.log('inserted element: '+elt.user)
+      console.log(`into list ${this.toList().map((x)=>(x.user))}`)
+      console.log(`returning ${result}`)
+      console.dir(result)
+    }
+
+    return result
   }
 
   get(k){
     return this.nth(k).data
   }
 
-
-
-
-
-
 }
+
+function isOrdered(list){
+  for(let i=0; i<list.length-1; i++){
+    if (list[i].user > list[i+1].user) {
+      return false
+    }
+  }
+  return true
+}
+
+window.BSTwi = BSTwi
