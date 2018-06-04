@@ -26,7 +26,9 @@ class TestServer{
   }
 
   shuffle(){
+    console.log('before shuffle: '+JSON.stringify(this.delayList))
     shuffleList(this.delayList)
+    console.log('after shuffle: '+JSON.stringify(this.delayList))
   }
 
   delay(){

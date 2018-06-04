@@ -60,30 +60,37 @@ s3.emit("hi to all")
 
 document.getElementById('go').addEventListener('click',function(event){
   let k = parseInt(document.getElementById('kTF').value)
+  let numEdits = parseInt(document.getElementById('numEditsTF').value)
   let numLists = parseInt(document.getElementById('numListsTF').value)
   let initSize = parseInt(document.getElementById('initSizeTF').value)
   let burstSize = parseInt(document.getElementById('burstSizeTF').value)
-  console.log("running tests"+JSON.stringify([k,numLists,initSize,burstSize]))
-  runTimeTests(k,numLists,initSize,burstSize)
+  let shuffled = document.getElementById('shuffleCB').checked
+  console.log("running tests"+JSON.stringify([k,numEdits,numLists,initSize,burstSize]))
+  runTimeTests(k,numEdits,numLists,initSize,burstSize,shuffled)
 })
 
 
-function runTimeTests(k0,numLists0,initSize0,burstSize0){
+function runTimeTests(k0,numEdits0, numLists0,initSize0,burstSize0,shuffled){
   let info = document.getElementById('results')
+  let test = document.getElementById('test')
+  let multiplier = parseInt(document.getElementById('multTF').value)
+  let testVal = test.value
+  console.log(testVal)
   let tableData = `<table border='2'>\n<tr><td>NumEditOps (per client)</td><td>TotalTime(ms) (per client)</td>`+
   `<td>treeHeight</td><td>TreeSize</td><td>timePerOp (microseconds)</td><td>timePerOp/log(N) (nanoseconds)</td><td>TreeSize/n (%)</td>`+
-  `<td>Reps</td><td>NumLists</td><td>initSize</td><td>burstSize</td>`+
+  `<td>numEdits</td><td>NumLists</td><td>initSize</td><td>burstSize</td>`+
   `</tr>\n`
 
   for(let j=1;j<=k0;j++){
-    let numEdits= 4
-    let numLists = j*20
-    let initSize = initSize0
-    let burstSize = burstSize0
+    let numEdits= (testVal=='numEdits')?j*multiplier:numEdits0
+    let numLists = (testVal=='numClients')?j*multiplier:numLists0
+    let initSize = (testVal=='initialSize')?j*multiplier:initSize0
+    let burstSize = (testVal=='burstSize')?j*multiplier:burstSize0
+    console.log(JSON.stringify([testVal,j,multiplier,numEdits,numLists,initSize,burstSize]))
     window.avlReset()
 
     let a = performance.now();
-    let lists = runTestsA(numEdits,numLists,initSize,burstSize);
+    let lists = runTestsA(numEdits,numLists,initSize,burstSize,shuffled);
     let b = performance.now();
     checkEquality(lists)
 
@@ -110,10 +117,15 @@ function runTimeTests(k0,numLists0,initSize0,burstSize0){
       ` treeSize=${treeSize} treeSizePerOp=${treeSizePerOp} \n`)
       console.log(s)
     let data =
-    `<tr><td>${numEditOps/numLists}</td><td>${Math.round(totalTime/1000/numLists)}<td>${treeHeight}</td><td>${treeSize}</td>`+
+    `<tr><td>${numEditOps/numLists}</td>`+
+        `<td>${Math.round(totalTime/1000/numLists)}</td>`+
+        `<td>${treeHeight}</td><td>${treeSize}</td>`+
         `<td>${timePerOp}</td><td>${Math.round(1000*timePerOpOverLogN)}</td>`+
         `<td>${Math.round(100*treeSize/numEditOps*numLists)}</td>`+
-        `<td>${numEdits}</td><td>${numLists}</td><td>${initSize}</td><td>${burstSize}</td>`+
+        `<td>${numEdits}</td>`+
+        `<td>${numLists}</td>`+
+        `<td>${initSize}</td>`+
+        `<td>${burstSize}</td>`+
        `</tr>`
 
     tableData += "\n"+data
@@ -205,15 +217,15 @@ function range(a,b){
   return list
 }
 
-function runTestsA(numEdits,numLists,initSize,burstSize){
+function runTestsA(numEdits,numLists,initSize,burstSize,shuffled){
   let server = new TestServer()
   let lists = createLists(numLists,server)
   lists[0].insertList(0,range(0,initSize))
-  runDeleteTests(lists,numEdits,server,burstSize)
+  runDeleteTests(lists,numEdits,server,burstSize,shuffled)
   return lists
 }
 
-function runDeleteTests(lists,N,server,burstSize){
+function runDeleteTests(lists,N,server,burstSize,shuffled){
 
   for(let i=1; i<=N; i++){
     server.delay()
@@ -233,6 +245,7 @@ function runDeleteTests(lists,N,server,burstSize){
     if (i%burstSize==0) {
       //server.shuffle()
       //console.log(`releasing server queue with size ${server.delayList.length}`)
+      if (shuffled) server.shuffle()
       server.release()
     }
   }

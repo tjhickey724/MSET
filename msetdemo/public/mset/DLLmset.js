@@ -122,18 +122,29 @@ class DLLmset{
      * when we get an op from the network we just enqueue it and then
      * periodically call processNetOp to handle those ops...
      */
+
+
   processNetOp(){
       if (this.opqueue.length == 0) // check to see that the queue is not empty, return else
           return false;
 
       var op=this.opqueue.shift(); // take from the head of the queue!
       var target=this.nodes[op.nodeid]; // make sure the target is in the tree
-
-      if (target===undefined) {  // if not, then push onto the wait queue
+      console.log('processNetOp '+JSON.stringify(op)+' target'+target)
+      if ((target===undefined)
+           ||
+           ((op.op=='insert') && (op.q>= target.elts.length))
+           ||
+           ((op.op=='extend') && (op.q > target.elts.length))
+           ||
+           ((op.op=='hide') && (op.q >= target.elts.length))
+         ){  // if not, then push onto the wait queue
+           console.log('opqueue -- waiting '+JSON.stringify(op))
           this.waitqueue[op.nodeid] = this.waitqueue[op.nodeid] || []; // make waitqueue empty if undefined
           this.waitqueue[op.nodeid].push(op);
+          return false
       }else {                    // if so, then apply, and enqueue ops waiting for the created result
-
+          console.log('opqueue -- NOT waiting '+JSON.stringify(op))
           var result = this.applyTreeOp(op); // returns new node it creates or extends
           var waiting = this.waitqueue[result.nodeid];
           this.waitqueue[result.nodeid]=null;
@@ -160,7 +171,7 @@ class DLLmset{
       if (treeOp.op == "insert") {
           n = this.treeinsert(treeOp.nodeid, treeOp.q, treeOp.un, treeOp.c);
       } else if (treeOp.op == "extend") {
-          n = this.treeextend(treeOp.nodeid, treeOp.c);
+          n = this.treeextend(treeOp.nodeid, treeOp.q, treeOp.c);
       } else if (treeOp.op == "delete") {
           n = this.treehide(treeOp.nodeid, treeOp.q, treeOp.u, treeOp.size);
       }
@@ -308,12 +319,15 @@ class DLLmset{
    *  this inserts the character c at the end of the node with the specified nodeid
    *  and it updates M to reflect this change ...
    */
-  treeextend(nodeid,c){
+  treeextend(nodeid,q,c){
       //console.log("inside treeextend: "+JSON.stringify([nodeid,c]))
       //console.dir(this)
       var n = this.nodes[nodeid];
       //console.dir(n)
       //console.dir(c)
+      if (n.elts.length != q){
+        throw new Error("error in treeextend, not inserting at end of list")
+      }
       n.elts = n.elts.concat(c)
       //console.dir(['te1',n])
       const f = n.end;
@@ -518,8 +532,10 @@ class DLLmset{
               if (fcell.data.treeNode.user==this.user) {
                 //console.log('case3a')
                   // case 3a: it the user owns the node then extend
-                  this.network.extend(fcell.data.nodeid, c);
-                  this.treeextend(fcell.data.nodeid,c);
+                  //console.log("in InsertList case for treeextend")
+                  //console.dir(fcell.data)
+                  this.network.extend(fcell.data.nodeid, fcell.data.treeNode.elts.length, c);
+                  this.treeextend(    fcell.data.nodeid, fcell.data.treeNode.elts.length, c);
               }
               else {
                 //console.log('case3b')

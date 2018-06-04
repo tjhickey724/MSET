@@ -7,10 +7,24 @@ block content
   | to open the Javascript console in Chrome <br>
   | (and if you aren't using Chrome, then switch!!)
   br
+  select#test
+      option('selected') numEdits
+      option numClients
+      option initialSize
+      option burstSize
+      option p2p
+  |
   | k=
   input#kTF(type="text",value="10")
+  |
+  | multiplier=
+  input#multTF(type="text", value="1")
+  button#go RUN TESTS
+  hr
+  | numEdits=
+  input#numEditsTF(type="text",value="10")
   br
-  | numLists=
+  | numClients=
   input#numListsTF(type="text",value="2")
   br
   |initSize=
@@ -19,7 +33,11 @@ block content
   |burstSize=
   input#burstSizeTF(type="text",value="1")
   br
-  button#go Go
+  |shuffle?=
+  input#shuffleCB(type="checkbox",value="1")
+  br
+  hr
+
   #results
 
   script(src="https://code.jquery.com/jquery-1.11.1.js")

@@ -180,8 +180,8 @@ class Network{
     this.broadcast(op,un);
   }
 
-  extend(un,c) {
-    var op = {op:"extend", nodeid:un, c:c};
+  extend(un,q,c) {
+    var op = {op:"extend", nodeid:un, q:q, c:c};
     this.broadcast(op,un);
   }
 
@@ -220,8 +220,8 @@ class Network{
          msetTree.treeinsert(msg.nodeid,msg.q,msg.un,msg.c)
          break;
        case 'extend':
-          z = `REMOTE treeextend([${msg.nodeid}],'${msg.c}')`
-          msetTree.treeextend(msg.nodeid,msg.c)
+          z = `REMOTE treeextend([${msg.nodeid}],${msg.q},'${msg.c}')`
+          msetTree.treeextend(msg.nodeid,msg.q,msg.c)
           break;
       case 'delete':
          z = `REMOTE treehide([${msg.nodeid}],${msg.q},${msg.u})`
