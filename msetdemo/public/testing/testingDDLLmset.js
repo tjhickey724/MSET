@@ -76,8 +76,8 @@ function runTimeTests(k0,numLists0,initSize0,burstSize0){
   `</tr>\n`
 
   for(let j=1;j<=k0;j++){
-    let numEdits= 1000
-    let numLists = j
+    let numEdits= 4
+    let numLists = j*20
     let initSize = initSize0
     let burstSize = burstSize0
     window.avlReset()
