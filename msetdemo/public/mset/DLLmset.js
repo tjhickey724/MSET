@@ -200,6 +200,7 @@ class DLLmset{
               // otherwise we'll just insert in the iset of this node ...
               let inNodeOffset = q-s.indexOf('edit')
               let e = s.data.split(inNodeOffset)
+              e.right.vis = true //the new subnode could be extended by another client
               s = e.right.listSubnode
             } else {
               s = s.next
@@ -322,6 +323,14 @@ class DLLmset{
       //console.dir(f)
       const insertionPos = f.listNode.indexOf('std')
       var g = f.listNode.prev.data; // this is the previous subnode, which we will extend!
+      if (!g.vis) {
+        // we need to split g to insert a new node to insert in...
+        let e = g.split(g.size)
+        //console.dir([g,e,g.size])
+        //console.log('in treeextend')
+        e.right.vis = true
+        g=e.right
+      }
 
       //console.log('updating g')
       //console.dir(g)
@@ -603,23 +612,31 @@ class Element{
 
   split(p){
     // split the subnode into two at the current offset
+    // we do this when inserting an element between two characters in the node
+    // and in this case the new nodes have the same visibility
+    // we also do this when adding a new node of size zero at the end
+    // but in this case the new right node should be visible
+    // we also do this when deleting a node, and in that case only the
+    // delete subset become non-visible. We will have split just copy the
+    // visibility into the new nodes and the parent call should do the right thing
+    // after they are built.
     // remove the old subnode and insert the two new subnodes into both lists
     //We split by removing the node and replacing it with two new nodes!
-    let mLeft = new Element(  this.first,           p,  true, false, this.treeNode, this.isLast)
-    let mRight  = new Element(this.first+p, this.size-p,  true, false, this.treeNode, this.isLast)
+    let mLeft = new Element(  this.first,           p,  this.vis, false, this.treeNode, this.isLast)
+    let mRight  = new Element(this.first+p, this.size-p,  this.vis, false, this.treeNode, this.isLast)
     let prevListNode = this.listNode.prev
     let prevListSubnode = this.listSubnode.prev
+
     this.listNode.delete()
     this.listSubnode.delete()
 
-    mLeft.listNode  = prevListNode.insertAfter(mLeft)
-    mLeft.iset = this.iset
-
+    mLeft.listNode      = prevListNode.insertAfter(mLeft)
     mRight.listNode   = mLeft.listNode.insertAfter(mRight)
 
-    mLeft.listSubnode = prevListSubnode.insertAfter(mLeft)
+    mLeft.listSubnode      = prevListSubnode.insertAfter(mLeft)
     mRight.listSubnode   = mLeft.listSubnode.insertAfter(mRight)
 
+    mLeft.iset = this.iset
     mRight.iset = new InsertionSet()
 
     return {left:mLeft,right:mRight}

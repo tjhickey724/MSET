@@ -76,7 +76,7 @@ function runTimeTests(k0,numLists0,initSize0,burstSize0){
   `</tr>\n`
 
   for(let j=1;j<=k0;j++){
-    let numEdits= 2
+    let numEdits= 1000
     let numLists = j
     let initSize = initSize0
     let burstSize = burstSize0
