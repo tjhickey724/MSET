@@ -77,9 +77,17 @@ function runTimeTests(k0,numEdits0, numLists0,initSize0,burstSize0,shuffled){
   let multiplier = parseInt(document.getElementById('multTF').value)
   let testVal = test.value
   console.log(testVal)
-  let tableData = `<table border='2'>\n<tr><td>NumEditOps (per client)</td><td>TotalTime(ms) (per client)</td>`+
-  `<td>treeHeight</td><td>NumNodes</td><td>ListSize</td><td>timePerOp (microseconds)</td><td>timePerOp/log(N) (nanoseconds)</td><td>TreeSize/n (%)</td>`+
-  `<td>numEdits</td><td>NumLists</td><td>initSize</td><td>burstSize</td>`+
+  let tableData = `<table border='2'>\n<tr>`+
+  `<td>N = Edits (per client)</td>`+
+  `<td>TotalTime(ms) (per client)</td>`+
+  `<td>Height</td>`+
+  `<td>Nodes</td>`+
+  `<td>Nodes/Edit</td>`+
+  `<td>M = ListSize</td>`+
+  `<td>timePerOp (microseconds)</td>`+
+  `<td>timePerOp/log(N) (nanoseconds)</td>`+
+  `<td>timePerOp/W(N) (nanoseconds)</td>`+
+  `<td>NumLists</td><td>initSize</td><td>burstSize</td><td>SimTime(sec)</td>`+
   `</tr>\n`
 
   for(let j=1;j<=k0;j++){
@@ -97,41 +105,47 @@ function runTimeTests(k0,numEdits0, numLists0,initSize0,burstSize0,shuffled){
 
     console.log('finished running for j='+j)
     let treeHeight = lists[0].strings.tln.height
-    let treeSize = lists[0].toList('edit').length
-    let revStringSize = lists[0].toList('rev').length
+    let treeSize = lists[0].strings.toList('edit').length
+    let revStringSize = lists[0].strings.toList('rev').length
     let numNodes = (treeSize-revStringSize)/2
-    let stringSize = lists[0].toList('std').length
+    let stringSize = lists[0].strings.toList('std').length
     let totalTime = Math.round(1000*(b-a)) // in microseconds
     let numEditOps = numEdits*2*numLists*numLists
+    let N = numEditOps/numLists
     let timePerOp = Math.round(totalTime/numEditOps)
     let treeSizePerOp = treeSize/numEditOps*numLists
-    let timePerOpOverLogN = (totalTime/(Math.log(numEditOps)*numEditOps))
+    let timePerOpOverLogN = (timePerOp/Math.log(N))
+
 
     let avlInfo = window.avlInfo()
+    /*
     let avlPerOpOverNx1000 = Math.round(avlInfo.a/(numEditOps*numEditOps))
     let nthPerOpOverLogNx1000 = Math.round(avlInfo.n/(numEditOps*Math.log(numEditOps)))
     let indexPerOpOverLogNx1000 = Math.round(avlInfo.i/(numEditOps*Math.log(numEditOps)))
     let avlPerOpOverLogNx1000 = Math.round(avlInfo.a/(numEditOps*Math.log(numEditOps)))
     let updateWPerOpOverNx1000 = Math.round(avlInfo.u/(numEditOps*numEditOps))
-    let s =(`reps=${numEdits} numLists=${numLists} initSize=${initSize} burstSize=${burstSize} j=${j} h=${treeHeight} time (sec)=${Math.round(totalTime/1000000)}  numEditOps=${numEditOps} `+
-      ` nthPerOpOverLogNx1000=${nthPerOpOverLogNx1000} indexPerOpOverLogNx1000=${indexPerOpOverLogNx1000} `+
-      ` avlInfo.a=${avlInfo.a} avlPerOp/n=${avlPerOpOverNx1000}  avlPerOp/logN=${avlPerOpOverLogNx1000} `+
-      `updateWPerOp/n = ${updateWPerOpOverNx1000} `+
-      ` timePerOp=${timePerOp} timePerOp/LogN=${timePerOpOverLogN} `+
-      ` treeSize=${treeSize} treeSizePerOp=${treeSizePerOp} \n`)
+    */
+    let s =(`numEdits=${numEdits} numLists=${numLists} initSize=${initSize} burstSize=${burstSize}`+
+      ` j=${j} treeHeight=${treeHeight} time (sec)=${Math.round(totalTime/1000000)} `+
+      ` numEditOps=${numEditOps} `+
+      ` avlInfo.a=${avlInfo.a} avlInfo.i = ${avlInfo.i}`+
+      ` timePerOp=${timePerOp} timePerOp/LogN=${timePerOpOverLogN}  timePerOp/N=${Math.round(timePerOp/N)}`+
+      ` \n`)
       console.log(s)
     let data =
-    `<tr><td>${numEditOps/numLists}</td>`+
+    `<tr><td>${N}</td>`+
         `<td>${Math.round(totalTime/1000/numLists)}</td>`+
         `<td>${treeHeight}</td>`+
         `<td>${numNodes}</td>`+
+        `<td>${Math.round(100*numNodes/N)/100}</td>`+
         `<td>${stringSize}</td>`+
-        `<td>${timePerOp}</td><td>${Math.round(1000*timePerOpOverLogN)}</td>`+
-        `<td>${Math.round(100*treeSize/numEditOps*numLists)}</td>`+
-        `<td>${numEdits}</td>`+
+        `<td>${timePerOp}</td>`+
+        `<td>${Math.round(1000*timePerOpOverLogN)}</td>`+
+        `<td>${Math.round(1000*timePerOp/(Math.log(N)-Math.log(Math.log(N))))}</td>`+
         `<td>${numLists}</td>`+
         `<td>${initSize}</td>`+
         `<td>${burstSize}</td>`+
+        `<td>${Math.round((b-a))/1000}</td>`+
        `</tr>`
 
     tableData += "\n"+data

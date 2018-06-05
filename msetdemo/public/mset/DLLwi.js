@@ -812,7 +812,7 @@ AND MAKE IT CLEAR AND EASY TO VALIDATE!!
     const rightHeight = (node.right?node.right.height:0)
     const newHeight =  Math.max(leftHeight, rightHeight)+1
 
-    if (newHeight>20) throw new Error("height>20!!")
+    if (newHeight>100) throw new Error("height>100!!")
     if (Math.abs(leftHeight-rightHeight)>2) {
       console.dir(node)
       console.log(node.listNode.dll.tln.toStringIndent(5))

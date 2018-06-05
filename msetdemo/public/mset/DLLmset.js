@@ -98,13 +98,30 @@ class DLLmset{
   }
 
   nth(n,feature){
-    return this.strings.nth(n,'std').data.userData
+    return this.strings.nth(n,'std').data.userData()
+  }
+
+  toListOLD(feature){
+    feature = feature || 'std'
+    /*
+      I need to rewrite this using iteration as it exhausts the runtime stack
+      it must be using recursive calls....
+    */
+    return [].concat.apply([],
+        (this.toListInternal(feature).map((x)=>((x.vis||x.marker)?x.userData():'['+x.userData()+']'))))
   }
 
   toList(feature){
-    feature = feature || 'std'
-    return [].concat.apply([],
-        (this.toListInternal(feature).map((x)=>((x.vis||x.marker)?x.userData:'['+x.userData+']'))))
+    let z = this.strings.toList(feature)
+    let result=[]
+    for(let i=0;i<z.length;i++){
+      if (z[i].vis||z[i].marker){
+        result.push(z[i].userData())
+      } else {
+        result.push("["+z[i].userData()+"]")
+      }
+    }
+    return result.join('')
   }
 
   toListInternal(feature){
@@ -126,6 +143,7 @@ class DLLmset{
 
   processRemoteOp(op){
       this.opqueue.push(op)
+      //console.log(`processRemoteOp(${op}  opqueue=\n${JSON.stringify(this.opqueue)})`)
       //console.dir(op)
       while (this.opqueue.length > 0) {
         var op=this.opqueue.shift(); // take from the head of the queue!
@@ -374,7 +392,7 @@ class DLLmset{
       g.size = g.size+c.length
       g.listNode.elementSize = {std:g.size,rev:g.size,edit:g.size,count:g.size}
       g.listSubnode.elementSize = g.listNode.elementSize
-      g.userData = g.treeNode.elts.slice(g.first,g.first+g.size)
+      g.userData = () => g.treeNode.elts.slice(g.first,g.first+g.size)
       //console.log(JSON.stringify([g.size,c.length,g.listNode.size,g.userData]))
       //f.listNode.prev.data = g // this should update the weights!!
       //console.log('updating g.listNode in treeExtend')
@@ -614,7 +632,7 @@ class Element{
     this.listSubnode=null;
     this.isLast = isLast // true when the element is the last in the node,  we don't need this..
     //console.dir(['in new Element',first,size,vis,marker,treeNode,isLast])
-    this.userData = treeNode.elts.slice(first,first+size)  // DEBUGGING!!
+    this.userData = () => (treeNode.elts.slice(first,first+size)) // DEBUGGING!!
     this.nodeid = [treeNode.user,treeNode.count]
   }
 
@@ -626,7 +644,7 @@ class Element{
     } else {
       result += (k+4)+"|"+" ".repeat(k+4)+"iset-EMPTY\n"
     }
-    result += k+"|"+" ".repeat(k+4)+ "DATA: "+(this.vis?this.userData:"["+this.userData+"]")+"\n"
+    result += k+"|"+" ".repeat(k+4)+ "DATA: "+(this.vis?this.userData():"["+this.userData()+"]")+"\n"
     return result
   }
 
@@ -685,11 +703,11 @@ class Element{
 
   // REWRITE THIS AS toString() ...
   toString(){
-    //onsole.log("inside toString of Element")
+
     //console.dir(this)
     if (this.marker){
       //console.dir(['a',this.userData])
-      return this.userData
+      return this.userData()
     } else if (this.vis) {
       //console.dir(['b',this.first,this.size,this.treeNode.elts.slice(this.first,this.first+this.size)])
       return "("+this.treeNode.elts.slice(this.first,this.first+this.size)
@@ -703,7 +721,7 @@ class Element{
 
   // REWRITE THIS
   toStringLong2() {
-    return "{"+this.userData+","+this.vis+","+this.marker+","+this.nodeid+","+this.offset+"}";
+    return "{"+this.userData()+","+this.vis+","+this.marker+","+this.nodeid+","+this.offset+"}";
   }
 
 
@@ -723,7 +741,7 @@ class Element{
   static createStart(n){
       var startsym = "<"+n.user+":"+n.count
       var e = new Element('start',0,false,true,n,false)
-      e.userData = startsym
+      e.userData = ()=>startsym
       e.treeNode = n
       e.nodeid = [n.user, n.count]
       e.offset="start"
@@ -734,7 +752,7 @@ class Element{
   static createEnd(n){
       var endsym = n.user+":"+n.count+">"
       var e = new Element('end',0,false,true,n,false)
-      e.userData = endsym
+      e.userData = ()=>endsym
       e.treeNode = n
       e.nodeid = [n.user, n.count]
       e.offset = "end"
@@ -777,6 +795,7 @@ class Node{
   toString(){
     return "node("+this.subnodes.toString("|",'count')+","+")"
   }
+
   toStringIndent(k){
     let result = k+"|"+" ".repeat(k)+"<"+this.user+":"+this.count+"\n"
     let subnodes = this.subnodes.toList()
@@ -790,9 +809,12 @@ class Node{
 }
 
 function compareNodes(x,y){
-  if ((x=="startmarker")||(y=="endmarker")){
+  if ( ((typeof(x)=='string')&&(x=="startmarker")) ||
+       ((typeof(y)=='string')&&  (y=="endmarker")) ) {
     return -1
-  } else if ((x=="endmarker") || (y=="startmarker")){
+  } else if
+    ( ((typeof(x)=='string')&&  (x=="endmarker")) ||
+      ((typeof(y)=='string')&&(y=="startmarker")) ){
     return 1
   } else if ((typeof(x.user)=='number') && (typeof(y.user)=='number')){
     return x.user-y.user
