@@ -78,7 +78,7 @@ function runTimeTests(k0,numEdits0, numLists0,initSize0,burstSize0,shuffled){
   let testVal = test.value
   console.log(testVal)
   let tableData = `<table border='2'>\n<tr><td>NumEditOps (per client)</td><td>TotalTime(ms) (per client)</td>`+
-  `<td>treeHeight</td><td>EditListSize</td><td>timePerOp (microseconds)</td><td>timePerOp/log(N) (nanoseconds)</td><td>TreeSize/n (%)</td>`+
+  `<td>treeHeight</td><td>NumNodes</td><td>ListSize</td><td>timePerOp (microseconds)</td><td>timePerOp/log(N) (nanoseconds)</td><td>TreeSize/n (%)</td>`+
   `<td>numEdits</td><td>NumLists</td><td>initSize</td><td>burstSize</td>`+
   `</tr>\n`
 
@@ -98,6 +98,9 @@ function runTimeTests(k0,numEdits0, numLists0,initSize0,burstSize0,shuffled){
     console.log('finished running for j='+j)
     let treeHeight = lists[0].strings.tln.height
     let treeSize = lists[0].toList('edit').length
+    let revStringSize = lists[0].toList('rev').length
+    let numNodes = (treeSize-revStringSize)/2
+    let stringSize = lists[0].toList('std').length
     let totalTime = Math.round(1000*(b-a)) // in microseconds
     let numEditOps = numEdits*2*numLists*numLists
     let timePerOp = Math.round(totalTime/numEditOps)
@@ -121,7 +124,8 @@ function runTimeTests(k0,numEdits0, numLists0,initSize0,burstSize0,shuffled){
     `<tr><td>${numEditOps/numLists}</td>`+
         `<td>${Math.round(totalTime/1000/numLists)}</td>`+
         `<td>${treeHeight}</td>`+
-        `<td>${treeSize}</td>`+
+        `<td>${numNodes}</td>`+
+        `<td>${stringSize}</td>`+
         `<td>${timePerOp}</td><td>${Math.round(1000*timePerOpOverLogN)}</td>`+
         `<td>${Math.round(100*treeSize/numEditOps*numLists)}</td>`+
         `<td>${numEdits}</td>`+
