@@ -50,7 +50,7 @@ class DLLmset{
     this.nodes = {};
     this.nodes[[0,0]] = this.root;
     this.opqueue = [];  // dequeue of ops that haven't been applied
-    this.waitqueue=[];  // hashtable from targets to list of ops
+    this.waitqueue={};  // hashtable from targets to list of ops
     this.emptyNetwork = {hide:(x)=>null,insert:(x)=>null,extend:(x)=>null}
     this.network = network || this.emptyNetwork
 
@@ -124,36 +124,59 @@ class DLLmset{
      */
 
 
-  processNetOp(){
-      if (this.opqueue.length == 0) // check to see that the queue is not empty, return else
-          return false;
+  processRemoteOp(op){
+      this.opqueue.push(op)
+      //console.dir(op)
+      while (this.opqueue.length > 0) {
+        var op=this.opqueue.shift(); // take from the head of the queue!
+        var target=this.nodes[op.nodeid]; // make sure the target is in the tree
+        //console.log('processNetOp '+JSON.stringify(op)+' target'+target)
+        //console.dir(target)
 
-      var op=this.opqueue.shift(); // take from the head of the queue!
-      var target=this.nodes[op.nodeid]; // make sure the target is in the tree
-      console.log('processNetOp '+JSON.stringify(op)+' target'+target)
-      if ((target===undefined)
-           ||
-           ((op.op=='insert') && (op.q>= target.elts.length))
-           ||
-           ((op.op=='extend') && (op.q > target.elts.length))
-           ||
-           ((op.op=='hide') && (op.q >= target.elts.length))
-         ){  // if not, then push onto the wait queue
-           console.log('opqueue -- waiting '+JSON.stringify(op))
-          this.waitqueue[op.nodeid] = this.waitqueue[op.nodeid] || []; // make waitqueue empty if undefined
-          this.waitqueue[op.nodeid].push(op);
-          return false
-      }else {                    // if so, then apply, and enqueue ops waiting for the created result
-          console.log('opqueue -- NOT waiting '+JSON.stringify(op))
-          var result = this.applyTreeOp(op); // returns new node it creates or extends
-          var waiting = this.waitqueue[result.nodeid];
-          this.waitqueue[result.nodeid]=null;
-          if ((waiting !==undefined) && (waiting !== null)) {  // if something is waiting, add it to front of the opqueue
-      this.opqueue = waiting.concat(this.opqueue);
-          }
+        if ((target===undefined)
+             ||
+             ((op.op=='insert') && (op.q> target.elts.length))
+             ||
+             ((op.op=='extend') && (op.q > target.elts.length))
+             ||
+             ((op.op=='delete') && (op.q >= target.elts.length))
+           ){  // if not, then push onto the wait queue
+             //console.log(`PUSHING INTO WAIT QUEUE`+JSON.stringify(op))
+             if (target==undefined){
+               //console.log('opqueue -- waiting for the node '+JSON.stringify(op.nodeid))
+             } else {
+               //console.log(`waiting for node ${op.nodeid.user}:${op.nodeid.count} to be > ${op.q}`+` currently at ${target.elts.length}`)
+             }
+             //console.dir({target:target,op:op})
+            this.waitqueue[op.nodeid] = this.waitqueue[op.nodeid] || []; // make waitqueue empty if undefined
+            this.waitqueue[op.nodeid].push(op);
+            //console.log('waitqueue:\n'+JSON.stringify(this.waitqueue))
+        }else {                    // if so, then apply, and enqueue ops waiting for the created result
+            //console.log('opqueue -- NOT waiting '+JSON.stringify(op))
+            //console.log(`processing ${JSON.stringify(op)} of length ${target.elts.length}`)
+            var result = this.applyTreeOp(op); // returns new node it creates or extends
+            //console.dir(result)
+            //console.dir(target)
+            if (op.op=='delete'){ // hiding doesn't add new nodes
+              return
+            } else {
+              let nodeid = [result.user,result.count]
+              //console.log('generating '+JSON.stringify(nodeid))
+              var waiting = this.waitqueue[nodeid];
+              this.waitqueue[nodeid]=null;
+              //console.log('waitqueue:\n'+JSON.stringify(this.waitqueue))
+              if ((waiting !==undefined) && (waiting !== null)) {  // if something is waiting, add it to front of the opqueue
+                  //console.log(`target ${result.user}:${result.count}/${result.elts.length} was found!`)
+                  //console.log(`adding ${JSON.stringify(waiting)} to opqueue to get`)
+                  this.opqueue = waiting.concat(this.opqueue);
+                  //console.log('enqueueing ops:\n'+JSON.stringify(this.opqueue))
+              }
+            }
+
+        }
       }
-      return true;
   }
+
 
   enqueue(op) {
     this.opqueue.push(op);

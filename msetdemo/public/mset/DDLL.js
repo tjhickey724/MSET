@@ -214,6 +214,7 @@ class Network{
 
     let z = ""
     const msetTree = this.msetSocket.msetTree;
+    msetTree.processRemoteOp(msg); return
         switch (msg.op){
       case 'insert':
          z = `REMOTE treeinsert([${msg.nodeid}],${msg.q},[${msg.un}],'${msg.c}')`
@@ -229,6 +230,7 @@ class Network{
          break;
       default: throw new Error("unknown remote op: "+JSON.stringify(msg))
     }
+
 
   }
 

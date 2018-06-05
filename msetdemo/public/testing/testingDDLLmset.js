@@ -72,12 +72,13 @@ document.getElementById('go').addEventListener('click',function(event){
 
 function runTimeTests(k0,numEdits0, numLists0,initSize0,burstSize0,shuffled){
   let info = document.getElementById('results')
+  info.innerHTML = ".... running tests"
   let test = document.getElementById('test')
   let multiplier = parseInt(document.getElementById('multTF').value)
   let testVal = test.value
   console.log(testVal)
   let tableData = `<table border='2'>\n<tr><td>NumEditOps (per client)</td><td>TotalTime(ms) (per client)</td>`+
-  `<td>treeHeight</td><td>TreeSize</td><td>timePerOp (microseconds)</td><td>timePerOp/log(N) (nanoseconds)</td><td>TreeSize/n (%)</td>`+
+  `<td>treeHeight</td><td>EditListSize</td><td>timePerOp (microseconds)</td><td>timePerOp/log(N) (nanoseconds)</td><td>TreeSize/n (%)</td>`+
   `<td>numEdits</td><td>NumLists</td><td>initSize</td><td>burstSize</td>`+
   `</tr>\n`
 
@@ -119,7 +120,8 @@ function runTimeTests(k0,numEdits0, numLists0,initSize0,burstSize0,shuffled){
     let data =
     `<tr><td>${numEditOps/numLists}</td>`+
         `<td>${Math.round(totalTime/1000/numLists)}</td>`+
-        `<td>${treeHeight}</td><td>${treeSize}</td>`+
+        `<td>${treeHeight}</td>`+
+        `<td>${treeSize}</td>`+
         `<td>${timePerOp}</td><td>${Math.round(1000*timePerOpOverLogN)}</td>`+
         `<td>${Math.round(100*treeSize/numEditOps*numLists)}</td>`+
         `<td>${numEdits}</td>`+
@@ -242,7 +244,7 @@ function runDeleteTests(lists,N,server,burstSize,shuffled){
       lists[j].delete(z2[j])
     }
 
-    if (i%burstSize==0) {
+    if ((burstSize==0)|| (i%burstSize==0)) {
       //server.shuffle()
       //console.log(`releasing server queue with size ${server.delayList.length}`)
       if (shuffled) server.shuffle()
