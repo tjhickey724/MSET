@@ -77,17 +77,18 @@ function runTimeTests(k0,numEdits0, numLists0,initSize0,burstSize0,shuffled){
   let multiplier = parseInt(document.getElementById('multTF').value)
   let testVal = test.value
   console.log(testVal)
-  let tableData = `<table border='2'>\n<tr>`+
-  `<td>N = Edits (per client)</td>`+
-  `<td>TotalTime(ms) (per client)</td>`+
-  `<td>Height</td>`+
-  `<td>Nodes</td>`+
-  `<td>Nodes/Edit</td>`+
-  `<td>M = ListSize</td>`+
-  `<td>timePerOp (microseconds)</td>`+
-  `<td>timePerOp/log(N) (nanoseconds)</td>`+
-  `<td>timePerOp/W(N) (nanoseconds)</td>`+
-  `<td>NumLists</td><td>initSize</td><td>burstSize</td><td>SimTime(sec)</td>`+
+  let tableData = `<table border='2' cellpadding='10'>\n<tr>`+
+  `<td>Edits(E)</td>`+
+  `<td>Clients(C)</td>`+
+  `<td>Size(S) </td>` +
+  `<td>Nodes(N)</td>`+
+  `<td>H</td>`+
+  `<td>Time(T)</td>`+
+  `<td>N/E</td>`+
+  `<td>T/E</td>`+
+  `<td>A1</td>`+
+  `<td>E/T</td>`+
+  `<td>T*C</td>`+
   `</tr>\n`
 
   for(let j=1;j<=k0;j++){
@@ -134,17 +135,15 @@ function runTimeTests(k0,numEdits0, numLists0,initSize0,burstSize0,shuffled){
       console.log(s)
     let data =
     `<tr><td>${N}</td>`+
-        `<td>${Math.round(totalTime/1000/numLists)}</td>`+
-        `<td>${treeHeight}</td>`+
-        `<td>${numNodes}</td>`+
-        `<td>${Math.round(100*numNodes/N)/100}</td>`+
-        `<td>${stringSize}</td>`+
-        `<td>${timePerOp}</td>`+
-        `<td>${Math.round(1000*timePerOpOverLogN)}</td>`+
-        `<td>${Math.round(1000*timePerOp/(Math.log(N)-Math.log(Math.log(N))))}</td>`+
         `<td>${numLists}</td>`+
-        `<td>${initSize}</td>`+
-        `<td>${burstSize}</td>`+
+        `<td>${stringSize}</td>`+
+        `<td>${numNodes}</td>`+
+        `<td>${treeHeight}</td>`+
+        `<td>${Math.round(totalTime/numLists)/1000}</td>`+
+        `<td>${Math.round(100*numNodes/N)/100}</td>`+
+        `<td>${timePerOp/1000}</td>`+
+        `<td>${Math.round(100*timePerOpOverLogN)/100}</td>`+
+        `<td>${Math.round(1000/timePerOp)}</td>`+
         `<td>${Math.round((b-a))/1000}</td>`+
        `</tr>`
 

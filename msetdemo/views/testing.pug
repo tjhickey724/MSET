@@ -39,6 +39,32 @@ block content
   hr
 
   #results
+  br
+  hr
+  |  E = edits per client
+  br
+  |  C = number of clients collaborating
+  br
+  |  S = final list size -- O(1)
+  br
+  |  N = nodes in edit tree -- O(E)
+  br
+  |  H = height of main avl tree for subNodes -- O(log(E))
+  br
+  |  T = time per client in milliseconds -- O(log(E))
+  br
+  |  N/E = nodes per edit op -- O(1)
+  br
+  |  T/E = Time in ms per Edit operation -- O(log(E))
+  br
+  |  A1 = T/(E*log(E)) -- O(1)
+  br
+  |  E/T = number of edit operations per millisecond
+  br
+  |  T*C = total time in seconds to simulate this edit session
+
+
+
 
   script(src="https://code.jquery.com/jquery-1.11.1.js")
   script(src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.0/socket.io.js")
