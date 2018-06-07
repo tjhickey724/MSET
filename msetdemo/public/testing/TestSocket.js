@@ -23,6 +23,11 @@ class TestServer{
     this.oplist=[]
     this.delayFlag = false
     this.delayList=[]
+    this.delaySteps=0
+  }
+
+  setDelay(k){
+    this.delaySteps=k
   }
 
   shuffle(){
@@ -39,12 +44,20 @@ class TestServer{
     //console.log(`sending ${k} delayed ops`)
     //console.log(`delayList has ${this.delayList.length} elements`)
     this.delayFlag = false
+    let gap =  (this.delaySteps*this.socketList.length - this.delayList.length)
+    while (gap>0) {
+      this.delayList.push('noop')
+      gap--
+    }
+    //console.log('server emitting')
     for(let i=0;i<k;i++) {
-      this.emit(this.delayList[i])
+      //console.log(JSON.stringify(this.delayList[i]))
+      if (this.delayList != 'noop'){
+        this.emit(this.delayList[i])
+      }
     }
     this.delayList.splice(0,k)
-    //this.delayList.forEach((x)=>(this.emit(x)))
-    //this.delayList=[]
+
   }
 
   connect(socket){

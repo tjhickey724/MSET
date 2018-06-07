@@ -239,8 +239,10 @@ function range(a,b){
 
 function runTestsA(numEdits,numLists,initSize,burstSize,shuffled){
   let server = new TestServer()
+  server.setDelay(burstSize)
   let lists = createLists(numLists,server)
   server.delay()
+  server.release(numLists) // this fills the delayQueue
   lists[0].insertList(0,range(0,initSize))
   runDeleteTests(lists,numEdits,server,burstSize,shuffled)
   return lists
@@ -263,14 +265,20 @@ function runDeleteTests(lists,N,server,burstSize,shuffled){
       lists[j].delete(z2[j])
     }
 
+    server.release(lists.length*2)
+    if (shuffled) {
+      server.shuffle()
+    }
+
+    /*
     if (i >= burstSize){
       if (shuffled) {
         server.shuffle()
       }
       server.release(lists.length*2)
     }
-
-    console.log('intransit: '+lists[0].network.inTransitQueue.length)
+*/
+    //console.log('intransit: '+lists[0].network.inTransitQueue.length)
 /*
     const itn = lists[0].network
     console.dir([itn,itn.outgoingOps,itn.incomingOps])
