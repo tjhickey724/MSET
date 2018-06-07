@@ -42,6 +42,7 @@ class DDLL {
     this.msetTree={};
     this.initSocket();
     this.callback = callback
+
   }
 
   exit() {
@@ -93,11 +94,13 @@ class DDLL {
       if (msg.documentId!=this.documentId) return
       msg = msg.op
       // ignore insert and extend messages from self
+      /*
       if (((msg.op=='extend'))&&(msg.nodeid[0]==this.msetId)){
         return;
       } else if ((msg.op=='insert') && (msg.un[0]==this.msetId)){
         return;
       }
+      */
       this.remoteOp=true; // temporarily ignore changes to the textarea as remote ops are processed
       this.msetTree.network.processRemoteOp(msg)
       //const newString = this.msetTree.strings.toString('','std')
@@ -144,6 +147,11 @@ class Network{
     this.allowOutgoing=true
     this.incomingQueue = []
     this.outgoingQueue = []
+    this.inTransitQueue = []
+    this.userid = this.msetSocket.msetId
+
+    this.incomingOps = []
+    this.outgoingOps = []
   }
 
 
@@ -171,7 +179,13 @@ class Network{
     const op=msg.op
     const un=msg.un  //we don't need this parameter, refactor ...
     var i;
-
+    this.inTransitQueue.push(op)
+    this.outgoingOps.push(op)
+/*
+    if (this.userid==1){
+      console.log(`${this.userid} pushing \n${JSON.stringify(op)}`)
+    }
+    */
     this.msetSocket.sendOperationToServer(op);
   }
 
@@ -214,7 +228,31 @@ class Network{
 
     let z = ""
     const msetTree = this.msetSocket.msetTree;
+    /*
+    if (this.userid==1){
+      console.log('REMOTE\n'+JSON.stringify(msg));
+    }*/
+    this.incomingOps.push(msg)
+    /*
+    console.log('just pushed in pro')
+    console.dir([msg, this,this.incomingOps])
+
+    //console.dir(msg)
+    //console.dir(this)
+    */
+    if (isOwner(msg,this.userid)) {
+      this.inTransitQueue = removeOp(msg,this.inTransitQueue)
+      //if (this.userid==1){
+      //  console.log('removing\n'+JSON.stringify(msg)+' from itq for '+this.userid)
+      //}
+      return // don't handle our own ops ..
+    }
+
+
     msetTree.processRemoteOp(msg); return
+
+
+
         switch (msg.op){
       case 'insert':
          z = `REMOTE treeinsert([${msg.nodeid}],${msg.q},[${msg.un}],'${msg.c}')`
@@ -236,6 +274,40 @@ class Network{
 
 }
 
+function isOwner(op,user){
+  // this tests if the user owns the Edit op
+  //console.log('in isOwner '+user+" "+JSON.stringify(op))
+  const result =
+     ( ((op.op == 'insert') &&  (op.un[0]==user))
+       ||
+       ((op.op == 'extend') && (op.nodeid[0]==user))
+       ||
+       ((op.op == 'delete') && (op.u == user)) )
+  //if (user==1){
+  //  console.log('in isOwner: '+result+' '+user+" "+JSON.stringify(op))
+  //}
+  return result
+}
+
+function removeOp(op,oplist){
+
+  let newList = []
+  let found = false
+  const opString = JSON.stringify(op)
+  for(let i=0; i<oplist.length; i++){
+    if (opString!=JSON.stringify(oplist[i])) {
+      newList.push(oplist[i])
+    } else {
+      found=true
+    }
+  }
+  if (!found){
+    console.log('bug in remove Op')
+    console.log(JSON.stringify([op,oplist]))
+  }
+  return newList
+
+}
 
 window.DDLL=DDLL
 window.Network = Network

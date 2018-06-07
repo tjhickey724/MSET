@@ -43,8 +43,12 @@ class DLLmset{
     elements = elements || []
     this.user = u;
     this.count = 0;
+
+    // these are needed for garbage collection
     this.netOps = [] // stack of EditOp objects used for garbage collection
     this.localOps = []
+    this.inTransitOps = []
+
     this.root = new Node(0,0,elements);
 
     this.strings = new DLLwi(Element.sizefn);
@@ -151,10 +155,30 @@ class DLLmset{
         var target=this.nodes[op.nodeid]; // make sure the target is in the tree
         //console.log('processNetOp '+JSON.stringify(op)+' target'+target)
         //console.dir(target)
+        //console.log('user '+this.user+ ' processing remote op '+JSON.stringify(op))
+/*
+        if ( ((op.op == 'insert') &&  (op.un[0]==this.user))
+             ||
+             ((op.op == 'extend') && (op.nodeid[0]==this.user))
+             ||
+             ((op.op == 'delete') && (op.nodeid[0] == this.user)) ){
+          // this tests to see if this.user owns this operation
+          // this is needed for garbage collection
+          // we are keeping track of the intransit operations
+          //console.log('in transit length is '+this.inTransitOps.length)
+          console.dir(this.inTransitOps)
+          const popop = this.inTransitOps.splice(0,1)
+          console.dir([popop,op])
+          console.log('popped inTransit for '+this.user)
+          console.log(JSON.stringify(op))
+          if (popop.length>0)
+            console.log(JSON.stringify(popop[0].treeOp))
 
+        }
+*/
         if ((target===undefined)
              ||
-             ((op.op=='insert') && (op.q> target.elts.length))
+             ((op.op=='insert') && (op.q > target.elts.length))
              ||
              ((op.op=='extend') && (op.q > target.elts.length))
              ||
@@ -639,7 +663,7 @@ class EditOp {
   // string edit and vice versa. It also includes the list of deleted characters
   // in the delete ops so they can be easily inverted.
   constructor(d){
-    this.dllmset = d
+    //this.d = d
     this.treeOp={}
     this.stringOp={}
   }
@@ -660,16 +684,25 @@ class EditOp {
   insert(k,cs,un,q,vm){
     this.stringOp = {op:'insert',k:k,cs:cs}
     this.treeOp = {op:'treeinsert',un:un,q:q,vm:vm,cs:cs}
+    //this.d.inTransitOps.push(this)
+    //console.log("pushing into inTransitOps:")
+    //console.log(JSON.stringify([this.stringOp,this.treeOp]))
     return this
   }
   insertE(k,cs,un,q){
     this.stringOp = {op:'insert',k:k,cs:cs}
     this.treeOp = {op:'treeextend',un:un,q:q,cs:cs}
+    //this.d.inTransitOps.push(this)
+    //console.log("pushing into inTransitOps:")
+    //console.log(JSON.stringify([this.stringOp,this.treeOp]))
     return this
   }
   delete(k,size,un,q,u,cs){
     this.stringOp = {op:'delete',k:k,cs:cs}
     this.treeOp = {op:'treehide',un:un, q:q,cs:cs}
+    //this.d.inTransitOps.push(this)
+    //console.log("pushing into inTransitOps:")
+    //console.log(JSON.stringify([this.stringOp,this.treeOp]))
     return this
   }
 }

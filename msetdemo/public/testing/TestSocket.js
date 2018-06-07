@@ -34,11 +34,17 @@ class TestServer{
     this.delayFlag = true
   }
 
-  release(){
-    //console.log(`sending ${this.delayList.length} delayed ops`)
+  release(k){
+    k = k || this.delayList.length
+    //console.log(`sending ${k} delayed ops`)
+    //console.log(`delayList has ${this.delayList.length} elements`)
     this.delayFlag = false
-    this.delayList.forEach((x)=>(this.emit(x)))
-    this.delayList=[]
+    for(let i=0;i<k;i++) {
+      this.emit(this.delayList[i])
+    }
+    this.delayList.splice(0,k)
+    //this.delayList.forEach((x)=>(this.emit(x)))
+    //this.delayList=[]
   }
 
   connect(socket){

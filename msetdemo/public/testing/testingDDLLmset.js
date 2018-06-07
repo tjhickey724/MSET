@@ -240,6 +240,7 @@ function range(a,b){
 function runTestsA(numEdits,numLists,initSize,burstSize,shuffled){
   let server = new TestServer()
   let lists = createLists(numLists,server)
+  server.delay()
   lists[0].insertList(0,range(0,initSize))
   runDeleteTests(lists,numEdits,server,burstSize,shuffled)
   return lists
@@ -262,12 +263,34 @@ function runDeleteTests(lists,N,server,burstSize,shuffled){
       lists[j].delete(z2[j])
     }
 
-    if ((burstSize==0)|| (i%burstSize==0)) {
-      //server.shuffle()
-      //console.log(`releasing server queue with size ${server.delayList.length}`)
-      if (shuffled) server.shuffle()
-      server.release()
+    if (i >= burstSize){
+      if (shuffled) {
+        server.shuffle()
+      }
+      server.release(lists.length*2)
     }
+
+    console.log('intransit: '+lists[0].network.inTransitQueue.length)
+/*
+    const itn = lists[0].network
+    console.dir([itn,itn.outgoingOps,itn.incomingOps])
+
+    console.log('**********\nuser: '+lists[0].network.userid+
+       'inTransit:')
+    for(let k=0;k<itn.inTransitQueue.length;k++){
+      console.log(JSON.stringify(itn.inTransitQueue[k]))
+    }
+    console.log('**********\nuser: '+lists[0].network.userid+
+       'outgoing:')
+    for(let k=0;k<itn.outgoingOps.length;k++){
+      console.log(JSON.stringify(itn.outgoingOps[k]))
+    }
+    console.log('**********\nuser: '+lists[0].network.userid+
+       'incomoing:')
+    for(let k=0;k<itn.incomingOps.length;k++){
+      console.log(JSON.stringify(itn.incomingOps[k]))
+    }
+*/
   }
   server.release()
 }
