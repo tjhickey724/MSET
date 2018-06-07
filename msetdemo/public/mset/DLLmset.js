@@ -43,7 +43,8 @@ class DLLmset{
     elements = elements || []
     this.user = u;
     this.count = 0;
-
+    this.netOps = [] // stack of EditOp objects used for garbage collection
+    this.localOps = []
     this.root = new Node(0,0,elements);
 
     this.strings = new DLLwi(Element.sizefn);
@@ -94,7 +95,7 @@ class DLLmset{
 
   toString(separator,feature){
     separator = separator || ''
-    return this.strings.toString(separator,'std')
+    return this.strings.toString(separator,feature)
   }
 
   nth(n,feature){
@@ -121,7 +122,7 @@ class DLLmset{
         result.push("["+z[i].userData()+"]")
       }
     }
-    return result.join('')
+    return result
   }
 
   toListInternal(feature){
@@ -230,6 +231,7 @@ class DLLmset{
    */
 
   treeinsert(vm,q,un,c){
+
       //console.log('in treeinsert:'+JSON.stringify([vm,q,un,c]))
       //console.dir(this)
       //console.log(this.strings.tln.toStringIndent(5))
@@ -345,9 +347,9 @@ class DLLmset{
       //console.log(this.strings.tln.toStringIndent(5))
       // and insert the new node into the hashtable
       this.nodes[un]=m; // add the new node to the hash table
-
-      this.insertCallback(node2.indexOf("std"),c,un[0]) // ILL HAVE TO CHECK WHAT INDEXOF RETURNS
-
+      const insertPos = node2.indexOf("std")
+      this.insertCallback(insertPos,c,un[0]) // ILL HAVE TO CHECK WHAT INDEXOF RETURNS
+      this.netOps.push(new EditOp(this).treeinsert(vm,q,un,c,insertPos))
       //console.log("AFTER INSERT "+this.strings.toString(' ','count'))
       //console.log(this.strings.tln.toStringIndent(5))
       return m;
@@ -361,6 +363,7 @@ class DLLmset{
    *  and it updates M to reflect this change ...
    */
   treeextend(nodeid,q,c){
+
       //console.log("inside treeextend: "+JSON.stringify([nodeid,c]))
       //console.dir(this)
       var n = this.nodes[nodeid];
@@ -405,6 +408,7 @@ class DLLmset{
       //console.dir(g)
       //console.log(g.listNode.dll.tln.toStringIndent(5))
       this.insertCallback(insertionPos,c,n.user)
+      this.netOps.push(new EditOp(this).treeextend(nodeid,q,c,insertionPos))
       return n;
   }
 
@@ -414,6 +418,7 @@ class DLLmset{
    *  and it updates M to reflect this change ...
    */
   treehide(nodeid,q,u) {
+
       const n = this.nodes[nodeid] // O(log(N))
       //console.log("in treehide "+JSON.stringify([nodeid,q,u]))
       //console.dir([n,this])
@@ -465,6 +470,7 @@ class DLLmset{
       }
 
       this.deleteCallback(deletionPosition,deletionElement,u)
+      this.netOps.push(new EditOp(this).treehide(nodeid,q,u,deletionPosition,deletionElement))
       return n;
   }
 
@@ -500,6 +506,7 @@ class DLLmset{
     Later we will add deletion of a range of elements (which will be more efficient!)
   */
   delete(k) {
+
       const listNode = this.strings.nth(k,"std") // find the subnode containing kth element
       const eltsBeforeNode = listNode.indexOf("std")
       const subNode = listNode.data
@@ -509,6 +516,7 @@ class DLLmset{
       //console.dir([listNode,eltsBeforeNode,subNode,nodeid,offset,k,this])
       this.treehide(nodeid,offset,this.user)
       this.network.hide(nodeid,offset,this.user)
+      this.localOps.push(new EditOp(this).delete(k,1,nodeid,offset,this.user))
       //e.vis=false;
       //listNode.size.std = 0  // it is not longer visible
       //listNode.tln.rebalance()
@@ -519,6 +527,7 @@ class DLLmset{
   }
 
   insertList(k,c) {
+
       //console.log('insertList '+k+' '+c)
       // the goal of this method is to make the appropriate call to treeinsert or treeextend
       // but not to actually modify the tree...
@@ -532,6 +541,7 @@ class DLLmset{
         // insert new node into the root of the empty tree
         this.treeinsert([0,0],0,un,c)
         this.network.insert([0,0],0,un,c)
+        this.localOps.push(new EditOp(this).insert(k,c,[0,0],0,un))
       }
       else if (k==0) {
         //console.log('case 1: k='+k)
@@ -543,6 +553,7 @@ class DLLmset{
         const e = this.strings.nth(0,"rev").data; //O(log(N))
         this.network.insert(e.nodeid,0,un,c);
         this.treeinsert(e.nodeid,0,un,c);
+        this.localOps.push(new EditOp(this).insert(k,c,e.nodeid,0,un))
 
       } else { // k>0
         //console.log('case2')
@@ -567,6 +578,7 @@ class DLLmset{
               un = [this.user,this.count++];
               this.network.insert(ecell.data.nodeid, ecell.data.first+offsetInCell,un,c);
               this.treeinsert(ecell.data.nodeid, ecell.data.first+offsetInCell,un,c);
+              this.localOps.push(new EditOp(this).insert(k,c,ecell.data.nodeid, ecell.data.first+offsetInCell,un))
           } else if (fcell.data.marker && (fcell.data == fcell.data.treeNode.end)) {
 
                //CASE 3: the next element is an end marker
@@ -577,6 +589,7 @@ class DLLmset{
                   //console.dir(fcell.data)
                   this.network.extend(fcell.data.nodeid, fcell.data.treeNode.elts.length, c);
                   this.treeextend(    fcell.data.nodeid, fcell.data.treeNode.elts.length, c);
+                  this.localOps.push(new EditOp(this).insertE(k,c,fcell.data.nodeid, fcell.data.treeNode.elts.length))
               }
               else {
                 //console.log('case3b')
@@ -586,6 +599,7 @@ class DLLmset{
                 //console.dir(fcell)
                 this.network.insert(fcell.data.nodeid, fcell.data.treeNode.elts.length, un, c);
                 this.treeinsert(    fcell.data.nodeid, fcell.data.treeNode.elts.length, un, c);
+                this.localOps.push(new EditOp(this).insert(k,c, fcell.data.nodeid, fcell.data.treeNode.elts.length, un, c))
               }
           } else {
             //console.log('case4')
@@ -598,6 +612,7 @@ class DLLmset{
 
                 this.network.insert(fcell.data.nodeid,0,un,c);
                 this.treeinsert(fcell.data.nodeid,0,un,c);
+                this.localOps.push(new EditOp(this).insert(k,c,fcell.data.nodeid,0,un,c))
           }
       }
   }
@@ -617,6 +632,48 @@ class DLLmset{
  * Likewise when deleting a subrange of an element, the element must be split unless
  * the entire element will be deleted in which case the flag is just changed.
  */
+
+class EditOp {
+  // this creates a pair of complementary tree and string edit operations
+  // on a particular tree. Given a tree edit it also generates the corresponding
+  // string edit and vice versa. It also includes the list of deleted characters
+  // in the delete ops so they can be easily inverted.
+  constructor(d){
+    this.dllmset = d
+    this.treeOp={}
+    this.stringOp={}
+  }
+  treeinsert(un,q,vm,cs,k){
+    this.treeOp = {op:'treeinsert',un:un,q:q,vm:vm,cs:cs}
+    this.stringOp = {op:'insert',k:k,cs:cs}
+    return this
+  }
+  treeextend(un,q,cs,k){
+    this.treeOp = {op:'treeextend',un:un, q:q, cs:cs}
+    this.stringOp = {op:'insert',k:k,cs:cs}
+    return this
+  }
+  treehide(un,q,u,size,k,cs){
+    this.treeOp = {op:'treehide',un:un, q:q, u:u, cs:cs}
+    this.stringOp = {op:'delete',k:k,cs:cs}
+    return this  }
+  insert(k,cs,un,q,vm){
+    this.stringOp = {op:'insert',k:k,cs:cs}
+    this.treeOp = {op:'treeinsert',un:un,q:q,vm:vm,cs:cs}
+    return this
+  }
+  insertE(k,cs,un,q){
+    this.stringOp = {op:'insert',k:k,cs:cs}
+    this.treeOp = {op:'treeextend',un:un,q:q,cs:cs}
+    return this
+  }
+  delete(k,size,un,q,u,cs){
+    this.stringOp = {op:'delete',k:k,cs:cs}
+    this.treeOp = {op:'treehide',un:un, q:q,cs:cs}
+    return this
+  }
+}
+
 
 class Element{
 
@@ -868,6 +925,7 @@ class InsertionSet{
 
 // these allow me access to the class from the Javascript console
 window.DLLmset = DLLmset
+window.EditOp = EditOp
 window.Element = Element
 window.Node = Node
 window.InsertionSet = InsertionSet

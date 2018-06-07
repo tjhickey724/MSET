@@ -103,13 +103,14 @@ function runTimeTests(k0,numEdits0, numLists0,initSize0,burstSize0,shuffled){
     let lists = runTestsA(numEdits,numLists,initSize,burstSize,shuffled);
     let b = performance.now();
     checkEquality(lists)
-
+    //window.debugging.lists = lists
+    //throw new Error("checking lists[0] ops")
     console.log('finished running for j='+j)
     let treeHeight = lists[0].strings.tln.height
     let treeSize = lists[0].strings.toList('edit').length
     let revStringSize = lists[0].strings.toList('rev').length
     let numNodes = (treeSize-revStringSize)/2
-    let stringSize = lists[0].strings.toList('std').length
+    let stringSize = lists[0].size('std')
     let totalTime = Math.round(1000*(b-a)) // in microseconds
     let numEditOps = numEdits*2*numLists*numLists
     let N = numEditOps/numLists
