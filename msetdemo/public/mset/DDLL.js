@@ -50,6 +50,7 @@ class DDLL {
     this.gcMode = false
     this.gcRequest = false
     this.gcCounter=0
+    this.numGCs = 0
     this.numPeers = 0
 
   }
@@ -179,8 +180,7 @@ class DDLL {
         let N=this.size('std')
         let W = Math.log(N)-Math.log(Math.log(N)) + Math.log(Math.log(N))/Math.log(N)
         let A = N/W
-        console.log(`gcThreshold was ${this.gcThreshold} and is now N/W =min(${A},${this.gcThresholdMin} where `+
-            `W=${W} log(N/W)=${Math.log(N/W)}`)
+        //console.log(`gcThreshold was ${this.gcThreshold} and is now N/W =min(${A},${this.gcThresholdMin} where `+`W=${W} log(N/W)=${Math.log(N/W)}`)
         //this.gcThreshold = Math.min(A,this.gcThresholdMin)
         this.gcRequest = true
         this.sendOperationToServer('gc')
@@ -207,6 +207,7 @@ class DDLL {
         this.gcRequest=false
         this.msetTree.gcMode = false
         this.gcCounter = 0
+        this.numGCs++
         //console.log('oplist = \n'+JSON.stringify(this.socket.server.delayList))
 
         window.debugging.ddll = window.debugging.ddll || []

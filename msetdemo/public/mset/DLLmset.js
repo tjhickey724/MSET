@@ -113,7 +113,7 @@ class DLLmset{
           }
     newMSET.insertCallback = this.insertCallback
     newMSET.deleteCallback = this.deleteCallback
-    console.log(`oldSize=${this.size('edit')} newSize=${newMSET.size('edit')}`)
+    //console.log(`oldSize=${this.size('edit')} newSize=${newMSET.size('edit')}`)
     window.debugging.oldMset = this
     window.debugging.newMset = newMSET
 
@@ -451,6 +451,8 @@ class DLLmset{
       //console.dir(n)
       //console.dir(c)
       if (n.elts.length != q){
+        console.log(JSON.stringify([nodeid,q,c,n.elts.length]))
+        console.dir([n,this])
         throw new Error("error in treeextend, not inserting at end of list")
       }
       n.elts = n.elts.concat(c)
