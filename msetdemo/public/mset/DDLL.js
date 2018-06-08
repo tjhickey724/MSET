@@ -35,7 +35,8 @@ console.log("loading MSET")
 
 
 class DDLL {
-  constructor(socket,documentId,callback){
+  constructor(socket,documentId,callback,initElements){
+    this.initElements = initElements || []
     this.socket = socket
     this.documentId = documentId
     this.msetId=-1;
@@ -43,6 +44,44 @@ class DDLL {
     this.initSocket();
     this.callback = callback
 
+    //this is needed for garbage collection
+    this.gcThreshold = 10000
+    this.gcThresholdMin = 10000
+    this.gcMode = false
+    this.gcRequest = false
+    this.gcCounter=0
+    this.numPeers = 0
+
+  }
+
+  insert(pos,c){
+    return this.msetTree.insert(pos,c)
+  }
+
+  delete(pos){
+    return this.msetTree.delete(pos)
+  }
+
+  size(feature){
+    return this.msetTree.size(feature)
+  }
+
+  get info(){
+    return {treeHeight:this.msetTree.strings.tln.height}
+  }
+
+  toString(a,b){
+    return this.msetTree.toString(a,b)
+  }
+
+  toList(feature){
+    feature = feature || 'std'
+    let z =  this.msetTree.strings.toList(feature)
+    let result=[]
+    for(let i=0; i<z.length;i++){
+      result=result.concat(z[i].toList())
+    }
+    return result
   }
 
   exit() {
@@ -57,8 +96,10 @@ class DDLL {
       thisDDLL.msetId=parseInt(msg.msetId);
       //console.log("responding to msetId message: "+msg.msetId+" type is "+typeof(msg.msetId))
       //console.dir(arguments)
-      thisDDLL.msetTree = new DLLmset(thisDDLL.msetId,new Network(thisDDLL));
+      thisDDLL.msetTree = new DLLmset(thisDDLL.msetId,new Network(thisDDLL),thisDDLL.initElements);
       thisDDLL.callback('init')
+      //console.log('initial tree is '+thisDDLL.msetTree.strings.toList('std'))
+      //console.log('elements = '+JSON.stringify(this.initElements))
       thisDDLL.msetTree.insertCallback =
           function(pos,elt,user){
               return thisDDLL.callback('insert',pos,elt,user,thisDDLL.msetId)
@@ -77,6 +118,7 @@ class DDLL {
     })
 
     this.socket.on('remoteOperation', function(msg){
+      //console.log(`\n\n${thisDDLL.msetId} applying remote op ${JSON.stringify(msg)}`)
       thisDDLL.applyRemoteOp(msg);
 
     })
@@ -90,9 +132,23 @@ class DDLL {
     }
 
     applyRemoteOp(msg){
+      //console.log('applyRemoteOp(msg),this->'+JSON.stringify(msg))
+      if ((msg.op=='gc')&& !this.gcMode) {
+        // ignore all but the first gc requests .
+        //console.log('applyRemoteOp(gc),this->'+JSON.stringify(msg))
+        //console.dir(['applyRemoteOp(gc)->',msg,this])
+        this.enterGCmode(msg.numPeers)
+        return
+      } else if (msg.op=='gcAck'){
+        //console.log(`${this.msetId} applyRemoteOp(gcAck),this->`+JSON.stringify(msg))
+        //console.dir(['applyRemoteOp(gcAck)->',msg,this])
+        this.enterGCmode(msg.numPeers)
+        this.countGC(msg.numPeers)
+      }
       //console.log("in applyRemote Op "+msg); console.dir(msg)
       if (msg.documentId!=this.documentId) return
       msg = msg.op
+
       // ignore insert and extend messages from self
       /*
       if (((msg.op=='extend'))&&(msg.nodeid[0]==this.msetId)){
@@ -113,8 +169,60 @@ class DDLL {
     }
 
     sendOperationToServer(op){
+      //console.log(`DDLL: ${this.msetId} sendOptoServer:${JSON.stringify(op)}`)
       this.socket.emit('operation',
         {taId:this.taId,documentId:this.documentId, op:op});
+      if (!this.gcMode && !this.gcRequest&& (this.msetTree.size('edit')>this.gcThreshold)){
+        //console.log('********** GARBAGE COLLECTION!********')
+        //console.log(`${this.msetId} is initiating gc`)
+        //console.log(`${this.msetTree.size('edit')}>${this.gcThreshold}`)
+        let N=this.size('std')
+        let W = Math.log(N)-Math.log(Math.log(N)) + Math.log(Math.log(N))/Math.log(N)
+        let A = N/W
+        console.log(`gcThreshold was ${this.gcThreshold} and is now N/W =min(${A},${this.gcThresholdMin} where `+
+            `W=${W} log(N/W)=${Math.log(N/W)}`)
+        //this.gcThreshold = Math.min(A,this.gcThresholdMin)
+        this.gcRequest = true
+        this.sendOperationToServer('gc')
+      }
+    }
+
+    gcWait(){
+      //console.log("DDLL: gcWait")
+      //this.sendOperationToServer('gcWait')
+    }
+
+    countGC(numPeers){
+      this.gcCounter += 1
+      this.numPeers = numPeers
+      //console.log(`DDLL: ${this.msetId} in gcMode`+` counter=${this.gcCounter}`+` numPeers=${this.numPeers}`)
+
+      if (this.gcCounter >= this.numPeers) {
+        // everything has syncrhonized
+        //console.dir(this)
+        //console.log(`DDLL: ${this.msetId} is synchronized ${this.gcCounter} ${this.numPeers} .. gcing`)
+        this.msetTree = this.msetTree.copy()
+        this.gcMode=false
+        this.gcAck=false
+        this.gcRequest=false
+        this.msetTree.gcMode = false
+        this.gcCounter = 0
+        //console.log('oplist = \n'+JSON.stringify(this.socket.server.delayList))
+
+        window.debugging.ddll = window.debugging.ddll || []
+        window.debugging.ddll[this.msetId]=this
+      }
+    }
+
+    enterGCmode(numPeers){
+      if (!this.gcMode){
+        //console.log(`DDLL: ${this.msetId} Entering gcMode numPeers=${numPeers}`)
+        this.gcMode = true
+        this.msetTree.gcMode = true
+        this.numPeers = numPeers
+        //console.log(`${this.msetId} sending gcAck`)
+        this.sendOperationToServer('gcAck')
+      }
     }
 
 }
@@ -202,6 +310,10 @@ class Network{
   hide(vm,q,u) {
     var op = {op:"delete", nodeid:vm, q:q, u:u};  // refactor ... change this to hide
     this.broadcast(op,u);
+  }
+
+  gcWait(){
+    this.msetSocket.gcWait()
   }
 
 

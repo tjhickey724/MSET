@@ -43,7 +43,7 @@ class TestServer{
     k = k || this.delayList.length
     //console.log(`sending ${k} delayed ops`)
     //console.log(`delayList has ${this.delayList.length} elements`)
-    this.delayFlag = false
+    //this.delayFlag = false
     let gap =  (this.delaySteps*this.socketList.length - this.delayList.length)
     while (gap>0) {
       this.delayList.push('noop')
@@ -52,8 +52,8 @@ class TestServer{
     //console.log('server emitting')
     for(let i=0;i<k;i++) {
       //console.log(JSON.stringify(this.delayList[i]))
-      if (this.delayList != 'noop'){
-        this.emit(this.delayList[i])
+      if ((this.delayList != 'noop') && this.delayList[i]){
+        this.emitNow(this.delayList[i])
       }
     }
     this.delayList.splice(0,k)
@@ -78,22 +78,37 @@ class TestServer{
   }
 
   emit(obj){
-    //console.log("Server is broadcasting the object "+JSON.stringify(obj))
+    //console.log("Server is emitting the object "+JSON.stringify(obj))
     if (this.delayFlag){
       this.delayList.push(obj)
+      //console.log(`server delaying ${JSON.stringify(obj)}`)
     } else {
+      emitNow(obj)
+    }
+
+  }
+
+  emitNow(obj){
+    if (!obj){
+      window.debugging.obj = obj
+      throw new Error("trouble in emit")
+    } else if (obj=='noop'){
+      //console.log(`server ignoring 'noop'`)
+    } else {
+      //console.log(`server broadcasting ${JSON.stringify(obj)}`)
       this.socketList.forEach((s)=>(s.callbacks.remoteOperation(obj)))
       this.oplist.push(obj)
     }
-
   }
 
 }
 
 class TestSocket{
   constructor(){
-
+    this.server = null
+    this.generation = 0
     let socket = this
+
     this.callbacks= // these are the default callbacks ..
     {
       msetId:function(msg){
@@ -131,12 +146,37 @@ class TestSocket{
   emit(op,obj){
 
     //console.log(arguments)
-    if (op=="operation"){
-      //console.log(`client ${this.id} emitting obj= ${JSON.stringify(obj)} with op=${op}`)
-      this.server.emit(obj)
+     if (op=="operation"){
+       if (obj.op=="gcWait"){
+         //console.log(`SOCKET: client ${this.id} reseting with oplistlength= ${JSON.stringify(this.server.oplist.length)} with op=${op}`)
+         this.server.emit('noop')
+       } else if (obj.op=="gc"){
+         //console.log("SOCKET: just got a gc message!")
+         this.server.emit({op:'gc',numPeers:this.server.socketList.length})
+         // I really should move this to the server and make the TestSocket truly local....
+       } else if (obj.op=="gcAck"){
+         //console.log("SOCKET: just got a gcAck message!")
+         this.server.emit({op:'gcAck',numPeers:this.server.socketList.length})
+         // I really should move this to the server and make the TestSocket truly local....
+       } else {
+         //console.log(`SOCKET: client ${this.id} emitting obj= ${JSON.stringify(obj)} with op=${op}`)
+         this.server.emit(obj)
+       }
+
     } else if (op=="reset"){
       //console.log(`client ${this.id} reseting with oplist= ${JSON.stringify(this.oplist)} with op=${op}`)
       this.callbacks.reset({oplist:this.server.oplist})
+    } else  if (op=="gcAck"){
+      //console.log("SOCKET: just got a gcAck message!")
+      this.server.emit({op:"gcAck",numPeers:this.server.socketList.length})
+      this.gcCounter++
+      throw new Error("in Socket.emit(gcAck,obj)")
+      if (this.gcCounter==this.server.socketList.length){
+        this.generation++
+        //console.log("SOCKET:: all clients have acknowledged receiving gc. Gen="+this.generation)
+
+        this.gcCounter=0
+      }
     } else {
       //console.log("unknown message: "+JSON.stringify([op,obj]))
     }

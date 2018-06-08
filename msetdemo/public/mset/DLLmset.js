@@ -48,6 +48,8 @@ class DLLmset{
     this.netOps = [] // stack of EditOp objects used for garbage collection
     this.localOps = []
     this.inTransitOps = []
+    this.gcMode = false //
+
 
     this.root = new Node(0,0,elements);
 
@@ -79,6 +81,8 @@ class DLLmset{
 
   }
 
+
+
   treeHeight(){
     return this.strings.tln.height
   }
@@ -88,11 +92,49 @@ class DLLmset{
     return this.strings.tln.sublistSize[feature]
   }
 
+  gcWait(){
+    this.network.gcWait()
+
+  }
+
   copy(){
-    const elts = this.toList()
-    const newMSET = new DLLmset()
-    newMSET.insertAll(i,elts) // have to write insertALL
+    const elts = this.strings.toList('std')
+    let eltArray = []
+    elts.forEach(function(e){eltArray= eltArray.concat(e.treeNode.elts.slice(e.first,e.first+e.size))})
+    //console.dir(elts)
+    const newMSET = new DLLmset(this.user,this.network,eltArray)
+    newMSET.insertCallback =
+        function(pos,elt,user){
+            return thisDDLL.callback('insert',pos,elt,user,this.user)
+          }
+    newMSET.deleteCallback =
+        function(pos,elt,user){
+            return thisDDLL.callback('delete',pos,elt,user,this.user)
+          }
+    newMSET.insertCallback = this.insertCallback
+    newMSET.deleteCallback = this.deleteCallback
+    console.log(`oldSize=${this.size('edit')} newSize=${newMSET.size('edit')}`)
+    window.debugging.oldMset = this
+    window.debugging.newMset = newMSET
+
+    //console.log(this.toString(' ','std'))
+    //console.log(newMSET.toString(' ','std'))
+    //console.log(newMSET.root.toStringIndent(5))
+    //console.log(newMSET.toList2())
+    //throw new Error("test window.debugging Msets ...")
+    //newMSET.insertAll(elts) // have to write insertALL
+
     return newMSET
+  }
+
+  toList2(feature){
+    feature = feature || 'std'
+    let z =  this.strings.toList(feature)
+    let result=[]
+    for(let i=0; i<z.length;i++){
+      result=result.concat(z[i].toList())
+    }
+    return result
   }
 
 
@@ -116,12 +158,27 @@ class DLLmset{
         (this.toListInternal(feature).map((x)=>((x.vis||x.marker)?x.userData():'['+x.userData()+']'))))
   }
 
+  toListTest(feature){
+    let z = this.strings.toList(feature)
+    let result=[]
+    for(let i=0;i<z.length;i++){
+      if (z[i].vis) {
+        result.concat(z[i].toList())
+      } else if (z[i].marker){
+        result.push(z[i].userData())
+      } else {
+        result.push(z[i].toList().map((x)=>([x])))
+      }
+    }
+    return result
+  }
+
   toList(feature){
     let z = this.strings.toList(feature)
     let result=[]
     for(let i=0;i<z.length;i++){
       if (z[i].vis||z[i].marker){
-        result.push(z[i].userData())
+        result.push(""+z[i].userData())
       } else {
         result.push("["+z[i].userData()+"]")
       }
@@ -807,6 +864,14 @@ class Element{
       return "[["+this.treeNode.elts.slice(this.first,this.first+this.size)+"]] "
     }
 
+  }
+
+  toList(){
+    if (this.marker){
+      return [this.userData()]
+    } else {
+      return this.treeNode.elts.slice(this.first,this.first+this.size)
+    }
   }
 
   // REWRITE THIS

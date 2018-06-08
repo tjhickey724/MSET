@@ -106,9 +106,11 @@ function runTimeTests(k0,numEdits0, numLists0,initSize0,burstSize0,shuffled){
     //window.debugging.lists = lists
     //throw new Error("checking lists[0] ops")
     console.log('finished running for j='+j)
-    let treeHeight = lists[0].strings.tln.height
-    let treeSize = lists[0].strings.toList('edit').length
-    let revStringSize = lists[0].strings.toList('rev').length
+    let treeHeight = lists[0].info.treeHeight
+    //let treeSize = lists[0].strings.toList('edit').length
+    //let revStringSize = lists[0].strings.toList('rev').length
+    let treeSize = lists[0].size('edit')
+    let revStringSize = lists[0].size('rev')
     let numNodes = (treeSize-revStringSize)/2
     let stringSize = lists[0].size('std')
     let totalTime = Math.round(1000*(b-a)) // in microseconds
@@ -159,9 +161,9 @@ function logCallbacks(op,pos,elt,user,me){
   //console.log(JSON.stringify(['editorCallback',op,pos,elt,user,me]))
 }
 
-function createDDLLclient(socket,docId){
+function createDDLLclient(socket,docId,elements){
   //console.log('creating a DDLL object')
-  return new DDLL(socket,docId,logCallbacks)
+  return new DDLL(socket,docId,logCallbacks,elements)
 }
 
 function runSimpleTests(){
@@ -200,7 +202,7 @@ function randN(N){
 
 window.randN= randN
 
-function createLists(N,server){
+function createLists(N,server,initElements){
   // this creates N DDLL lists on the server.
   //let server = new TestServer()
 
@@ -208,19 +210,22 @@ function createLists(N,server){
   let lists=[]
   for(let i=0;i<N;i++){
     let s = new TestSocket()
-    let ddll = createDDLLclient(s,'doc1')
+    let ddll = createDDLLclient(s,'doc1',initElements)
     s.connect(server)
-    lists[i]= ddll.msetTree
+    lists[i]= ddll//.msetTree
   }
   return lists
 }
 
 function checkEquality(lists){
-  console.log(`starting to test equality of ${lists.length} lists of size ${lists[0].length}`)
+  console.log(`starting to test equality of ${lists.length} lists of size ${lists[0].size()}`)
   for (let i=0;i<lists.length-1;i++){
     console.log(`comparing list ${i} with ${i+1} `)
-    if (!JSONcompare('Insertion/Deletion Tests',lists[i].toList(),lists[i+1].toList())){
+    if (!JSONcompare('Insertion/Deletion Tests',
+             lists[i].toString(' ','std'),
+             lists[i+1].toString(' ','std'))){
       console.log(`Error in DDLL insert! i=${i}`)
+      console.log(lists[i].toString(' ','std')+" \n"+  lists[i+1].toString(' ','std'))
       console.dir([i, lists[i],lists[i+1]])
       window.debugging.error = [i, lists[i],lists[i+1]]
       throw new Error()
@@ -240,29 +245,45 @@ function range(a,b){
 function runTestsA(numEdits,numLists,initSize,burstSize,shuffled){
   let server = new TestServer()
   server.setDelay(burstSize)
-  let lists = createLists(numLists,server)
+  let lists = createLists(numLists,server,range(0,initSize))
   server.delay()
   server.release(numLists) // this fills the delayQueue
-  lists[0].insertList(0,range(0,initSize))
+  //lists[0].insertList(0,range(0,initSize))
+  console.dir(lists[0])
+  window.debugging.list0 = lists[0]
   runDeleteTests(lists,numEdits,server,burstSize,shuffled)
   return lists
 }
 
 function runDeleteTests(lists,N,server,burstSize,shuffled){
-
-  for(let i=1; i<=N; i++){
+  let gcCounter = 0
+  let i=0
+  while(i<=N){
+    i++
     server.delay()
     let z1=[]
     let z2=[]
     for(let j=0; j<lists.length; j++){
       z1[j] = randN(lists[j].size())
       //console.log("\n********\ninserting "+(-i)+" at position "+z1+" in \n"+lists.v1.tln.toStringIndent(5))
-      lists[j].insert(z1[j],j+i*lists.length)
+      if (!lists[j].gcMode){
+        lists[j].insert(z1[j],j+i*lists.length)
+      } else {
+        gcCounter++
+        lists[j].gcWait()
+        //console.log(`j=${j} gcCounter=${gcCounter} gcMode=${lists[j].gcMode}`)
+      }
+
     }
     for(let j in lists){
       z2[j] = randN(lists[j].size())
       //console.log("deleting elt at position "+z2+" in \n"+lists.v1.tln.toStringIndent(5))
-      lists[j].delete(z2[j])
+      if (!lists[j].gcMode){
+        lists[j].delete(z2[j])
+      } else {
+        gcCounter++
+        lists[j].gcWait()
+      }
     }
 
     server.release(lists.length*2)
@@ -301,6 +322,8 @@ function runDeleteTests(lists,N,server,burstSize,shuffled){
 */
   }
   server.release()
+
+  return gcCounter
 }
 
 window.ddll = {checkEquality,runDeleteTests,createLists,runTestsA, runTimeTests}
