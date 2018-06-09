@@ -21,7 +21,7 @@ class TestServer{
   constructor(){
     this.socketList = []
     this.oplist=[]
-    this.delayFlag = false
+    this.delayFlag = true
     this.delayList=[]
     this.delaySteps=0
   }
@@ -83,7 +83,7 @@ class TestServer{
       this.delayList.push(obj)
       //console.log(`server delaying ${JSON.stringify(obj)}`)
     } else {
-      emitNow(obj)
+      this.emitNow(obj)
     }
 
   }

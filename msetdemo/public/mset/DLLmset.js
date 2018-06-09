@@ -77,7 +77,7 @@ class DLLmset{
     end.listNode = elts.listNode.insertAfter(end)
 
     this.root.isRoot=true
-    window.u = this
+
 
   }
 
@@ -98,11 +98,19 @@ class DLLmset{
   }
 
   copy(){
-    const elts = this.strings.toList('std')
+    const elts = this.toList3('std')
+    //console.log("in copy: elts="+JSON.stringify(elts))
     let eltArray = []
-    elts.forEach(function(e){eltArray= eltArray.concat(e.treeNode.elts.slice(e.first,e.first+e.size))})
+    //elts.forEach(function(e){eltArray= eltArray.concat(e.treeNode.elts.slice(e.first,e.first+e.size))})
     //console.dir(elts)
-    const newMSET = new DLLmset(this.user,this.network,eltArray)
+    const newMSET = new DLLmset(this.user,this.network,elts)//Array)
+    const oldSize = this.size('edit')-this.size('rev')
+    const newSize = newMSET.size('edit')-newMSET.size('rev')
+
+  
+
+    if (newSize>10) throw new Error("???")
+
     newMSET.insertCallback =
         function(pos,elt,user){
             return thisDDLL.callback('insert',pos,elt,user,this.user)
@@ -113,15 +121,15 @@ class DLLmset{
           }
     newMSET.insertCallback = this.insertCallback
     newMSET.deleteCallback = this.deleteCallback
-    //console.log(`oldSize=${this.size('edit')} newSize=${newMSET.size('edit')}`)
-    window.debugging.oldMset = this
-    window.debugging.newMset = newMSET
+
+    console.log(`oldSize=${oldSize} newSize=${newSize}`)
+
 
     //console.log(this.toString(' ','std'))
     //console.log(newMSET.toString(' ','std'))
     //console.log(newMSET.root.toStringIndent(5))
     //console.log(newMSET.toList2())
-    //throw new Error("test window.debugging Msets ...")
+
     //newMSET.insertAll(elts) // have to write insertALL
 
     return newMSET
@@ -186,6 +194,16 @@ class DLLmset{
     return result
   }
 
+  toList3(feature){
+    feature = feature || 'std'
+    let z =  this.strings.toList(feature)
+    let result=[]
+    for(let i=0; i<z.length;i++){
+      result=result.concat(z[i].toList())
+    }
+    return result
+  }
+
   toListInternal(feature){
     return this.strings.toList(feature)
   }
@@ -205,6 +223,7 @@ class DLLmset{
 
   processRemoteOp(op){
       this.opqueue.push(op)
+
       //console.log(`processRemoteOp(${op}  opqueue=\n${JSON.stringify(this.opqueue)})`)
       //console.dir(op)
       while (this.opqueue.length > 0) {
@@ -346,13 +365,13 @@ class DLLmset{
       } else {
           //console.dir([n,q])
           //console.log(n.subnodes.toString(' ','count'))
-          window.debugging.n=n
+
           s = n.subnodes.nth(q,'edit') // return subnode containing offset q
           //console.log('looking up subnode containing the qth element')
           //console.dir(s)
       }
       //console.dir([s,q,s.indexOf('std')])
-      window.debugging.data={s,q,n,t:this}
+
       const s_offset = q - s.indexOf('edit')
       const s_size = s.data.size;
       //console.log(JSON.stringify([s_offset,s_size]))
@@ -377,7 +396,7 @@ class DLLmset{
         k = s.data.iset.insertNode(m)
         //console.log("k= "+k)
         if (k>0){
-          window.debugging={s:s,t:this,k:k}
+
           f = s.data.iset.get(k-1).end.listNode
           //console.log('f is end of previous iset entry')
           //console.dir(f)
@@ -413,7 +432,7 @@ class DLLmset{
       //console.dir(f)
       //console.log(this.strings.tln.toStringIndent(5))
 
-      // window.debugging= true
+
       const node1 = f.insertAfter(m.start);
       m.start.listNode=node1
       //console.dir(m.start)
@@ -588,6 +607,13 @@ class DLLmset{
     For now we implemention delete a single element at a time.
     Later we will add deletion of a range of elements (which will be more efficient!)
   */
+
+  processLocalOp(op){
+    this.localOps.push(op)
+    this.inTransitOps.push(op)
+  }
+
+
   delete(k) {
 
       const listNode = this.strings.nth(k,"std") // find the subnode containing kth element
@@ -599,7 +625,7 @@ class DLLmset{
       //console.dir([listNode,eltsBeforeNode,subNode,nodeid,offset,k,this])
       this.treehide(nodeid,offset,this.user)
       this.network.hide(nodeid,offset,this.user)
-      this.localOps.push(new EditOp(this).delete(k,1,nodeid,offset,this.user))
+      this.processLocalOp(new EditOp(this).delete(k,1,nodeid,offset,this.user))
       //e.vis=false;
       //listNode.size.std = 0  // it is not longer visible
       //listNode.tln.rebalance()
@@ -624,7 +650,7 @@ class DLLmset{
         // insert new node into the root of the empty tree
         this.treeinsert([0,0],0,un,c)
         this.network.insert([0,0],0,un,c)
-        this.localOps.push(new EditOp(this).insert(k,c,[0,0],0,un))
+        this.processLocalOp(new EditOp(this).insert(k,c,[0,0],0,un))
       }
       else if (k==0) {
         //console.log('case 1: k='+k)
@@ -636,7 +662,7 @@ class DLLmset{
         const e = this.strings.nth(0,"rev").data; //O(log(N))
         this.network.insert(e.nodeid,0,un,c);
         this.treeinsert(e.nodeid,0,un,c);
-        this.localOps.push(new EditOp(this).insert(k,c,e.nodeid,0,un))
+        this.processLocalOp(new EditOp(this).insert(k,c,e.nodeid,0,un))
 
       } else { // k>0
         //console.log('case2')
@@ -661,7 +687,7 @@ class DLLmset{
               un = [this.user,this.count++];
               this.network.insert(ecell.data.nodeid, ecell.data.first+offsetInCell,un,c);
               this.treeinsert(ecell.data.nodeid, ecell.data.first+offsetInCell,un,c);
-              this.localOps.push(new EditOp(this).insert(k,c,ecell.data.nodeid, ecell.data.first+offsetInCell,un))
+              this.processLocalOp(new EditOp(this).insert(k,c,ecell.data.nodeid, ecell.data.first+offsetInCell,un))
           } else if (fcell.data.marker && (fcell.data == fcell.data.treeNode.end)) {
 
                //CASE 3: the next element is an end marker
@@ -672,7 +698,7 @@ class DLLmset{
                   //console.dir(fcell.data)
                   this.network.extend(fcell.data.nodeid, fcell.data.treeNode.elts.length, c);
                   this.treeextend(    fcell.data.nodeid, fcell.data.treeNode.elts.length, c);
-                  this.localOps.push(new EditOp(this).insertE(k,c,fcell.data.nodeid, fcell.data.treeNode.elts.length))
+                  this.processLocalOp(new EditOp(this).insertE(k,c,fcell.data.nodeid, fcell.data.treeNode.elts.length))
               }
               else {
                 //console.log('case3b')
@@ -682,7 +708,7 @@ class DLLmset{
                 //console.dir(fcell)
                 this.network.insert(fcell.data.nodeid, fcell.data.treeNode.elts.length, un, c);
                 this.treeinsert(    fcell.data.nodeid, fcell.data.treeNode.elts.length, un, c);
-                this.localOps.push(new EditOp(this).insert(k,c, fcell.data.nodeid, fcell.data.treeNode.elts.length, un, c))
+                this.processLocalOp(new EditOp(this).insert(k,c, fcell.data.nodeid, fcell.data.treeNode.elts.length, un, c))
               }
           } else {
             //console.log('case4')
@@ -695,7 +721,7 @@ class DLLmset{
 
                 this.network.insert(fcell.data.nodeid,0,un,c);
                 this.treeinsert(fcell.data.nodeid,0,un,c);
-                this.localOps.push(new EditOp(this).insert(k,c,fcell.data.nodeid,0,un,c))
+                this.processLocalOp(new EditOp(this).insert(k,c,fcell.data.nodeid,0,un,c))
           }
       }
   }
@@ -941,7 +967,7 @@ class Node{
     this.start = Element.createStart(this)
     this.end = Element.createEnd(this)
     let eltSubnode = new Element(0,this.elts.length,true,false,this,true)
-    window.debugging.newNode=this
+
     eltSubnode.listSubnode = this.subnodes.first.insertAfter(eltSubnode)
 
 

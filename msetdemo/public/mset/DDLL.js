@@ -156,6 +156,9 @@ class DDLL {
           // serialized case
           console.dir([msg,this])
           console.log('SAW a gc ... start the Serialized GC process!')
+          if ((this.gcType=='serialized') && (this.generation==msg.generation)){
+            this.serializedGC()
+          }
           return
         }
       } else if (msg.op=='gcAck'){
@@ -170,33 +173,24 @@ class DDLL {
             return
           }
 
-      } else if (msg.op=='gc'){
-          if ((this.gcType=='serialized') && (this.generation==msg.generation)){
-            console.log("start the serialized GC process!")
-            return
-          } else {
-            return
-          }
       }
 
 
-      // ignore insert and extend messages from self
-      /*
-      if (((msg.op=='extend'))&&(msg.nodeid[0]==this.msetId)){
-        return;
-      } else if ((msg.op=='insert') && (msg.un[0]==this.msetId)){
-        return;
-      }
-      */
+
       this.remoteOp=true; // temporarily ignore changes to the textarea as remote ops are processed
       this.msetTree.network.processRemoteOp(msg)
-      //const newString = this.msetTree.strings.toString('','std')
-      //this.ta.value = newString
-      //this.lastValue = newString;
       this.remoteOp=false;
 
       return
+    }
 
+    serializedGC(){
+      let inTransitOps = this.msetTree.network.inTransitQueue;
+      //console.log("ito=\n"+JSON.stringify(inTransitOps))
+      for(let i=0; i<inTransitOps.length; i++){
+        console.log(`op[${i}] = ${JSON.stringify(inTransitOps[i])}`)
+      }
+      throw new Error("time to debug!")
     }
 
     sendOperationToServer(op){
@@ -210,14 +204,15 @@ class DDLL {
       op.generation = this.generation
       this.socket.emit('operation',op)
 
+      const garbage  = this.msetTree.size('edit')-this.msetTree.size('rev')
 
       if ((this.gcType!='none')&&
           !this.gcMode &&
           !this.gcRequest&&
-          (this.msetTree.size('edit')>this.gcThreshold)){
+          (garbage>this.gcThreshold)){
         console.log('********** GARBAGE COLLECTION!********')
         //console.log(`${this.msetId} is initiating gc`)
-        //console.log(`${this.msetTree.size('edit')}>${this.gcThreshold}`)
+        //console.log(`${garbage}>${this.gcThreshold}`)
         let N=this.size('std')
         let W = Math.log(N)-Math.log(Math.log(N)) + Math.log(Math.log(N))/Math.log(N)
         let A = N/W
@@ -256,8 +251,7 @@ class DDLL {
         this.numGCs++
         //console.log('oplist = \n'+JSON.stringify(this.socket.server.delayList))
 
-        window.debugging.ddll = window.debugging.ddll || []
-        window.debugging.ddll[this.msetId]=this
+
         //console.dir(this)
       }
     }
@@ -326,8 +320,7 @@ class Network{
       }
       this.outgoingQueue = []
     } else {
-      document.getElementById("outgoingOps").innerHTML =
-          JSON.stringify(this.outgoingQueue)
+      //document.getElementById("outgoingOps").innerHTML =JSON.stringify(this.outgoingQueue)
     }
   }
 
@@ -335,6 +328,7 @@ class Network{
     const op=msg.op
     const un=msg.un  //we don't need this parameter, refactor ...
     var i;
+    //console.log(`${this.userid} is pushing ${JSON.stringify(op)} onto inTransitQ`)
     this.inTransitQueue.push(op)
     this.outgoingOps.push(op)
 /*
@@ -401,6 +395,7 @@ class Network{
     //console.dir(this)
     */
     if (isOwner(msg,this.userid)) {
+      //console.log(`${this.userid} is popping ${JSON.stringify(msg)} from inTransitQueue`)
       this.inTransitQueue = removeOp(msg,this.inTransitQueue)
       //if (this.userid==1){
       //  console.log('removing\n'+JSON.stringify(msg)+' from itq for '+this.userid)

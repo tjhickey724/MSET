@@ -15,18 +15,6 @@ The time per op when processing n*100 inserts and deletes in an empty list is
 about 750*n microseconds when it should be proportional to log(n)
 So I must be doing something wrong in my AVL tree rebalancing ...
 
-window.ddll.runTimeTests(9,2,0,1)
-13:43:23.205 testingDDLLmset.js:58 n=1 total=308300  numEditOps=400 timePerOp=771 timePerOp/n=771 treeSize=604 treeSizePerOp=1.51
-13:43:24.367 testingDDLLmset.js:58 n=2 total=1161700  numEditOps=800 timePerOp=1452 timePerOp/n=726 treeSize=1204 treeSizePerOp=1.505
-13:43:26.996 testingDDLLmset.js:58 n=3 total=2628600  numEditOps=1200 timePerOp=2191 timePerOp/n=730 treeSize=1804 treeSizePerOp=1.5033333333333334
-13:43:31.597 testingDDLLmset.js:58 n=4 total=4600500  numEditOps=1600 timePerOp=2875 timePerOp/n=719 treeSize=2404 treeSizePerOp=1.5025
-13:43:38.875 testingDDLLmset.js:58 n=5 total=7276900  numEditOps=2000 timePerOp=3638 timePerOp/n=728 treeSize=3004 treeSizePerOp=1.502
-13:43:49.788 testingDDLLmset.js:58 n=6 total=10912400  numEditOps=2400 timePerOp=4547 timePerOp/n=758 treeSize=3604 treeSizePerOp=1.5016666666666667
-13:44:04.666 testingDDLLmset.js:58 n=7 total=14878100  numEditOps=2800 timePerOp=5314 timePerOp/n=759 treeSize=4204 treeSizePerOp=1.5014285714285713
-*/
-
-/*
-
 We create two identical lists of size N, one using AVL indexing
 and the other a naive DLL implementation. The lists are constructed
 by inserting the numbers 0-N into random positions in the lists.
@@ -104,7 +92,7 @@ function runTimeTests(k0,numEdits0, numLists0,initSize0,burstSize0,shuffled){
     let lists = runTestsA(numEdits,numLists,initSize,burstSize,shuffled);
     let b = performance.now();
     checkEquality(lists)
-    //window.debugging.lists = lists
+
     //throw new Error("checking lists[0] ops")
     console.log('finished running for j='+j)
     let treeHeight = lists[0].info.treeHeight
@@ -182,7 +170,7 @@ function runSimpleTests(){
   s1.connect(server)
   s2.connect(server)
 
-  window.test={s0:s0,s1:s1,s2:s2,d1:d1,d2:d2,server:server}
+
 
 }
 
@@ -230,7 +218,7 @@ function checkEquality(lists){
       console.log(`Error in DDLL insert! i=${i}`)
       console.log(lists[i].toString(' ','std')+" \n"+  lists[i+1].toString(' ','std'))
       console.dir([i, lists[i],lists[i+1]])
-      window.debugging.error = [i, lists[i],lists[i+1]]
+
       throw new Error()
     }
     console.log("Testing complete")
@@ -249,28 +237,34 @@ function runTestsA(numEdits,numLists,initSize,burstSize,shuffled){
   let server = new TestServer()
   server.setDelay(burstSize)
   let lists = createLists(numLists,server,range(0,initSize))
-  server.delay()
+  //server.delay()
   server.release(numLists) // this fills the delayQueue
   //lists[0].insertList(0,range(0,initSize))
   console.dir(lists[0])
-  window.debugging.list0 = lists[0]
+
   runDeleteTests(lists,numEdits,server,burstSize,shuffled)
   return lists
 }
 
 function runDeleteTests(lists,N,server,burstSize,shuffled){
   let gcCounter = 0
-  let i=0
+  let i=1
+
   while(i<=N){
     i++
-    server.delay()
+    //console.log(`${i} --  ${lists[0].size('edit')}`)
+    //server.delay()
+    if (false &&(i>15)) {
+      console.log("******** Stop outgoing traffic !!!!!!!")
+      lists[0].msetTree.network.allowOutgoing = false
+    }
     let z1=[]
     let z2=[]
     for(let j=0; j<lists.length; j++){
       z1[j] = randN(lists[j].size())
       //console.log("\n********\ninserting "+(-i)+" at position "+z1+" in \n"+lists.v1.tln.toStringIndent(5))
       if (!lists[j].gcMode){
-        lists[j].insert(z1[j],j+i*lists.length)
+        lists[j].insert(z1[j],j+i*lists.length*10)
       } else {
         gcCounter++
         lists[j].gcWait()
@@ -330,13 +324,3 @@ function runDeleteTests(lists,N,server,burstSize,shuffled){
 }
 
 window.ddll = {checkEquality,runDeleteTests,createLists,runTestsA, runTimeTests}
-
-/*
-let listSize =20
-let reps = 100000
-console.log("running insertion/deletion tests "+Date())
-window.vlists = createRandLists(listSize)
-console.log("created two lists of size "+listSize)
-runDeleteTests(window.vlists,reps)
-console.log(reps+ " insertion/deletion tests successfully completed")
-*/
