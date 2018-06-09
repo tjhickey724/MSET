@@ -89,6 +89,7 @@ function runTimeTests(k0,numEdits0, numLists0,initSize0,burstSize0,shuffled){
   `<td>A1</td>`+
   `<td>E/T</td>`+
   `<td>T*C</td>`+
+  `<td>GC</td>`+
   `</tr>\n`
 
   for(let j=1;j<=k0;j++){
@@ -119,6 +120,7 @@ function runTimeTests(k0,numEdits0, numLists0,initSize0,burstSize0,shuffled){
     let timePerOp = Math.round(totalTime/numEditOps)
     let treeSizePerOp = treeSize/numEditOps*numLists
     let timePerOpOverLogN = (timePerOp/Math.log(N))
+    let numGCs = lists[0].numGCs
 
 
     let avlInfo = window.avlInfo()
@@ -148,6 +150,7 @@ function runTimeTests(k0,numEdits0, numLists0,initSize0,burstSize0,shuffled){
         `<td>${Math.round(100*timePerOpOverLogN)/100}</td>`+
         `<td>${Math.round(1000/timePerOp)}</td>`+
         `<td>${Math.round((b-a))/1000}</td>`+
+        `<td>${numGCs}</td>`+
        `</tr>`
 
     tableData += "\n"+data

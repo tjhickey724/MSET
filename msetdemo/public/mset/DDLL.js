@@ -46,6 +46,7 @@ class DDLL {
     this.callback = callback
 
     //this is needed for garbage collection
+    this.gcType = 'p2p'  // none, p2p, or serialized
     this.gcThreshold = 10000
     this.gcThresholdMin = 10000
     this.gcMode = false
@@ -53,6 +54,10 @@ class DDLL {
     this.gcCounter=0
     this.numGCs = 0
     this.numPeers = 0
+
+
+
+    this.generation=0
 
   }
 
@@ -139,17 +144,39 @@ class DDLL {
       //console.log("in applyRemote Op "+msg); console.dir(msg)
       if (msg.documentId!=this.documentId) return
 
-      if ((msg.op=='gc')&& !this.gcMode) {
-        // ignore all but the first gc requests .
-        //console.log('applyRemoteOp(gc),this->'+JSON.stringify(msg))
-        //console.dir(['applyRemoteOp(gc)->',msg,this])
-        this.enterGCmode(msg.numPeers)
-        return
+      if (msg.op=='gc'){
+        //console.dir([msg,this])
+        if ((this.gcType=='p2p')&& !this.gcMode) {
+          // ignore all but the first gc requests .
+          //console.log('applyRemoteOp(gc),this->'+JSON.stringify(msg))
+          //console.dir(['applyRemoteOp(gc)->',msg,this])
+          this.enterGCmode(msg.numPeers)
+          return
+        } else {
+          // serialized case
+          console.dir([msg,this])
+          console.log('SAW a gc ... start the Serialized GC process!')
+          return
+        }
       } else if (msg.op=='gcAck'){
-        //console.log(`${this.msetId} applyRemoteOp(gcAck),this->`+JSON.stringify(msg))
-        //console.dir(['applyRemoteOp(gcAck)->',msg,this])
-        this.enterGCmode(msg.numPeers)
-        this.countGC(msg.numPeers)
+          //console.dir([msg,this])
+          if ((this.gcType=='p2p')) {
+            //console.log(`${this.msetId} applyRemoteOp(gcAck),this->`+JSON.stringify(msg))
+            //console.dir(['applyRemoteOp(gcAck)->',msg,this])
+            this.enterGCmode(msg.numPeers)
+            this.countGC(msg.numPeers)
+            return
+          }else {
+            return
+          }
+
+      } else if (msg.op=='gc'){
+          if ((this.gcType=='serialized') && (this.generation==msg.generation)){
+            console.log("start the serialized GC process!")
+            return
+          } else {
+            return
+          }
       }
 
 
@@ -178,12 +205,18 @@ class DDLL {
         This allows one socket to handle multiple DDLL's
 
       */
-      //console.log(`DDLL: ${this.msetId} sendOptoServer:${JSON.stringify(op)}`)
+    //  console.log(`DDLL: ${this.msetId} sendOptoServer:${JSON.stringify(op)}`)
       op.documentId = this.documentId // add the documentId to the op
+      op.generation = this.generation
       this.socket.emit('operation',op)
-      if (!this.gcMode && !this.gcRequest&& (this.msetTree.size('edit')>this.gcThreshold)){
+
+
+      if ((this.gcType!='none')&&
+          !this.gcMode &&
+          !this.gcRequest&&
+          (this.msetTree.size('edit')>this.gcThreshold)){
         console.log('********** GARBAGE COLLECTION!********')
-        console.log(`${this.msetId} is initiating gc`)
+        //console.log(`${this.msetId} is initiating gc`)
         //console.log(`${this.msetTree.size('edit')}>${this.gcThreshold}`)
         let N=this.size('std')
         let W = Math.log(N)-Math.log(Math.log(N)) + Math.log(Math.log(N))/Math.log(N)
@@ -191,7 +224,11 @@ class DDLL {
         //console.log(`gcThreshold was ${this.gcThreshold} and is now N/W =min(${A},${this.gcThresholdMin} where `+`W=${W} log(N/W)=${Math.log(N/W)}`)
         //this.gcThreshold = Math.min(A,this.gcThresholdMin)
         this.gcRequest = true
-        this.sendOperationToServer({op:'gc'})
+        //console.log('setting gcRequest to true:'+this.gcRequest)
+        this.generation++
+        this.sendOperationToServer({op:'gc',documentId:this.documentId, generation:this.generation})
+      } else if (this.msetTree.size('edit')>this.gcThreshold) {
+        //console.log(`gc triggered: ${this.msetTree.size('edit')}`)
       }
     }
 
@@ -213,6 +250,7 @@ class DDLL {
         this.gcMode=false
         this.gcAck=false
         this.gcRequest=false
+        //console.log('setting gcRequest to false:'+this.gcRequest)
         this.msetTree.gcMode = false
         this.gcCounter = 0
         this.numGCs++
@@ -220,6 +258,7 @@ class DDLL {
 
         window.debugging.ddll = window.debugging.ddll || []
         window.debugging.ddll[this.msetId]=this
+        //console.dir(this)
       }
     }
 
@@ -230,7 +269,7 @@ class DDLL {
         this.msetTree.gcMode = true
         this.numPeers = numPeers
         //console.log(`${this.msetId} sending gcAck`)
-        this.sendOperationToServer('gcAck')
+        this.sendOperationToServer({op:'gcAck'})
       }
     }
 
@@ -371,24 +410,6 @@ class Network{
 
 
     msetTree.processRemoteOp(msg); return
-
-
-
-        switch (msg.op){
-      case 'insert':
-         z = `REMOTE treeinsert([${msg.nodeid}],${msg.q},[${msg.un}],'${msg.c}')`
-         msetTree.treeinsert(msg.nodeid,msg.q,msg.un,msg.c)
-         break;
-       case 'extend':
-          z = `REMOTE treeextend([${msg.nodeid}],${msg.q},'${msg.c}')`
-          msetTree.treeextend(msg.nodeid,msg.q,msg.c)
-          break;
-      case 'delete':
-         z = `REMOTE treehide([${msg.nodeid}],${msg.q},${msg.u})`
-         msetTree.treehide(msg.nodeid,msg.q,msg.u)
-         break;
-      default: throw new Error("unknown remote op: "+JSON.stringify(msg))
-    }
 
 
   }

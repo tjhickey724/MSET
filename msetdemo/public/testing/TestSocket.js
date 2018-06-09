@@ -152,11 +152,13 @@ class TestSocket{
          this.server.emit('noop')
        } else if (obj.op=="gc"){
          //console.log("SOCKET: just got a gc message!")
-         this.server.emit({op:'gc',numPeers:this.server.socketList.length})
+         obj.numPeers = this.server.socketList.length
+         this.server.emit(obj)
          // I really should move this to the server and make the TestSocket truly local....
        } else if (obj.op=="gcAck"){
          //console.log("SOCKET: just got a gcAck message!")
-         this.server.emit({op:'gcAck',numPeers:this.server.socketList.length})
+         obj.numPeers = this.server.socketList.length
+         this.server.emit(obj)
          // I really should move this to the server and make the TestSocket truly local....
        } else {
          //console.log(`SOCKET: client ${this.id} emitting obj= ${JSON.stringify(obj)} with op=${op}`)
