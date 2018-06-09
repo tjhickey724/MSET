@@ -135,6 +135,10 @@ class DDLL {
 
     applyRemoteOp(msg){
       //console.log('applyRemoteOp(msg),this->'+JSON.stringify(msg))
+
+      //console.log("in applyRemote Op "+msg); console.dir(msg)
+      if (msg.documentId!=this.documentId) return
+
       if ((msg.op=='gc')&& !this.gcMode) {
         // ignore all but the first gc requests .
         //console.log('applyRemoteOp(gc),this->'+JSON.stringify(msg))
@@ -147,9 +151,7 @@ class DDLL {
         this.enterGCmode(msg.numPeers)
         this.countGC(msg.numPeers)
       }
-      //console.log("in applyRemote Op "+msg); console.dir(msg)
-      if (msg.documentId!=this.documentId) return
-      msg = msg.op
+
 
       // ignore insert and extend messages from self
       /*
@@ -171,12 +173,17 @@ class DDLL {
     }
 
     sendOperationToServer(op){
+      /*
+        This wraps up an op in a larger object containing the documentId property
+        This allows one socket to handle multiple DDLL's
+
+      */
       //console.log(`DDLL: ${this.msetId} sendOptoServer:${JSON.stringify(op)}`)
-      this.socket.emit('operation',
-        {taId:this.taId,documentId:this.documentId, op:op});
+      op.documentId = this.documentId // add the documentId to the op
+      this.socket.emit('operation',op)
       if (!this.gcMode && !this.gcRequest&& (this.msetTree.size('edit')>this.gcThreshold)){
-        //console.log('********** GARBAGE COLLECTION!********')
-        //console.log(`${this.msetId} is initiating gc`)
+        console.log('********** GARBAGE COLLECTION!********')
+        console.log(`${this.msetId} is initiating gc`)
         //console.log(`${this.msetTree.size('edit')}>${this.gcThreshold}`)
         let N=this.size('std')
         let W = Math.log(N)-Math.log(Math.log(N)) + Math.log(Math.log(N))/Math.log(N)
@@ -184,7 +191,7 @@ class DDLL {
         //console.log(`gcThreshold was ${this.gcThreshold} and is now N/W =min(${A},${this.gcThresholdMin} where `+`W=${W} log(N/W)=${Math.log(N/W)}`)
         //this.gcThreshold = Math.min(A,this.gcThresholdMin)
         this.gcRequest = true
-        this.sendOperationToServer('gc')
+        this.sendOperationToServer({op:'gc'})
       }
     }
 
