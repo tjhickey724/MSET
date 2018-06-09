@@ -6,7 +6,7 @@ class CollabEd {
 
   constructor(namespace, taId, taId2, documentId){
     this.documentId = (documentId || 'default')
-    this.mset = new DDLL(io(namespace),documentId,editorCallbacks)
+    this.mset = new DDLL([],editorCallbacks,io(namespace),documentId)
     this.taId = taId
     console.log("Inside the new MSET texteditor!!")
     this.ta = document.getElementById(taId)

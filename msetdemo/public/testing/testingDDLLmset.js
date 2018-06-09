@@ -163,7 +163,7 @@ function logCallbacks(op,pos,elt,user,me){
 
 function createDDLLclient(socket,docId,elements){
   //console.log('creating a DDLL object')
-  return new DDLL(socket,docId,logCallbacks,elements)
+  return new DDLL(elements,logCallbacks,socket,docId)
 }
 
 function runSimpleTests(){

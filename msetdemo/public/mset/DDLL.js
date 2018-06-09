@@ -35,10 +35,11 @@ console.log("loading MSET")
 
 
 class DDLL {
-  constructor(socket,documentId,callback,initElements){
+  constructor(initElements,callback,socket,documentId){
     this.initElements = initElements || []
-    this.socket = socket
-    this.documentId = documentId
+    const socketStub = {close:()=>('nosocket'),on:()=>('nosocket'),emit:()=>('nosocket')}
+    this.socket = socket || socketStub
+    this.documentId = documentId || 'doc0'
     this.msetId=-1;
     this.msetTree={};
     this.initSocket();
