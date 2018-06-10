@@ -284,6 +284,7 @@ function runDeleteTests(lists,N,server,burstSize,shuffled){
     }
 
     server.release(lists.length*2)
+    console.log(`\n\n*****\nTESTCODE LOOP ${i}`)
     for(let j=0; j<lists.length; j++){
       console.log(`U${lists[j].msetId}:`+
         ` G${lists[j].msetTree.size('edit')-lists[j].msetTree.size('rev')}| ` +

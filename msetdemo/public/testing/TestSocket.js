@@ -49,8 +49,8 @@ class TestServer{
       this.delayList.push('noop')
       gap--
     }
-    console.log(`gap=${gap} k=${k} ${this.delayList.length}`)
-    this.visualizeDelayList(k)
+    //console.log(`gap=${gap} k=${k} ${this.delayList.length}`)
+    //this.visualizeDelayList(k)
     //console.log('server emitting')
     for(let i=0;i<k;i++) {
       //console.log(JSON.stringify(this.delayList[i]))
