@@ -59,6 +59,9 @@ class DDLL {
 
     this.generation=0
 
+    window.ddll = window.ddll || {}
+    window.ddll['a']=this
+
   }
 
   insert(pos,c){

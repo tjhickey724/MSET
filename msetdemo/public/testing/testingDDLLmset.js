@@ -238,7 +238,7 @@ function runTestsA(numEdits,numLists,initSize,burstSize,shuffled){
   server.setDelay(burstSize)
   let lists = createLists(numLists,server,range(0,initSize))
   //server.delay()
-  server.release(numLists) // this fills the delayQueue
+  //server.release(numLists) // this fills the delayQueue
   //lists[0].insertList(0,range(0,initSize))
   console.dir(lists[0])
 
@@ -284,8 +284,26 @@ function runDeleteTests(lists,N,server,burstSize,shuffled){
     }
 
     server.release(lists.length*2)
+    for(let j=0; j<lists.length; j++){
+      console.log(`U${lists[j].msetId}:`+
+        ` G${lists[j].msetTree.size('edit')-lists[j].msetTree.size('rev')}| ` +
+        ` ${JSON.stringify(lists[j].toList('std'))}`
+      )
+    }
+
+    for(let j=0; j<lists.length; j++){
+      console.log(`U${lists[j].msetId}: ${JSON.stringify(lists[j].toList('edit'))}`)
+    }
     if (shuffled) {
       server.shuffle()
+    }
+    for(let j=0; j<lists.length; j++){
+      const itq = lists[j].msetTree.network.inTransitQueue
+      console.log(`itq${j}:`)
+      for(let k=0; k<itq.length;k++){
+        console.log(`${k}: ${visualizeEditOp(itq[k])}`)
+      }
+
     }
 
     /*
@@ -319,8 +337,34 @@ function runDeleteTests(lists,N,server,burstSize,shuffled){
 */
   }
   server.release()
+  for(let j=0; j<lists.length; j++){
+    console.log(`U${lists[j].msetId}:`+
+      ` G${lists[j].msetTree.size('edit')-lists[j].msetTree.size('rev')}| ` +
+      ` ${JSON.stringify(lists[j].toList('std'))}`
+    )
+  }
+
+  for(let j=0; j<lists.length; j++){
+    console.log(`U${lists[j].msetId}: ${JSON.stringify(lists[j].toList('edit'))}`)
+  }
+
 
   return gcCounter
+}
+
+function visualizeEditOp(e){
+  if (e=='noop'){
+    return 'noop'
+  } else if (e.op=='insert'){
+    return `U${e.un[0]}: I${e.nodeid[0]}:${e.nodeid[1]}(${e.q},<${e.un[0]}:${e.un[1]} ${e.c} ${e.un[0]}:${e.un[1]} >)`
+  } else if (e.op=='delete'){
+    return `U${e.u}: D${e.nodeid[0]}:${e.nodeid[1]}(${e.q})`
+  } else if (e.op=='extend'){
+    return `U${e.nodeid[0]}: E${e.nodeid[0]}:${e.nodeid[1]}(${e.q}, ${e.c})`
+  } else {
+    return 'Unknown edit op:\n'+JSON.stringify(e)
+  }
+
 }
 
 window.ddll = {checkEquality,runDeleteTests,createLists,runTestsA, runTimeTests}

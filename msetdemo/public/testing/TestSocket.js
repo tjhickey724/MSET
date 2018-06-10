@@ -49,6 +49,8 @@ class TestServer{
       this.delayList.push('noop')
       gap--
     }
+    console.log(`gap=${gap} k=${k} ${this.delayList.length}`)
+    this.visualizeDelayList(k)
     //console.log('server emitting')
     for(let i=0;i<k;i++) {
       //console.log(JSON.stringify(this.delayList[i]))
@@ -57,6 +59,31 @@ class TestServer{
       }
     }
     this.delayList.splice(0,k)
+
+  }
+
+  visualizeDelayList(k){
+    console.log("\n*****\nDelay List:\n")
+    for(let i=0;i<this.delayList.length;i++){
+      console.log(`${i} -- ${this.visualizeEditOp(this.delayList[i])}`)
+      if (i==k-1){
+        console.log("still in transit")
+      }
+    }
+  }
+
+  visualizeEditOp(e){
+    if (e=='noop'){
+      return 'noop'
+    } else if (e.op=='insert'){
+      return `U${e.un[0]}: I${e.nodeid[0]}:${e.nodeid[1]}(${e.q},<${e.un[0]}:${e.un[1]} ${e.c} ${e.un[0]}:${e.un[1]} >)`
+    } else if (e.op=='delete'){
+      return `U${e.u}: D${e.nodeid[0]}:${e.nodeid[1]}(${e.q})`
+    } else if (e.op=='extend'){
+      return `U${e.nodeid[0]}: E${e.nodeid[0]}:${e.nodeid[1]}(${e.q}, ${e.c})`
+    } else {
+      return 'Unknown edit op:\n'+JSON.stringify(e)
+    }
 
   }
 
@@ -90,7 +117,7 @@ class TestServer{
 
   emitNow(obj){
     if (!obj){
-      window.debugging.obj = obj
+
       throw new Error("trouble in emit")
     } else if (obj=='noop'){
       //console.log(`server ignoring 'noop'`)
