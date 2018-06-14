@@ -47,8 +47,8 @@ class DDLL {
 
     //this is needed for garbage collection
     this.gcType = 'serialized'  // none, p2p, or serialized
-    this.gcThreshold = 20
-    this.gcThresholdMin = 20
+    this.gcThreshold = 10000
+    this.gcThresholdMin = 10000
     this.gcMode = false
     this.gcRequest = false
     this.gcCounter=0
@@ -61,6 +61,8 @@ class DDLL {
 
     window.ddll = window.ddll || {}
     window.ddll['a']=this
+    window.debugthis = this
+
 
   }
 
@@ -142,8 +144,14 @@ class DDLL {
     }
 
     applyRemoteOp(msg){
-      //console.log('applyRemoteOp(msg),this->'+JSON.stringify(msg))
-
+      //console.log('\n\n'+this.msetId+'applyRemoteOp(msg),this->'+JSON.stringify(msg))
+      //console.log('current string:\n'+JSON.stringify(this.toList('std')))
+      //console.log(`current generation = ${this.generation}`)
+      if (msg.generation < this.generation) {
+        //console.log("Skipping old generation remote op")
+        //console.log(JSON.stringify(msg))
+        return
+      }
       //console.log("in applyRemote Op "+msg); console.dir(msg)
       if (msg.documentId!=this.documentId) return
 
@@ -157,8 +165,8 @@ class DDLL {
           return
         } else {
           // serialized case
-          console.dir([msg,this])
-          console.log(this.msetId+' -- SAW a gc ... start the Serialized GC process!')
+          //console.dir([msg,this])
+          //console.log(this.msetId+' -- SAW a gc ... start the Serialized GC process!')
           if ((this.gcType=='serialized') && (this.generation==msg.generation)){
             this.serializedGC()
           }
@@ -183,27 +191,30 @@ class DDLL {
       this.remoteOp=true; // temporarily ignore changes to the textarea as remote ops are processed
       this.msetTree.network.processRemoteOp(msg)
       this.remoteOp=false;
+      //console.log('After applying remote opcurrent string:\n'+JSON.stringify(this.toList('std')))
 
       return
     }
 
     serializedGC(){
       let inTransitOps = this.msetTree.network.inTransitQueue;
-      console.log("ito=\n"+JSON.stringify(inTransitOps))
+      this.msetTree.network.inTransitQueue = []
+
+      //console.log("ito=\n"+JSON.stringify(inTransitOps))
       for(let i=0; i<inTransitOps.length; i++){
-        console.log(`op[${i}] = ${this.visualizeEditOp(inTransitOps[i])}`)
+        //console.log(`op[${i}] = ${this.visualizeEditOp(inTransitOps[i])}`)
       }
-      console.log('current string:\n'+JSON.stringify(this.toList('std')))
-      console.log('current edit tree:\n'+JSON.stringify(this.toList('edit')))
+      //console.log('current string:\n'+JSON.stringify(this.toList('std')))
+      //console.log('current edit tree:\n'+JSON.stringify(this.toList('edit')))
       window.debugging={ddll:this}
       const numOps = inTransitOps.length
       let stringOps=[]
       for (let i=0; i<numOps; i++){
-        console.log(`i=${i} L=${inTransitOps.length}`)
+        //console.log(`i=${i} L=${inTransitOps.length}`)
         stringOps.push(this.undoEditOp(inTransitOps[numOps-1-i]))
-        console.log('current string:\n'+JSON.stringify(this.toList('std')))
-        console.log('current edit tree:\n'+JSON.stringify(this.toList('edit')))
-        console.log(`end of loop body ${i} L=${inTransitOps.length}\n\n\n`)
+        //console.log('current string:\n'+JSON.stringify(this.toList('std')))
+        //console.log('current edit tree:\n'+JSON.stringify(this.toList('edit')))
+        //console.log(`end of loop body ${i} L=${inTransitOps.length}\n\n\n`)
       }
       this.oldTree = this.msetTree
       this.msetTree = this.msetTree.copy()
@@ -214,23 +225,27 @@ class DDLL {
       this.msetTree.gcMode = false
       this.gcCounter = 0
       this.numGCs++
-      console.log('Synchronized String ...')
-      console.log('current string:\n'+JSON.stringify(this.toList('std')))
+      //console.log('Synchronized String ...')
+      //console.log('current string:\n'+JSON.stringify(this.toList('std')))
 
-      console.log("String Ops:")
-      console.dir(stringOps)
+      //console.log("String Ops:")
+      //console.dir(stringOps)
+      this.generation++
       for (let i=stringOps.length-1; i>=0; i--) {
-        console.log(`op[${i}] = ${JSON.stringify(stringOps[i])}`+
-        ` -- ${this.visualizeEditOp( inTransitOps[numOps-1-i])}`)
+        //console.log(`op[${i}] = ${JSON.stringify(stringOps[i])}`+` -- ${this.visualizeEditOp( inTransitOps[numOps-1-i])}`)
         this.applyStringOp(stringOps[i])
       }
-      console.log('After applying Stringops to Synchronized String ...')
-      console.log('current string:\n'+JSON.stringify(this.toList('std')))
+      //console.log('After applying StringOps to Synchronized String ...')
+      //console.log('current string:\n'+JSON.stringify(this.toList('std')))
+      //console.log('\n\n\n\n')
 
-      throw new Error("time to debug!")
+
+      //throw new Error("time to debug!")
     }
 
     applyStringOp(e){
+      //console.log('reapplying '+JSON.stringify(e)+' to ')
+      //console.log('current string:\n'+JSON.stringify(this.toList('std')))
       switch(e.op){
         case 'delete':
             this.msetTree.delete(e.offset)
@@ -240,49 +255,55 @@ class DDLL {
             this.msetTree.insertList(e.offset,e.chars)
             //applyInsert(e);
             break;
+        case 'noop':
+            // this corresponds to a deletion collision which is ignored
+            break;
         default: console.dir(e);
           throw new Error(`unknown stringop ${e}`)
       }
+      //console.log('to get:\n'+JSON.stringify(this.toList('std')))
     }
 
     undoEditOp(e){
-      console.log('undoing '+this.visualizeEditOp(e))
-      console.dir(e)
-      console.log(`listsize before undoing op ${this.size('std')}`)
+      //console.log('undoing '+this.visualizeEditOp(e))
+      //console.dir(e)
+      //console.log(`listsize before undoing op ${this.size('std')}`)
       let stringOp=null
       switch(e.op){
         case 'delete': stringOp = this.undoDelete(e); break;
         case 'extend': stringOp =  this.undoExtend(e); break;
         case 'insert': stringOp =  this.undoInsert(e); break;
       }
-      console.log(JSON.stringify(stringOp))
-      console.log(`listsize after undoing op ${this.size('std')}`)
+      //console.log(JSON.stringify(stringOp))
+      //console.log(`listsize after undoing op ${this.size('std')}`)
       return stringOp
     }
 
     undoDelete(e){
-      console.log(`undoing delete: `+this.visualizeEditOp(e))
-      const element = this.msetTree.nodes[e.nodeid].subnodes.nth(e.q).hiddenData
-      console.log(`element = ${element} listsize = ${this.size('std')}`)
-      console.dir(element)
+      //console.log(`undoing delete: `+this.visualizeEditOp(e))
+      const element = this.msetTree.nodes[e.nodeid].subnodes.nth(e.q,'rev').hiddenData
+      //console.log(`element = ${element} listsize = ${this.size('std')}`)
+      //console.dir(element)
       const offset = element.listNode.indexOf('std')
       const chars = element.userData()
       const op = 'delete'
-      const stringOp = {op,offset,chars}
+      let stringOp = {}
       if (element.deletedBy==this.msetId){
         element.vis = true
         element.rebalance()
+        stringOp = {op,offset,chars}
       } else {
-        console.log(`not undoing a collision delete!`)
+        //console.log(`not undoing a collision delete!`)
+        stringOp = {op:'noop'}
         // another user also deleted this before the gc marker!
       }
-      console.log(`after delete -- listsize = ${this.size('std')}`)
+      //console.log(`after delete -- listsize = ${this.size('std')}`)
       return stringOp
 
     }
     undoExtend(e){
-      console.log(`undoing extend: `+this.visualizeEditOp(e))
-      console.dir(e)
+      //console.log(`undoing extend: `+this.visualizeEditOp(e))
+      //console.dir(e)
       const element = this.msetTree.nodes[e.nodeid].subnodes.last.prev.hiddenData
       element.size = element.size - e.c.length
       element.treeNode.elts
@@ -292,18 +313,27 @@ class DDLL {
       const chars = e.c
       const op = 'insert'
       const stringOp = {op,offset,chars}
-      console.dir(element)
+      //console.dir(element)
       if ((element.size==0) && (element.iset==null)) {
-        console.log('removing subnode from subnodes and strings')
+        //console.log('removing subnode from subnodes and strings')
         element.listNode.delete()
         element.listSubnode.delete()
       }
       return stringOp
     }
     undoInsert(e){
-      console.log(`undoing insert: `+this.visualizeEditOp(e))
+      //console.log(`undoing insert: `+this.visualizeEditOp(e))
       // first find the isetListNode to remove it from the iset tree
-      const parent = this.msetTree.nodes[e.nodeid].subnodes.nth(e.q).hiddenData
+
+      const parentNode = this.msetTree.nodes[e.nodeid]
+      let parent = null
+      if (parentNode.elts.length == e.q) {
+        // this is the case where we are inserting at the end of a node we don't own
+        parent = parentNode.subnodes.last.prev.hiddenData
+      } else {
+        parent = parentNode.subnodes.nth(e.q,'rev').hiddenData
+      }
+
       const target = this.msetTree.nodes[e.un]
       const isetListNode = parent.iset.bst.tln.binarySearch(target,parent.iset.bst.comparator)
       const offset = target.start.listNode.indexOf('std')
@@ -312,26 +342,26 @@ class DDLL {
       const stringOp = {op,offset,chars}
       isetListNode.delete()
       if (parent.iset.bst.size()==0) {
-        console.log(`iset is empty so we are setting it to null`)
+        //console.log(`iset is empty so we are setting it to null`)
         parent.iset = null
         if (parent.size==0) {
-          console.log(`parent is empty, so we are deleting it`)
-          console.dir(parent)
+          //console.log(`parent is empty, so we are deleting it`)
+          //console.dir(parent)
           parent.delete()
         }
       }
 
-      console.dir(target)
-      console.log(`removing the start and end markers`)
+      //console.dir(target)
+      //console.log(`removing the start and end markers`)
       target.start.delete()
       target.end.delete()
-      console.log(`removing the targets subnode from the msetTree`)
+      //console.log(`removing the targets subnode from the msetTree`)
       let pos = target.subnodes.first.next
       while (pos!=target.subnodes.last){
         pos.hiddenData.delete()
         pos = pos.next
       }
-      console.log(`insert has been undone!`)
+      //console.log(`insert has been undone!`)
       return stringOp
     }
 
@@ -367,6 +397,7 @@ class DDLL {
           !this.gcRequest&&
           (garbage>this.gcThreshold)){
         console.log('********** GARBAGE COLLECTION!********')
+        console.log(window.performance.memory)
         //console.log(`${this.msetId} is initiating gc`)
         //console.log(`${garbage}>${this.gcThreshold}`)
         let N=this.size('std')
@@ -376,7 +407,6 @@ class DDLL {
         //this.gcThreshold = Math.min(A,this.gcThresholdMin)
         this.gcRequest = true
         //console.log('setting gcRequest to true:'+this.gcRequest)
-        this.generation++
         this.sendOperationToServer({op:'gc',documentId:this.documentId, generation:this.generation})
       } else if (this.msetTree.size('edit')>this.gcThreshold) {
         //console.log(`gc triggered: ${this.msetTree.size('edit')}`)
@@ -405,6 +435,7 @@ class DDLL {
         this.msetTree.gcMode = false
         this.gcCounter = 0
         this.numGCs++
+        this.generation++
         //console.log('oplist = \n'+JSON.stringify(this.socket.server.delayList))
 
 
@@ -486,7 +517,7 @@ class Network{
     var i;
     //console.log(`${this.userid} is pushing ${JSON.stringify(op)} onto inTransitQ`)
     this.inTransitQueue.push(op)
-    this.outgoingOps.push(op)
+    //this.outgoingOps.push(op)
 /*
     if (this.userid==1){
       console.log(`${this.userid} pushing \n${JSON.stringify(op)}`)
@@ -542,7 +573,7 @@ class Network{
     if (this.userid==1){
       console.log('REMOTE\n'+JSON.stringify(msg));
     }*/
-    this.incomingOps.push(msg)
+    //this.incomingOps.push(msg)
     /*
     console.log('just pushed in pro')
     console.dir([msg, this,this.incomingOps])

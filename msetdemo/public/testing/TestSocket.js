@@ -40,7 +40,7 @@ class TestServer{
   }
 
   release(k){
-    k = k || this.delayList.length
+
     //console.log(`sending ${k} delayed ops`)
     //console.log(`delayList has ${this.delayList.length} elements`)
     //this.delayFlag = false
@@ -52,13 +52,24 @@ class TestServer{
     //console.log(`gap=${gap} k=${k} ${this.delayList.length}`)
     //this.visualizeDelayList(k)
     //console.log('server emitting')
-    for(let i=0;i<k;i++) {
-      //console.log(JSON.stringify(this.delayList[i]))
-      if ((this.delayList != 'noop') && this.delayList[i]){
+    if (k){
+      for(let i=0;i<k;i++) {
+        //console.log(JSON.stringify(this.delayList[i]))
+        if ((this.delayList != 'noop') && this.delayList[i]){
+          this.emitNow(this.delayList[i])
+        }
+      }
+      this.delayList.splice(0,k)
+    } else {
+      console.log('release all editops from the delay list')
+      console.dir(this.delayList)
+      for(let i=0; i<this.delayList.length; i++){
         this.emitNow(this.delayList[i])
       }
+      this.delayList = []
     }
-    this.delayList.splice(0,k)
+
+
 
   }
 
@@ -207,7 +218,7 @@ class TestSocket{
         this.gcCounter=0
       }
     } else {
-      //console.log("unknown message: "+JSON.stringify([op,obj]))
+      console.log("unknown message: "+JSON.stringify([op,obj]))
     }
   }
   // socket.on('msetId',function(msetId){....})

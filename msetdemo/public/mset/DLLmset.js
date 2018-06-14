@@ -449,7 +449,7 @@ class DLLmset{
       this.nodes[un]=m; // add the new node to the hash table
       const insertPos = node2.indexOf("std")
       this.insertCallback(insertPos,c,un[0]) // ILL HAVE TO CHECK WHAT INDEXOF RETURNS
-      this.netOps.push(new EditOp(this).treeinsert(vm,q,un,c,insertPos))
+      //this.netOps.push(new EditOp(this).treeinsert(vm,q,un,c,insertPos))
       //console.log("AFTER INSERT "+this.strings.toString(' ','count'))
       //console.log(this.strings.tln.toStringIndent(5))
       return m;
@@ -510,7 +510,7 @@ class DLLmset{
       //console.dir(g)
       //console.log(g.listNode.dll.tln.toStringIndent(5))
       this.insertCallback(insertionPos,c,n.user)
-      this.netOps.push(new EditOp(this).treeextend(nodeid,q,c,insertionPos))
+      //this.netOps.push(new EditOp(this).treeextend(nodeid,q,c,insertionPos))
       return n;
   }
 
@@ -573,7 +573,7 @@ class DLLmset{
       }
 
       this.deleteCallback(deletionPosition,deletionElement,u)
-      this.netOps.push(new EditOp(this).treehide(nodeid,q,u,deletionPosition,deletionElement))
+      //this.netOps.push(new EditOp(this).treehide(nodeid,q,u,deletionPosition,deletionElement))
       return n;
   }
 
@@ -610,8 +610,7 @@ class DLLmset{
   */
 
   processLocalOp(op){
-    this.localOps.push(op)
-    this.inTransitOps.push(op)
+    //this.inTransitOps.push(op)
   }
 
 
@@ -867,6 +866,11 @@ class Element{
     let mRight  = new Element(this.first+p, this.size-p,  this.vis, false, this.treeNode, this.isLast)
     let prevListNode = this.listNode.prev
     let prevListSubnode = this.listSubnode.prev
+
+    if (this.deletedBy) {
+      mLeft.deletedBy = this.deletedBy
+      mRight.deletedBy = this.deletedBy
+    }
 
     this.listNode.delete()
     this.listSubnode.delete()

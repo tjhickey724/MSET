@@ -284,6 +284,7 @@ function runDeleteTests(lists,N,server,burstSize,shuffled){
     }
 
     server.release(lists.length*2)
+    /*
     console.log(`\n\n*****\nTESTCODE LOOP ${i}`)
     for(let j=0; j<lists.length; j++){
       console.log(`U${lists[j].msetId}:`+
@@ -292,12 +293,15 @@ function runDeleteTests(lists,N,server,burstSize,shuffled){
       )
     }
 
+
     for(let j=0; j<lists.length; j++){
       console.log(`U${lists[j].msetId}: ${JSON.stringify(lists[j].toList('edit'))}`)
     }
+    */
     if (shuffled) {
       server.shuffle()
     }
+    /*
     for(let j=0; j<lists.length; j++){
       const itq = lists[j].msetTree.network.inTransitQueue
       console.log(`itq${j}:`)
@@ -306,6 +310,7 @@ function runDeleteTests(lists,N,server,burstSize,shuffled){
       }
 
     }
+    */
 
     /*
     if (i >= burstSize){
@@ -338,6 +343,7 @@ function runDeleteTests(lists,N,server,burstSize,shuffled){
 */
   }
   server.release()
+  /*
   for(let j=0; j<lists.length; j++){
     console.log(`U${lists[j].msetId}:`+
       ` G${lists[j].msetTree.size('edit')-lists[j].msetTree.size('rev')}| ` +
@@ -348,7 +354,7 @@ function runDeleteTests(lists,N,server,burstSize,shuffled){
   for(let j=0; j<lists.length; j++){
     console.log(`U${lists[j].msetId}: ${JSON.stringify(lists[j].toList('edit'))}`)
   }
-
+*/
 
   return gcCounter
 }
