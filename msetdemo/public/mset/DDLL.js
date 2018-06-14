@@ -46,9 +46,9 @@ class DDLL {
     this.callback = callback
 
     //this is needed for garbage collection
-    this.gcType = 'p2p'  // none, p2p, or serialized
-    this.gcThreshold = 10000
-    this.gcThresholdMin = 10000
+    this.gcType = 'serialized'  // none, p2p, or serialized
+    this.gcThreshold = 20
+    this.gcThresholdMin = 20
     this.gcMode = false
     this.gcRequest = false
     this.gcCounter=0
@@ -158,7 +158,7 @@ class DDLL {
         } else {
           // serialized case
           console.dir([msg,this])
-          console.log('SAW a gc ... start the Serialized GC process!')
+          console.log(this.msetId+' -- SAW a gc ... start the Serialized GC process!')
           if ((this.gcType=='serialized') && (this.generation==msg.generation)){
             this.serializedGC()
           }
@@ -189,11 +189,164 @@ class DDLL {
 
     serializedGC(){
       let inTransitOps = this.msetTree.network.inTransitQueue;
-      //console.log("ito=\n"+JSON.stringify(inTransitOps))
+      console.log("ito=\n"+JSON.stringify(inTransitOps))
       for(let i=0; i<inTransitOps.length; i++){
-        console.log(`op[${i}] = ${JSON.stringify(inTransitOps[i])}`)
+        console.log(`op[${i}] = ${this.visualizeEditOp(inTransitOps[i])}`)
       }
+      console.log('current string:\n'+JSON.stringify(this.toList('std')))
+      console.log('current edit tree:\n'+JSON.stringify(this.toList('edit')))
+      window.debugging={ddll:this}
+      const numOps = inTransitOps.length
+      let stringOps=[]
+      for (let i=0; i<numOps; i++){
+        console.log(`i=${i} L=${inTransitOps.length}`)
+        stringOps.push(this.undoEditOp(inTransitOps[numOps-1-i]))
+        console.log('current string:\n'+JSON.stringify(this.toList('std')))
+        console.log('current edit tree:\n'+JSON.stringify(this.toList('edit')))
+        console.log(`end of loop body ${i} L=${inTransitOps.length}\n\n\n`)
+      }
+      this.oldTree = this.msetTree
+      this.msetTree = this.msetTree.copy()
+      this.gcMode=false
+      this.gcAck=false
+      this.gcRequest=false
+      //console.log('setting gcRequest to false:'+this.gcRequest)
+      this.msetTree.gcMode = false
+      this.gcCounter = 0
+      this.numGCs++
+      console.log('Synchronized String ...')
+      console.log('current string:\n'+JSON.stringify(this.toList('std')))
+
+      console.log("String Ops:")
+      console.dir(stringOps)
+      for (let i=stringOps.length-1; i>=0; i--) {
+        console.log(`op[${i}] = ${JSON.stringify(stringOps[i])}`+
+        ` -- ${this.visualizeEditOp( inTransitOps[numOps-1-i])}`)
+        this.applyStringOp(stringOps[i])
+      }
+      console.log('After applying Stringops to Synchronized String ...')
+      console.log('current string:\n'+JSON.stringify(this.toList('std')))
+
       throw new Error("time to debug!")
+    }
+
+    applyStringOp(e){
+      switch(e.op){
+        case 'delete':
+            this.msetTree.delete(e.offset)
+            //applyDelete(e);
+            break;
+        case 'insert':
+            this.msetTree.insertList(e.offset,e.chars)
+            //applyInsert(e);
+            break;
+        default: console.dir(e);
+          throw new Error(`unknown stringop ${e}`)
+      }
+    }
+
+    undoEditOp(e){
+      console.log('undoing '+this.visualizeEditOp(e))
+      console.dir(e)
+      console.log(`listsize before undoing op ${this.size('std')}`)
+      let stringOp=null
+      switch(e.op){
+        case 'delete': stringOp = this.undoDelete(e); break;
+        case 'extend': stringOp =  this.undoExtend(e); break;
+        case 'insert': stringOp =  this.undoInsert(e); break;
+      }
+      console.log(JSON.stringify(stringOp))
+      console.log(`listsize after undoing op ${this.size('std')}`)
+      return stringOp
+    }
+
+    undoDelete(e){
+      console.log(`undoing delete: `+this.visualizeEditOp(e))
+      const element = this.msetTree.nodes[e.nodeid].subnodes.nth(e.q).hiddenData
+      console.log(`element = ${element} listsize = ${this.size('std')}`)
+      console.dir(element)
+      const offset = element.listNode.indexOf('std')
+      const chars = element.userData()
+      const op = 'delete'
+      const stringOp = {op,offset,chars}
+      if (element.deletedBy==this.msetId){
+        element.vis = true
+        element.rebalance()
+      } else {
+        console.log(`not undoing a collision delete!`)
+        // another user also deleted this before the gc marker!
+      }
+      console.log(`after delete -- listsize = ${this.size('std')}`)
+      return stringOp
+
+    }
+    undoExtend(e){
+      console.log(`undoing extend: `+this.visualizeEditOp(e))
+      console.dir(e)
+      const element = this.msetTree.nodes[e.nodeid].subnodes.last.prev.hiddenData
+      element.size = element.size - e.c.length
+      element.treeNode.elts
+        = element.treeNode.elts.slice(0,element.treeNode.elts.length-e.c.length)
+      element.rebalance()
+      const offset = element.listNode.indexOf("std")+element.size
+      const chars = e.c
+      const op = 'insert'
+      const stringOp = {op,offset,chars}
+      console.dir(element)
+      if ((element.size==0) && (element.iset==null)) {
+        console.log('removing subnode from subnodes and strings')
+        element.listNode.delete()
+        element.listSubnode.delete()
+      }
+      return stringOp
+    }
+    undoInsert(e){
+      console.log(`undoing insert: `+this.visualizeEditOp(e))
+      // first find the isetListNode to remove it from the iset tree
+      const parent = this.msetTree.nodes[e.nodeid].subnodes.nth(e.q).hiddenData
+      const target = this.msetTree.nodes[e.un]
+      const isetListNode = parent.iset.bst.tln.binarySearch(target,parent.iset.bst.comparator)
+      const offset = target.start.listNode.indexOf('std')
+      const chars = target.elts
+      const op = 'insert'
+      const stringOp = {op,offset,chars}
+      isetListNode.delete()
+      if (parent.iset.bst.size()==0) {
+        console.log(`iset is empty so we are setting it to null`)
+        parent.iset = null
+        if (parent.size==0) {
+          console.log(`parent is empty, so we are deleting it`)
+          console.dir(parent)
+          parent.delete()
+        }
+      }
+
+      console.dir(target)
+      console.log(`removing the start and end markers`)
+      target.start.delete()
+      target.end.delete()
+      console.log(`removing the targets subnode from the msetTree`)
+      let pos = target.subnodes.first.next
+      while (pos!=target.subnodes.last){
+        pos.hiddenData.delete()
+        pos = pos.next
+      }
+      console.log(`insert has been undone!`)
+      return stringOp
+    }
+
+    visualizeEditOp(e){
+      if (e=='noop'){
+        return 'noop'
+      } else if (e.op=='insert'){
+        return `U${e.un[0]}: I${e.nodeid[0]}:${e.nodeid[1]}(${e.q},<${e.un[0]}:${e.un[1]} ${e.c} ${e.un[0]}:${e.un[1]} >)`
+      } else if (e.op=='delete'){
+        return `U${e.u}: D${e.nodeid[0]}:${e.nodeid[1]}(${e.q})`
+      } else if (e.op=='extend'){
+        return `U${e.nodeid[0]}: E${e.nodeid[0]}:${e.nodeid[1]}(${e.q}, ${e.c})`
+      } else {
+        return 'Unknown edit op:\n'+JSON.stringify(e)
+      }
     }
 
     sendOperationToServer(op){

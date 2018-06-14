@@ -107,7 +107,7 @@ class DLLmset{
     const oldSize = this.size('edit')-this.size('rev')
     const newSize = newMSET.size('edit')-newMSET.size('rev')
 
-  
+
 
     if (newSize>10) throw new Error("???")
 
@@ -535,6 +535,7 @@ class DLLmset{
       const deletionPosition = subNodePosition.data.listNode.indexOf("std")+offset
       const deletionElement = n.elts[q]
       //console.log('delete: '+deletionPosition+" "+deletionElement)
+      subNode.deletedBy = u
 
       if (offset==0){
         if (subNode.size==1){
@@ -829,6 +830,14 @@ class Element{
     this.rebalance()
   }
 
+  delete(){
+    this.listNode.delete()
+    if (this.listSubnode) {
+      // markers don't have listSubnodes
+      this.listSubnode.delete()
+    }
+  }
+
   rebalance(){
     // this should be called when the size of a node is changed
     //console.log("in rebalance")
@@ -897,7 +906,11 @@ class Element{
   toList(){
     if (this.marker){
       return [this.userData()]
-    } else {
+    } else if (!this.vis){
+      return this.treeNode.elts
+          .slice(this.first,this.first+this.size)
+          .map((x)=>([x]))
+    }else {
       return this.treeNode.elts.slice(this.first,this.first+this.size)
     }
   }
