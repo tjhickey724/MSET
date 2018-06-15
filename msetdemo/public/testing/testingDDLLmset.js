@@ -249,7 +249,7 @@ function runTestsA(numEdits,numLists,initSize,burstSize,shuffled){
 function runDeleteTests(lists,N,server,burstSize,shuffled){
   let gcCounter = 0
   let i=1
-
+  let startTime = performance.now();
   while(i<=N){
     i++
     //console.log(`${i} --  ${lists[0].size('edit')}`)
@@ -300,6 +300,11 @@ function runDeleteTests(lists,N,server,burstSize,shuffled){
     */
     if (shuffled) {
       server.shuffle()
+    }
+    if(i%10000==0){
+      let t = performance.now()-startTime;
+      let speed = i/t
+      console.log(`\n******\ni=${i} editSpeed (edits/ms)= ${speed}`)
     }
     /*
     for(let j=0; j<lists.length; j++){

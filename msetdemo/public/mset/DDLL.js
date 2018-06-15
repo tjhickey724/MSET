@@ -198,6 +198,7 @@ class DDLL {
 
     serializedGC(){
       let inTransitOps = this.msetTree.network.inTransitQueue;
+      console.log(`itq size: ${inTransitOps.length}`)
       this.msetTree.network.inTransitQueue = []
 
       //console.log("ito=\n"+JSON.stringify(inTransitOps))

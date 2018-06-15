@@ -44,7 +44,8 @@ class TestServer{
     //console.log(`sending ${k} delayed ops`)
     //console.log(`delayList has ${this.delayList.length} elements`)
     //this.delayFlag = false
-    let gap =  (this.delaySteps*this.socketList.length - this.delayList.length)
+    let maxListSize = this.delaySteps*this.socketList.length
+    let gap =  (maxListSize - this.delayList.length)
     while (gap>0) {
       this.delayList.push('noop')
       gap--
@@ -52,25 +53,15 @@ class TestServer{
     //console.log(`gap=${gap} k=${k} ${this.delayList.length}`)
     //this.visualizeDelayList(k)
     //console.log('server emitting')
-    if (k){
-      for(let i=0;i<k;i++) {
-        //console.log(JSON.stringify(this.delayList[i]))
-        if ((this.delayList != 'noop') && this.delayList[i]){
-          this.emitNow(this.delayList[i])
-        }
-      }
-      this.delayList.splice(0,k)
-    } else {
-      console.log('release all editops from the delay list')
-      console.dir(this.delayList)
-      for(let i=0; i<this.delayList.length; i++){
-        this.emitNow(this.delayList[i])
-      }
-      this.delayList = []
+    if(!k) {
+      maxListSize=0
     }
-
-
-
+    while (this.delayList.length > maxListSize){
+          const op = this.delayList.shift()
+          if (op!='noop'){
+            this.emitNow(op)
+          }
+    }
   }
 
   visualizeDelayList(k){
