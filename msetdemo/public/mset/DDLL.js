@@ -47,8 +47,9 @@ class DDLL {
 
     //this is needed for garbage collection
     this.gcType = 'serialized'  // none, p2p, or serialized
-    this.gcThreshold = 10000
-    this.gcThresholdMin = 10000
+    this.numElements = this.initElements.length
+    this.gcThreshold = this.numElements*10000000 // /(Math.log(this.numElements)/Math.log(2))
+    this.gcThresholdMin = 10000*10000000
     this.gcMode = false
     this.gcRequest = false
     this.gcCounter=0
@@ -59,9 +60,8 @@ class DDLL {
 
     this.generation=0
 
-    window.ddll = window.ddll || {}
-    window.ddll['a']=this
-    window.debugthis = this
+
+    //window.debugthis = this
 
 
   }
@@ -198,7 +198,7 @@ class DDLL {
 
     serializedGC(){
       let inTransitOps = this.msetTree.network.inTransitQueue;
-      console.log(`itq size: ${inTransitOps.length}`)
+      //console.log(`itq size: ${inTransitOps.length}`)
       this.msetTree.network.inTransitQueue = []
 
       //console.log("ito=\n"+JSON.stringify(inTransitOps))
@@ -207,7 +207,6 @@ class DDLL {
       }
       //console.log('current string:\n'+JSON.stringify(this.toList('std')))
       //console.log('current edit tree:\n'+JSON.stringify(this.toList('edit')))
-      window.debugging={ddll:this}
       const numOps = inTransitOps.length
       let stringOps=[]
       for (let i=0; i<numOps; i++){
@@ -219,6 +218,7 @@ class DDLL {
       }
       this.oldTree = this.msetTree
       this.msetTree = this.msetTree.copy()
+      this.oldTree = null
       this.gcMode=false
       this.gcAck=false
       this.gcRequest=false
@@ -307,8 +307,10 @@ class DDLL {
       //console.dir(e)
       const element = this.msetTree.nodes[e.nodeid].subnodes.last.prev.hiddenData
       element.size = element.size - e.c.length
-      element.treeNode.elts
-        = element.treeNode.elts.slice(0,element.treeNode.elts.length-e.c.length)
+      // this might require copying the elts list...
+      // 6/16/2018
+      //element.treeNode.elts
+      //  = element.treeNode.elts.slice(0,element.treeNode.elts.length-e.c.length)
       element.rebalance()
       const offset = element.listNode.indexOf("std")+element.size
       const chars = e.c
@@ -397,15 +399,15 @@ class DDLL {
           !this.gcMode &&
           !this.gcRequest&&
           (garbage>this.gcThreshold)){
-        console.log('********** GARBAGE COLLECTION!********')
-        console.log(window.performance.memory)
+        //console.log('********** GARBAGE COLLECTION!********')
+        //console.log(window.performance.memory)
         //console.log(`${this.msetId} is initiating gc`)
         //console.log(`${garbage}>${this.gcThreshold}`)
         let N=this.size('std')
-        let W = Math.log(N)-Math.log(Math.log(N)) + Math.log(Math.log(N))/Math.log(N)
+        let W = 1 //Math.log(N)/Math.log(2)
         let A = N/W
         //console.log(`gcThreshold was ${this.gcThreshold} and is now N/W =min(${A},${this.gcThresholdMin} where `+`W=${W} log(N/W)=${Math.log(N/W)}`)
-        //this.gcThreshold = Math.min(A,this.gcThresholdMin)
+        this.gcThreshold = Math.max(A,this.gcThresholdMin)
         this.gcRequest = true
         //console.log('setting gcRequest to true:'+this.gcRequest)
         this.sendOperationToServer({op:'gc',documentId:this.documentId, generation:this.generation})

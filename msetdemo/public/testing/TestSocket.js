@@ -126,7 +126,7 @@ class TestServer{
     } else {
       //console.log(`server broadcasting ${JSON.stringify(obj)}`)
       this.socketList.forEach((s)=>(s.callbacks.remoteOperation(obj)))
-      this.oplist.push(obj)
+      //this.oplist.push(obj)
     }
   }
 

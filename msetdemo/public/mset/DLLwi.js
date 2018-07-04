@@ -1060,8 +1060,8 @@ class Debug{
   }
 }
 
-const debug = new Debug()
-debug.debugging = {any:false}
+//const debug = new Debug()
+//debug.debugging = {any:false}
 
 
 window.DLLwi = DLLwi

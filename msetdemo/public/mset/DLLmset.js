@@ -104,25 +104,15 @@ class DLLmset{
     //elts.forEach(function(e){eltArray= eltArray.concat(e.treeNode.elts.slice(e.first,e.first+e.size))})
     //console.dir(elts)
     const newMSET = new DLLmset(this.user,this.network,elts)//Array)
-    const oldSize = this.size('edit')-this.size('rev')
-    const newSize = newMSET.size('edit')-newMSET.size('rev')
+    //const oldSize = this.size('edit')-this.size('rev')
+    //const newSize = newMSET.size('edit')-newMSET.size('rev')
+    //if (newSize>10) throw new Error("???")
 
 
-
-    if (newSize>10) throw new Error("???")
-
-    newMSET.insertCallback =
-        function(pos,elt,user){
-            return thisDDLL.callback('insert',pos,elt,user,this.user)
-          }
-    newMSET.deleteCallback =
-        function(pos,elt,user){
-            return thisDDLL.callback('delete',pos,elt,user,this.user)
-          }
     newMSET.insertCallback = this.insertCallback
     newMSET.deleteCallback = this.deleteCallback
 
-    console.log(`oldSize=${oldSize} newSize=${newSize}`)
+    //console.log(`oldSize=${oldSize} newSize=${newSize}`)
 
 
     //console.log(this.toString(' ','std'))
@@ -282,7 +272,7 @@ class DLLmset{
               let nodeid = [result.user,result.count]
               //console.log('generating '+JSON.stringify(nodeid))
               var waiting = this.waitqueue[nodeid];
-              this.waitqueue[nodeid]=null;
+              delete this.waitqueue[nodeid]
               //console.log('waitqueue:\n'+JSON.stringify(this.waitqueue))
               if ((waiting !==undefined) && (waiting !== null)) {  // if something is waiting, add it to front of the opqueue
                   //console.log(`target ${result.user}:${result.count}/${result.elts.length} was found!`)
@@ -471,7 +461,7 @@ class DLLmset{
       //console.dir(c)
       if (n.elts.length != q){
         console.log(JSON.stringify([nodeid,q,c,n.elts.length]))
-        console.dir([n,this])
+        //console.dir([n,this])
         throw new Error("error in treeextend, not inserting at end of list")
       }
       n.elts = n.elts.concat(c)
@@ -1072,4 +1062,4 @@ window.EditOp = EditOp
 window.Element = Element
 window.Node = Node
 window.InsertionSet = InsertionSet
-window.debugging={}
+//window.debugging={}

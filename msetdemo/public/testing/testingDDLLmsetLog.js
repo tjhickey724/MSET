@@ -79,8 +79,9 @@ function runTimeTests(k0,numEdits0, numLists0,initSize0,burstSize0,shuffled){
   `<td>T*C</td>`+
   `<td>GC</td>`+
   `</tr>\n`
+  let j=1
+  for(let j0=1;j0<=k0;(j0++,j*=2)){
 
-  for(let j=1;j<=k0;j++){
     let numLists = (testVal=='numClients')?j*multiplier:numLists0
     let numEdits= ((testVal=='numEdits')?j*multiplier:numEdits0)/(2*numLists)
     let initSize = (testVal=='initialSize')?j*multiplier:initSize0
@@ -98,7 +99,7 @@ function runTimeTests(k0,numEdits0, numLists0,initSize0,burstSize0,shuffled){
     //throw new Error("checking lists[0] ops")
     console.log('finished running for j='+j)
     let treeHeight = lists[0].info.treeHeight
-    //let treeSize = lists[0].strings.toList('edit').length
+    let subnodes = lists[0].msetTree.strings.toList('edit').length
     //let revStringSize = lists[0].strings.toList('rev').length
     let treeSize = lists[0].size('edit')
     let revStringSize = lists[0].size('rev')
@@ -107,8 +108,8 @@ function runTimeTests(k0,numEdits0, numLists0,initSize0,burstSize0,shuffled){
     let totalTime = Math.round(1000*(b-a)) // in microseconds
     let numEditOps = numEdits*numLists*numLists*2
     let N = numEditOps/numLists
-    let timePerOp = Math.round(totalTime/numEditOps)
-    let treeSizePerOp = treeSize/numEditOps*numLists
+    let timePerOp = Math.round(100*totalTime/numEditOps)/100
+    let treeSizePerOp = treeSize/numEditOps*numLists/1000
     let L2 = (x) => (Math.log(x)/Math.log(2))
     let timePerOpOverLogN =
            (timePerOp/L2(N)) //(Math.log(N)/Math.log(2))
@@ -138,11 +139,14 @@ function runTimeTests(k0,numEdits0, numLists0,initSize0,burstSize0,shuffled){
         `<td>${treeHeight}</td>`+
         `<td>${Math.round(totalTime/numLists)/1000}</td>`+
         `<td>${Math.round(100*numNodes/N)/100}</td>`+
-        `<td>${timePerOp/1000}</td>`+
+        `<td>${timePerOp}</td>`+
         `<td>${Math.round(100*timePerOpOverLogN)/100}</td>`+
         `<td>${Math.round(1000/timePerOp)}</td>`+
         `<td>${Math.round((b-a))/1000}</td>`+
         `<td>${numGCs}</td>`+
+        `<td>${subnodes}</td>`+
+        `<td>${avlInfo.a}</td>`+
+        `<td>${avlInfo.i}</td>`+
        `</tr>`
 
     tableData += "\n"+data
