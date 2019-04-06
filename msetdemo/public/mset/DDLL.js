@@ -16,7 +16,7 @@ console.log("loading MSET")
 // It is also passed a callback function callback
 // When the io socket receives an 'init' message it calls
 //     callback('init')
-// It also passes the callback into DLLmset so that whenever a local insert is processed
+// It also passes the callback into DLLmset so that whenever a local (insert) is processed
 // DLLmset will call
 //     callback('insert',pos,elt,user,thisDDLL.msetId)
 // and when a local delete is processed it will call
@@ -67,6 +67,8 @@ class DDLL {
   }
 
   insert(pos,c){
+    console.log('in ddll.insert('+pos+','+c+')')
+    console.dir(this)
     return this.msetTree.insert(pos,c)
   }
 

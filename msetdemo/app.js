@@ -13,6 +13,7 @@ var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 var msetRouter = require('./routes/mset');
 var mset2Router = require('./routes/mset2');
+var collabedRouter = require('./routes/collabed');
 var testingRouter = require('./routes/testing');
 
 //var app = require('express')();
@@ -42,6 +43,7 @@ app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/mset', msetRouter);
 app.use('/mset2', mset2Router);
+app.use('/collabed', collabedRouter);
 app.use('/testing', testingRouter);
 
 // catch 404 and forward to error handler
@@ -66,7 +68,7 @@ module.exports = app;
 
 const io1 = io.of('/demo1')
 io1.on('connection', function(socket){
-  console.log('a user connected');
+  console.log('a user connected to /demo1');
   socket.on('operation',function(msg){
     console.log('operation: '+msg);
     console.dir(msg);
@@ -75,6 +77,7 @@ io1.on('connection', function(socket){
   socket.on('disconnect', function(){
     console.log('user disconnected');
   });
+	console.log('emitting msetId='+(msetId+1))
   socket.emit('msetId',msetId++);
 });
 

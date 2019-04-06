@@ -1,0 +1,12 @@
+extends layout
+
+block content
+
+  h1 Editor v0.1.2
+  hr
+  #keycatch
+    canvas#mset(tabindex="1",height="200",style="border:1px solid; font:32pt bold Courier")
+
+  script(src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.0/socket.io.js")
+  script(type="module",src="/collabed/fontmetrics.js")
+  script(type="module", src="/collabed/editor.js")
