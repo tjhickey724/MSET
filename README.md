@@ -22,8 +22,6 @@ npm start
 ```
 then open several browser windows (on one or more machines) to the page http://localhost:4000/mset2 and you can test the Collaborative Editor. 
 
-We have a new experimental Canvas-based editor using DDLL which you can access via http://HOSTSITE:4000/collabed  Visit this page with multiple browsers on localhost and you will be able to all edit a single document. We are working on expanding this to include the ability to create multiple editing sessiona and invite others to join in editing these documents. This is all on the collabed branch.
-
 # class CollabEd
 ### -- Colloboratively Editable Textareas with local editing and provably correct convergence
 This provides the client side code needed to collaboratively edit a textarea. It requires a simple server that will broadcast operations to all clients and which will assign a unique userid to each client who joins the editing session. 
