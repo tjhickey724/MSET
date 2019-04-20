@@ -1,3 +1,9 @@
+/*
+  start thie collabed editor with
+  % npm start
+  and access it on port 4000
+  localhost:4000
+*/
 import {DDLL} from '../mset/DDLL.js'
 /*
   I need to revise the redraw Canvas to use the FontMetrics
@@ -15,8 +21,8 @@ class DDLLstring{
 
   insertAtPos(char,pos){
     this.string = this.string.substring(0,pos)+char+this.string.substring(pos)
-    console.log(JSON.stringify(['local',this.string]))
-    console.log('this.ddll.insert('+char+','+pos+')')
+    //console.log(JSON.stringify(['local',this.string]))
+    //console.log('this.ddll.insert('+char+','+pos+')')
     this.ddll.insert(pos,char)
 
   }
@@ -25,22 +31,22 @@ class DDLLstring{
     let rc = this.getRowCol(pos)
 
     this.string = this.string.substring(0,pos)+char+this.string.substring(pos)
-    console.log(JSON.stringify(this.string))
+    //console.log(JSON.stringify(this.string))
 
     if (char=='\n'){
       this.textWin.splitRow(rc[0],rc[1],'remote')
     } else {
       this.textWin.insertChar(rc[0],rc[1],char,'remote')
     }
-    console.log(JSON.stringify(['remote',this.string]))
+    //console.log(JSON.stringify(['remote',this.string]))
   }
 
   deleteFromPos(pos){
-    console.log(JSON.stringify(["in deleteFromPos",pos]))
-    console.log(this.string.substring(0,pos))
-    console.log(this.string.substring(pos+1))
+    //console.log(JSON.stringify(["in deleteFromPos",pos]))
+    //console.log(this.string.substring(0,pos))
+    //console.log(this.string.substring(pos+1))
     this.string = this.string.substring(0,pos)+this.string.substring(pos+1)
-    console.log(JSON.stringify(['local',this.string]))
+    //console.log(JSON.stringify(['local',this.string]))
     this.ddll.delete(pos)
   }
 
@@ -48,21 +54,21 @@ class DDLLstring{
     const char=this.string[pos]
     let rc = this.getRowCol(pos)
 
-    console.log(JSON.stringify(["in deleteFromPos",pos]))
-    console.log(this.string.substring(0,pos))
-    console.log(this.string.substring(pos+1))
+    //console.log(JSON.stringify(["in deleteFromPos",pos]))
+    //console.log(this.string.substring(0,pos))
+    //console.log(this.string.substring(pos+1))
     this.string = this.string.substring(0,pos)+this.string.substring(pos+1)
-    console.log(JSON.stringify(this.string))
-    console.log(rc)
+    //console.log(JSON.stringify(this.string))
+    //console.log(rc)
 
     if (char=='\n'){
-      console.dir(['joinWithNextLine',rc[0]])
+      //console.dir(['joinWithNextLine',rc[0]])
       this.textWin.joinWithNextLine(rc[0],'remote')
     }else {
-      console.dir(['removePrevChar',rc[0],rc[1]+1])
+      //console.dir(['removePrevChar',rc[0],rc[1]+1])
       this.textWin.removePrevChar(rc[0],rc[1]+1,'remote')
     }
-    console.log(JSON.stringify(['remote',this.string]))
+    //console.log(JSON.stringify(['remote',this.string]))
   }
 
   getString(){
@@ -89,7 +95,7 @@ class DDLLstring{
 
 function editorCallbacks(ddllString,textWin){
   return (op,pos,elt,user,me) => {
-  console.log('editorCallbacks:'+JSON.stringify([op,pos,elt,user,me]))
+  //console.log('editorCallbacks:'+JSON.stringify([op,pos,elt,user,me]))
   switch(op){
     case "init": /* maybe block input on the canvas?? */  break;
     case "insert":
@@ -118,8 +124,12 @@ class TextWindow{
   constructor(ddll){
     this.string = new DDLLstring(this)
     this.text = [""]
-    this.windowOffset = 0  // the position of 1st visible character in the windowOffset
-    this.lastWindowOffset = 0
+
+    // we keep track of the char offsets
+    // that describe the visible text
+    this.firstCharOffset = 0  // position of 1st visible character
+    this.lastCharOffset = 0 // position of the last visible character
+
     this.cursor = [0,0]
     this.rowOffset=0
     this.colOffset=0
@@ -149,7 +159,15 @@ class TextWindow{
   }
 
   setRowOffset(row){
-    this.rowOffset = row
+    // we need to update the firstCharOffset and lastCharOffset
+    // for the visible window ...
+
+    // but we don't allow setting the row to a negative
+    // or after the end of the text...
+    let lastRow = this.getRowTotal()-1
+    this.rowOffset = Math.max(0,Math.min(row,lastRow))
+
+    this.updateCharOffsetAfterMove(row)
   }
 
   getColOffset(){
@@ -188,6 +206,100 @@ class TextWindow{
     this.cursor[1]= col
   }
 
+  setFirstCharOffset(a){
+    this.firstCharOffset = a
+    //console.log('firstCharOffset = '+a)
+  }
+
+  setLastCharOffset(a){
+    this.lastCharOffset = a
+    //console.log('lastCharOffset = '+a)
+  }
+
+  updateFirstCharOffset(delta){
+    this.setFirstCharOffset(this.firstCharOffset+delta)
+  }
+
+  updateLastCharOffset(delta){
+    this.setLastCharOffset(this.lastCharOffset+delta)
+  }
+
+  updateCharOffset(row,delta){
+    //console.dir(['updateCharOffset',row,delta,this])
+    // update the charOffset of the visible window
+    // when the length of the specified row has changed by delta
+    if (row<this.getRowOffset()){
+      this.updateFirstCharOffset(delta)
+    } else if (row <= this.getRowOffset()+this.getNumRows()){
+      this.updateLastCharOffset(delta)
+    }
+  }
+
+  getRowTotal(){
+    return this.text.length
+  }
+
+  updateCharOffsetCR(row,delta){
+    //console.dir(['updateCharOffsetCR',row,delta,this])
+    // update the charOffset of the visible window
+    // when the specified row has been changed by
+    // adding a CR in the row (delta=1)
+    // or removing the CR at the end of the row (delta=-1)
+    let rowOffset = this.getRowOffset()
+    let numRows = this.getNumRows()
+
+    if (delta>0) { // inserting a CR on specified row
+      if (row<rowOffset){
+        this.updateFirstCharOffset(delta)
+      } else {
+        let lastRow = rowOffset+numRows-1;
+        let lastRealRow = this.getRowTotal()-1
+        //console.log(JSON.stringify([row,delta,lastRow,rowOffset,numRows,lastRealRow,this.getRowTotal()]))
+        if (lastRow > lastRealRow){
+          //console.log(JSON.stringify(['a',lastRow,lastRealRow]))
+          // true when the end of the file is in the buffer
+          this.updateLastCharOffset(1) // add a CR
+        } else if (row < lastRow){
+          let lastLine = this.getLine(lastRow)
+          //console.log(JSON.stringify(['b',row,lastRow,lastLine,-lastLine.length]))
+          this.updateLastCharOffset(-lastLine.length)
+        }
+      }
+    } else { // removing CR at end of the specified row
+
+      if (row<rowOffset-1){
+        this.updateFirstCharOffset(-1)
+      } else if (row == rowOffset-1){
+        // joining first row with previous unseen row
+        let prevLine = this.getLine(rowOffset-1)
+        this.updateFirstCharOffset(-prevLine.length-1)
+      } else if (row <= rowOffset+numRows){
+        // adding a new line to end of visible range
+        let firstHiddenRow = rowOffset+numRows+1
+        if (firstHiddenRow > this.getRowTotal()){
+          this.updateLastCharOffset(-1)
+        } else {
+          let nextLine = this.getLine(rowOffset+numRows+1)
+          this.updateLastCharOffset(nextLine.length-1)
+        }
+      }
+    }
+  }
+
+  updateCharOffsetAfterMove(row) {
+    //console.dir(['updateCharOffsetAfterMove',row,this])
+    let rowOffset = this.getRowOffset()
+    let numRows = this.getNumRows()
+    if (row < rowOffset) {
+      let a = this.getCharPos(row,0)
+      let b = this.getCharPos(row+numRows+1,0)
+      this.setFirstCharOffset(a)
+      this.setLastCharOffset(b)
+    }
+  }
+
+
+
   insertChar(row,col,key,remote){ // for a non CR key
     const charPos = this.getCharPos(row,col)
     const line = this.getLine(row)
@@ -195,16 +307,20 @@ class TextWindow{
     const rest = line.substring(col)
     const newline = first+key+rest
     this.text[row]=newline
+
     if (!remote){
       this.string.insertAtPos(key,charPos)
     } else {
       this.updateCursor('insertChar',row,col)
     }
+
+    this.updateCharOffset(row,1)
+
   }
 
   splitRow(row,pos,remote){ // insert CR
     const charPos = this.getCharPos(row,pos)
-    const line = this.text[row]
+    const line = this.getLine(row)
     this.text.splice(row,1,
       line.substring(0,pos),line.substring(pos))
     if (!remote){
@@ -212,6 +328,7 @@ class TextWindow{
     } else {
       this.updateCursor('splitRow',row,pos)
     }
+    this.updateCharOffsetCR(row,1)
   }
 
   removePrevChar(row,col,remote){ // for a non CR key
@@ -224,6 +341,7 @@ class TextWindow{
     } else {
       this.updateCursor('removePrevChar',row,col)
     }
+    this.updateCharOffset(row,-1)
   }
 
   joinWithNextLine(row,remote){ // remove CR
@@ -235,6 +353,7 @@ class TextWindow{
     } else {
       this.updateCursor('joinWithNextLine',row)
     }
+    this.updateCharOffsetCR(row,-1)
 
   }
 
@@ -293,7 +412,9 @@ class TextWindow{
   }
 
   getLine(row){
-    return this.text[row]
+    if (row >=0 && row < this.text.length)
+      return this.text[row]
+    else return ""
   }
 
   getCurrentLine() {
