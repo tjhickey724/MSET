@@ -3,6 +3,11 @@ export {DDLL,Network}
 
 
 console.log("loading MSET")
+// TODO
+// remove the references to DOM elements (e.g. document.getElementById...)
+//
+//
+//
 // this creates an io socket on a namespace
 // and creates a new DLLmset object when it gets an 'init' message on the socket
 // The server sends an 'init' message to every new connection, followed by a
@@ -557,6 +562,16 @@ class Network{
   processAllRemoteOps(){
 
     if (this.allowIncoming){
+      let z = this.incomingQueue.shift() // take off front of queue
+      this.processOneRemoteOp(z)
+    }
+    setTimeout(this.processAllRemoteOps,0) // push onto event queue
+  }
+
+/*
+  processAllRemoteOpsOLD(){
+
+    if (this.allowIncoming){
       for(let i=0;i<this.incomingQueue.length;i++){
 
         this.processOneRemoteOp(this.incomingQueue[i])
@@ -567,6 +582,7 @@ class Network{
           JSON.stringify(this.incomingQueue)
     }
   }
+  */
 
   processOneRemoteOp(msg){
 
