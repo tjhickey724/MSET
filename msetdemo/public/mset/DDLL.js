@@ -568,8 +568,9 @@ class Network{
     setTimeout(this.processAllRemoteOps,0) // push onto event queue
   }
 
+
 /*
-  processAllRemoteOpsOLD(){
+  processAllRemoteOps(){
 
     if (this.allowIncoming){
       for(let i=0;i<this.incomingQueue.length;i++){
@@ -582,7 +583,7 @@ class Network{
           JSON.stringify(this.incomingQueue)
     }
   }
-  */
+*/
 
   processOneRemoteOp(msg){
 

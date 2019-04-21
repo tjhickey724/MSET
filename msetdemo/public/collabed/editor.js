@@ -346,12 +346,13 @@ class TextWindow{
 
   joinWithNextLine(row,remote){ // remove CR
     const charPos = this.getCharPos(row+1,0)-1
+    const rowLength = this.text[row].length
     this.text.splice(row,2,
       this.text[row]+ this.text[row+1])
     if (!remote){
       this.string.deleteFromPos(charPos)
     } else {
-      this.updateCursor('joinWithNextLine',row)
+      this.updateCursor('joinWithNextLine',row,rowLength)
     }
     this.updateCharOffsetCR(row,-1)
 
@@ -377,6 +378,11 @@ class TextWindow{
             if (row<this.rowOffset){
               this.rowOffset++;
             }
+          } else if (row==curRow){
+            if (col<=curCol){
+              this.cursor[0]++;
+              this.cursor[1] -= col
+            }
           }
           break;
       case "removePrevChar":
@@ -388,11 +394,14 @@ class TextWindow{
           }
           break;
       case "joinWithNextLine":
-          if (row <curRow){
+          if (row <curRow-1){
             this.cursor[0]--
             if (row<this.rowOffset){
               this.rowOffset--
             }
+          } else if (row== curRow-1){
+            this.cursor[0]--
+            this.cursor[1]+= col
           }
           break;
         }
