@@ -133,25 +133,25 @@ class TextWindow{
     this.cursor = [0,0]
     this.rowOffset=0
     this.colOffset=0
-    this.rows = 10
-    this.cols = 80
+    this.visRows = 10
+    this.visCols = 80
   }
 
-  setRowsCols(rows,cols){
-    this.rows = rows
-    this.cols = cols
+  setVisRowsCols(visRows,visCols){
+    this.visRows = visRows
+    this.visCols = visCols
   }
 
   getString(){
     return this.string
   }
 
-  getNumRows(){
-    return this.rows
+  getNumVisRows(){
+    return this.visRows
   }
 
-  getNumCols(){
-    return this.cols
+  getNumVisCols(){
+    return this.visCols
   }
 
   getRowOffset(){
@@ -230,7 +230,7 @@ class TextWindow{
     // when the length of the specified row has changed by delta
     if (row<this.getRowOffset()){
       this.updateFirstCharOffset(delta)
-    } else if (row <= this.getRowOffset()+this.getNumRows()){
+    } else if (row <= this.getRowOffset()+this.getNumVisRows()){
       this.updateLastCharOffset(delta)
     }
   }
@@ -246,15 +246,15 @@ class TextWindow{
     // adding a CR in the row (delta=1)
     // or removing the CR at the end of the row (delta=-1)
     let rowOffset = this.getRowOffset()
-    let numRows = this.getNumRows()
+    let numVisRows = this.getNumVisRows()
 
     if (delta>0) { // inserting a CR on specified row
       if (row<rowOffset){
         this.updateFirstCharOffset(delta)
       } else {
-        let lastRow = rowOffset+numRows-1;
+        let lastRow = rowOffset+numVisRows-1;
         let lastRealRow = this.getRowTotal()-1
-        //console.log(JSON.stringify([row,delta,lastRow,rowOffset,numRows,lastRealRow,this.getRowTotal()]))
+        //console.log(JSON.stringify([row,delta,lastRow,rowOffset,numvisRows,lastRealRow,this.getRowTotal()]))
         if (lastRow > lastRealRow){
           //console.log(JSON.stringify(['a',lastRow,lastRealRow]))
           // true when the end of the file is in the buffer
@@ -273,13 +273,13 @@ class TextWindow{
         // joining first row with previous unseen row
         let prevLine = this.getLine(rowOffset-1)
         this.updateFirstCharOffset(-prevLine.length-1)
-      } else if (row <= rowOffset+numRows){
+      } else if (row <= rowOffset+numVisRows){
         // adding a new line to end of visible range
-        let firstHiddenRow = rowOffset+numRows+1
+        let firstHiddenRow = rowOffset+numVisRows+1
         if (firstHiddenRow > this.getRowTotal()){
           this.updateLastCharOffset(-1)
         } else {
-          let nextLine = this.getLine(rowOffset+numRows+1)
+          let nextLine = this.getLine(rowOffset+numVisRows+1)
           this.updateLastCharOffset(nextLine.length-1)
         }
       }
@@ -289,10 +289,10 @@ class TextWindow{
   updateCharOffsetAfterMove(row) {
     //console.dir(['updateCharOffsetAfterMove',row,this])
     let rowOffset = this.getRowOffset()
-    let numRows = this.getNumRows()
+    let numVisRows = this.getNumVisRows()
     if (row < rowOffset) {
       let a = this.getCharPos(row,0)
-      let b = this.getCharPos(row+numRows+1,0)
+      let b = this.getCharPos(row+numVisRows+1,0)
       this.setFirstCharOffset(a)
       this.setLastCharOffset(b)
     }
@@ -468,17 +468,17 @@ class CanvasEditor{
 
     this.msetCanvas.width = window.innerWidth*0.9;
     this.msetCanvas.height = window.innerHeight*0.9;
-    let numRows = Math.floor(this.msetCanvas.height/this.lineHeight);
-    let numCols = Math.floor(this.msetCanvas.width/(this.charWidth))
+    let numVisRows = Math.floor(this.msetCanvas.height/this.lineHeight);
+    let numVisCols = Math.floor(this.msetCanvas.width/(this.charWidth))
 
-    this.state.setRowsCols(numRows,numCols);
+    this.state.setVisRowsCols(numVisRows,numVisCols);
 
     // this.state =
     //    {text:[""],
     //     cursor:[0,0],
     //     rowOffset:0,
     //     colOffset:0,
-    //     rows:numRows,cols:numCols}
+    //     VisRows:numVisRows,visCols:numVisCols}
 
     let theState = this.state
 
@@ -524,14 +524,14 @@ class CanvasEditor{
       this.lineSep = Math.round(this.fontSize.height*0.5) // additional distance between lines ...
       this.lineHeight = this.fontSize.height+this.lineSep //
       this.lineDescent = this.fontSize.descent
-      let numRows = Math.floor(this.msetCanvas.height/this.lineHeight);
-      let numCols = Math.floor(this.msetCanvas.width/(this.charWidth))
+      let numVisRows = Math.floor(this.msetCanvas.height/this.lineHeight);
+      let numVisCols = Math.floor(this.msetCanvas.width/(this.charWidth))
 
-      // this.state.cols = numCols
-      // this.state.rows = numRows
+      // this.state.visCols = numVisCols
+      // this.state.VisRows = numVisRows
       //let state = this.state
     //  console.dir(state)
-      this.state.setRowsCols(numRows,numCols)
+      this.state.setVisRowsCols(numVisRows,numVisCols)
 
       return this.ctx.measureText(this.letters);
   }
@@ -676,28 +676,28 @@ class CanvasEditor{
       if ((theState.getCurrentRow()<theState.getRowOffset())  ) {
         theState.setRowOffset(Math.max(0,theState.getCurrentRow()-5))
       } else if (theState.getCurrentRow() >=
-                   theState.getRowOffset()+theState.getNumRows()){
+                   theState.getRowOffset()+theState.getNumVisRows()){
         theState.setRowOffset(theState.getRowOffset()+5)
       }
 
       let col = theState.getCurrentCol()
       let colOffset = theState.getColOffset()
-      let numCols = theState.getNumCols()
+      let numVisCols = theState.getNumVisCols()
       if ((col<colOffset)  ) {
         theState.setColOffset(Math.max(0,col-5))
-      } else if (col>= colOffset+numCols){
-        theState.setColOffset(Math.max(0,colOffset + numCols-5));
+      } else if (col>= colOffset+numVisCols){
+        theState.setColOffset(Math.max(0,colOffset + numVisCols-5));
       }
       colOffset = theState.getColOffset()
 
       let rowOffset = theState.getRowOffset()
-      let numRows = theState.getNumRows()
-      let rowEnd = Math.min(theState.getLastRow(),numRows+rowOffset)
-      numCols = theState.getNumCols()
+      let numVisRows = theState.getNumVisRows()
+      let rowEnd = Math.min(theState.getLastRow(),numVisRows+rowOffset)
+      numVisCols = theState.getNumVisCols()
 
 
       for(let i=rowOffset; i<= rowEnd ; i++){
-        const line =theState.getLine(i).substring(colOffset,colOffset+numCols+5)
+        const line =theState.getLine(i).substring(colOffset,colOffset+numVisCols+5)
         const text = ctx.measureText(line)
         const start = 0
         const baseline = (1+i-rowOffset)*this.lineHeight+this.lineDescent
