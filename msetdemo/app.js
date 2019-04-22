@@ -14,6 +14,7 @@ var usersRouter = require('./routes/users');
 var msetRouter = require('./routes/mset');
 var mset2Router = require('./routes/mset2');
 var collabedRouter = require('./routes/collabed');
+var collabedWrappingRouter = require('./routes/collabed_wrapping');
 var testingRouter = require('./routes/testing');
 
 //var app = require('express')();
@@ -44,6 +45,7 @@ app.use('/users', usersRouter);
 app.use('/mset', msetRouter);
 app.use('/mset2', mset2Router);
 app.use('/collabed', collabedRouter);
+app.use('/collabed_wrapping', collabedWrappingRouter);
 app.use('/testing', testingRouter);
 
 // catch 404 and forward to error handler
