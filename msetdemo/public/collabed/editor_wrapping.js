@@ -3,6 +3,17 @@
   % npm start
   and access it on port 4000
   localhost:4000
+
+  6/15/2019
+  I'm starting with a version in which the users can type at the end
+  of the edit but can't backspace or use the mouse.
+
+  5/29/2019
+  I've removed the code to handle anything except character key presses.
+  My plan is to implement a minimal version which only keeps track of the
+  firstCharOffset, currCharOffset, visRows, visCols, mousePos and uses these 4 values
+  to redraw the screen and update the state after every keypress/mouseclick.
+
 */
 import {DDLL} from '../mset/DDLL.js'
 /*
@@ -10,9 +21,17 @@ import {DDLL} from '../mset/DDLL.js'
   and draw all of the lines. This should be pretty easy to do!
 */
 console.log("In editor.js!!!!!")
-let Zthis='zzz'
+let Zthis='zzz' // I could use the bind method to avoid this approach ...
 
 class DDLLstring{
+  /* This class implements the internal representation of the collaboratively
+   * edited string. Currently we have two representations
+   * this.ddll  which is our true, efficient rep
+   * this.string which is a debugging rep, that will be eliminated
+   *
+   * Remote Operations result in operations on the textWin
+   *  which is of type CanvasEditorWrapping
+   */
   constructor(textWin){
     this.string = ""
     this.ddll = new DDLL([],editorCallbacks(this,textWin),io('/demo2'), 'doc0')
@@ -20,19 +39,28 @@ class DDLLstring{
   }
 
   insertAtPos(char,pos){
+    // this.string is a local representation which we
+    // are keeping only for debugging while we develop
+    // it will be removed in the final version
     this.string = this.string.substring(0,pos)+char+this.string.substring(pos)
     //console.log(JSON.stringify(['local',this.string]))
     //console.log('this.ddll.insert('+char+','+pos+')')
+
+    // here we are applying the operation on our local ddll representation
     this.ddll.insert(pos,char)
 
   }
 
   insertAtPosRemote(char,pos){
-    let rc = this.getRowCol(pos)
 
+    // this is our temporary debugging representation of the
+    // local string
     this.string = this.string.substring(0,pos)+char+this.string.substring(pos)
     //console.log(JSON.stringify(this.string))
 
+    // here is where we update the local view
+    // this will change in the wrapped-text version
+    let rc = this.getRowCol(pos)
     if (char=='\n'){
       this.textWin.splitRow(rc[0],rc[1],'remote')
     } else {
@@ -51,8 +79,7 @@ class DDLLstring{
   }
 
   deleteFromPosRemote(pos){
-    const char=this.string[pos]
-    let rc = this.getRowCol(pos)
+
 
     //console.log(JSON.stringify(["in deleteFromPos",pos]))
     //console.log(this.string.substring(0,pos))
@@ -61,6 +88,10 @@ class DDLLstring{
     //console.log(JSON.stringify(this.string))
     //console.log(rc)
 
+    // here we apply the remote operation locally
+    // but this will change in our wrapped-text version
+    const char=this.string[pos]
+    let rc = this.getRowCol(pos)
     if (char=='\n'){
       //console.dir(['joinWithNextLine',rc[0]])
       this.textWin.joinWithNextLine(rc[0],'remote')
@@ -72,10 +103,13 @@ class DDLLstring{
   }
 
   getString(){
+    // this is for debugging only ....
+    // this should be updated to get the string from the DDLL object
     return this.string
   }
 
   getRowCol(pos){
+    // this will not be needed in our wrapped-text version
     let row=0;
     let col=0;
     let p = 0;
@@ -92,7 +126,11 @@ class DDLLstring{
   }
 }
 
-
+/*
+* This is called by the DDLL editor when ever an edit operation is processed
+* Remote edits received from other users are converted into the XRemote ops
+* Local edits are ignored as they have already been processed.
+*/
 function editorCallbacks(ddllString,textWin){
   return (op,pos,elt,user,me) => {
   //console.log('editorCallbacks:'+JSON.stringify([op,pos,elt,user,me]))
@@ -115,15 +153,66 @@ function editorCallbacks(ddllString,textWin){
  }
 }
 
+class TextWindowWrappingNEW{
 
-class TextWindow{
+    constructor(){
+      this.string = new DDLLstring(this)
+      this.visRowData=[{offset:0,eol:true}]
+      this.visCharOffset=0
+      this.visCursorPos={offset:0,row:0,col:0}
+      this.visRows = 10
+      this.visCols = 80
+    }
+
+
+    setVisRowsCols(visRows,visCols){
+      this.visRows = visRows
+      this.visCols = visCols
+    }
+
+
+    getDDLLString(){
+      // this returns DDLLstring object
+      return this.string
+    }
+
+    getNumVisRows(){
+      return this.visRows
+    }
+
+    getNumVisCols(){
+      return this.visCols
+    }
+
+
+}
+
+class TextWindowWrapping{
   /**
-    This class will represent a text object and a window onto that text object
+    This class will represent a text object and a window onto that text object.
+    The model will be with text wrapped from one line to the next if it is too long.
+    We'll add some graphical objects at the start and end to indicate line wrapping...
+    but not at first...
+
+    We will keep track of the rowoffset and coloffset as it is useful for the user.
+    The only really important value is the firstCharOffset as we can redraw the window
+    using only that ...
+    I will also create a this.visText field to represent the visible rows of text
+    and this will be used to redraw the screen. We will also update it when local or
+    remote operations are performed. Likewise, the this.visCursor will represent the cursor
+    position relative to the window.
   **/
 
-  constructor(ddll){
+  constructor(){
     this.string = new DDLLstring(this)
+    this.visRowData=[{offset:0,eol:true}]
+    this.visCharOffset=0
+    this.visCursorPos={offset:0,row:0,col:0}
+    this.visRows = 10
+    this.visCols = 80
+
     this.text = [""]
+    this.visText = [""]
 
     // we keep track of the char offsets
     // that describe the visible text
@@ -131,10 +220,10 @@ class TextWindow{
     this.lastCharOffset = 0 // position of the last visible character
 
     this.cursor = [0,0]
+    this.visCursor = [0,0]
     this.rowOffset=0
     this.colOffset=0
-    this.visRows = 10
-    this.visCols = 80
+
   }
 
   setVisRowsCols(visRows,visCols){
@@ -142,7 +231,9 @@ class TextWindow{
     this.visCols = visCols
   }
 
-  getString(){
+
+  getDDLLString(){
+    // this returns DDLLstring object
     return this.string
   }
 
@@ -154,10 +245,12 @@ class TextWindow{
     return this.visCols
   }
 
+  // deprecated
   getRowOffset(){
     return this.rowOffset
   }
 
+  // deprecated
   setRowOffset(row){
     // we need to update the firstCharOffset and lastCharOffset
     // for the visible window ...
@@ -170,60 +263,74 @@ class TextWindow{
     this.updateCharOffsetAfterMove(row)
   }
 
+  // deprecated
   getColOffset(){
     return this.colOffset
   }
 
+  // deprecated
   setColOffset(col){
     this.colOffset = col
   }
 
+  // deprecated
   getLastRow(){
     return this.text.length-1
   }
 
+  // deprecated
   getRowLength(row){
     return this.text[row].length
   }
 
+  // deprecated
   setCursor(row,col){
     this.cursor = [row,col]
   }
 
+  // deprecated
   getCurrentRow(){
     return this.cursor[0]
   }
 
+  // deprecated
   setCurrentRow(row){
     this.cursor[0] = row
   }
 
+  // deprecated
   getCurrentCol(){
     return this.cursor[1]
   }
 
+  // deprecated
   setCurrentCol(col){
     this.cursor[1]= col
   }
 
+  // deprecated
   setFirstCharOffset(a){
     this.firstCharOffset = a
     //console.log('firstCharOffset = '+a)
   }
 
+  // deprecated
   setLastCharOffset(a){
     this.lastCharOffset = a
     //console.log('lastCharOffset = '+a)
   }
 
+  // deprecated
   updateFirstCharOffset(delta){
     this.setFirstCharOffset(this.firstCharOffset+delta)
   }
 
+  // deprecated
   updateLastCharOffset(delta){
     this.setLastCharOffset(this.lastCharOffset+delta)
   }
 
+  // deprecated
   updateCharOffset(row,delta){
     //console.dir(['updateCharOffset',row,delta,this])
     // update the charOffset of the visible window
@@ -235,10 +342,12 @@ class TextWindow{
     }
   }
 
+  // deprecated
   getRowTotal(){
     return this.text.length
   }
 
+  // deprecated
   updateCharOffsetCR(row,delta){
     //console.dir(['updateCharOffsetCR',row,delta,this])
     // update the charOffset of the visible window
@@ -286,6 +395,7 @@ class TextWindow{
     }
   }
 
+  // deprecated
   updateCharOffsetAfterMove(row) {
     //console.dir(['updateCharOffsetAfterMove',row,this])
     let rowOffset = this.getRowOffset()
@@ -300,6 +410,7 @@ class TextWindow{
 
 
 
+  // deprecated
   insertChar(row,col,key,remote){ // for a non CR key
     const charPos = this.getCharPos(row,col)
     const line = this.getLine(row)
@@ -318,6 +429,7 @@ class TextWindow{
 
   }
 
+  // deprecated
   splitRow(row,pos,remote){ // insert CR
     const charPos = this.getCharPos(row,pos)
     const line = this.getLine(row)
@@ -331,6 +443,7 @@ class TextWindow{
     this.updateCharOffsetCR(row,1)
   }
 
+  // deprecated
   removePrevChar(row,col,remote){ // for a non CR key
     const charPos = this.getCharPos(row,col)
     const line = this.text[row]
@@ -344,6 +457,7 @@ class TextWindow{
     this.updateCharOffset(row,-1)
   }
 
+  // deprecated
   joinWithNextLine(row,remote){ // remove CR
     const charPos = this.getCharPos(row+1,0)-1
     const rowLength = this.text[row].length
@@ -358,6 +472,7 @@ class TextWindow{
 
   }
 
+  // deprecated
   updateCursor(op,row,col){
     let curRow = this.cursor[0]
     let curCol = this.cursor[1]
@@ -410,6 +525,7 @@ class TextWindow{
 
 
 
+  // deprecated
   getCharPos(row,col){
     let sum=0
 
@@ -420,16 +536,19 @@ class TextWindow{
     return sum
   }
 
+  // deprecated
   getLine(row){
     if (row >=0 && row < this.text.length)
       return this.text[row]
     else return ""
   }
 
+  // deprecated
   getCurrentLine() {
     return this.text[this.cursor[0]]
   }
 
+  // deprecated
   getCurrentLineLength(){
     return this.text[this.cursor[0]].length
   }
@@ -492,6 +611,7 @@ class CanvasEditorWrapping{
             });
 
     // here is how we can get the position of the mouseclick
+    /*
     this.msetCanvas.addEventListener('mousedown', function(event){
         let row = Math.floor(event.offsetY/msetCE.lineHeight)+
                             msetCE.state.getRowOffset()
@@ -502,6 +622,7 @@ class CanvasEditorWrapping{
         msetCE.state.setCursor(row,col)
         msetCE.redrawmsetCanvas()
     });
+    */
 
     // When the window is resized it changes the size of the canvas to fit the window
     window.addEventListener('resize', function(event){
@@ -556,7 +677,7 @@ class CanvasEditorWrapping{
         // process ^F ^B ^N ^P to move cursor ...
         // ^A beginning of line ^E end of line
         // ^D delete next character
-      } else if (key=='ArrowLeft'){
+      } /** else if (key=='ArrowLeft'){
         let ccol = state.getCurrentCol()
         if (ccol>0){
           const lineLen = state.getCurrentLineLength() //state.text[state.cursor[0]].length
@@ -612,14 +733,13 @@ class CanvasEditorWrapping{
         this.removePrevChar()
         // remove the character at the current position!!!
         return
-      } else if (key=='Enter'){
+      } **/ else if (key=='Enter'){
         this.insertCRLF()
         return
       } else if (this.allLetters.indexOf(key)<0) {
         return
       } else {
-
-      this.insertKey(key)
+        this.insertKey(key)
       }
     }
 
@@ -661,6 +781,19 @@ class CanvasEditorWrapping{
 
     //=============
 
+    /*
+    this should look at the firstCharOffset, the numRows and numCols fields,
+    and use them to draw the lines on the screen...
+    */
+
+    redrawmsetCanvas2(){
+      this.getFontSize()
+      this.clearmsetCanvas()
+      let theState = this.state
+      const ctx = this.msetCanvas.getContext('2d')
+      ctx.fillStyle='black'
+
+    }
 
     redrawmsetCanvas(){
       this.getFontSize()
@@ -674,6 +807,11 @@ class CanvasEditorWrapping{
       //context.strokeRect(0, 0, window.innerWidth, window.innerHeight);
       //===============
       ctx.fillStyle='black'
+      console.log('firstCharOffset='+theState.firstCharOffset)
+      console.log('visRows = '+theState.visRows)
+      console.log('visCol = '+theState.visCols)
+      console.log('\n*******************\n')
+
 
       if ((theState.getCurrentRow()<theState.getRowOffset())  ) {
         theState.setRowOffset(Math.max(0,theState.getCurrentRow()-5))
@@ -736,7 +874,7 @@ class CanvasEditorWrapping{
 
 }
 
-const tw = new TextWindow("dummy DDLL")
-const st = tw.getString();
+const tw = new TextWindowWrapping()
+//const st = tw.getString();
 const ed1 = new CanvasEditorWrapping(mset,tw)
 tw.canvasEditor=ed1
