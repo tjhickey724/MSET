@@ -4,7 +4,13 @@
   and access it on port 4000
   localhost:4000
 
-  6/15/2019
+  6/15/2019 5pm
+  I've modified the code so that one user can type a single
+  line with no backspace or newlines and it wraps the text
+  and puts a red line at the far right for wrapped lines.
+  
+
+  6/15/2019 noon
   I'm starting with a version in which the users can type at the end
   of the edit but can't backspace or use the mouse.
 
@@ -38,6 +44,31 @@ class DDLLstring{
     this.textWin = textWin
   }
 
+  getChars(rowCharOffset,visCols){
+    // get the next row starting at rowCharOffset
+    // and ending with a end-of-line or visCols characters
+    // This needs to return both the string of characters
+    // and a boolean indicating if the line is longer that visCols characters
+    console.log("in getChars "+rowCharOffset+" "+visCols)
+    let nextNewline = this.string.indexOf('\n',rowCharOffset)
+    let longLine=false
+    if (nextNewline == -1) {
+      nextNewline = this.string.length - rowCharOffset
+    } else {
+      nextNewline = nextNewline-rowCharOffset
+    }
+
+
+    let lineLength = Math.min(nextNewline,visCols)
+
+    console.log('nextNewline='+nextNewline)
+    console.log('lineLength = '+lineLength)
+    console.log('this.string= "'+this.string+'"')
+    const result= this.string.substring(rowCharOffset,lineLength+rowCharOffset)
+    console.log("==>"+ result)
+    return {chars:result, eol:nextNewline<=visCols}
+  }
+
   insertAtPos(char,pos){
     // this.string is a local representation which we
     // are keeping only for debugging while we develop
@@ -60,6 +91,8 @@ class DDLLstring{
 
     // here is where we update the local view
     // this will change in the wrapped-text version
+
+
     let rc = this.getRowCol(pos)
     if (char=='\n'){
       this.textWin.splitRow(rc[0],rc[1],'remote')
@@ -184,6 +217,16 @@ class TextWindowWrappingNEW{
       return this.visCols
     }
 
+    getRowChars(rowCharOffset){
+      // get the next row starting at rowCharOffset
+      // and ending with a end-of-line or visCols characters
+      //console.log("in getRowChars: "+rowCharOffset)
+      return this.string.getChars(rowCharOffset,this.visCols)
+
+    }
+
+
+
 
 }
 
@@ -207,6 +250,7 @@ class TextWindowWrapping{
     this.string = new DDLLstring(this)
     this.visRowData=[{offset:0,eol:true}]
     this.visCharOffset=0
+    this.numVisChars=0
     this.visCursorPos={offset:0,row:0,col:0}
     this.visRows = 10
     this.visCols = 80
@@ -244,6 +288,46 @@ class TextWindowWrapping{
   getNumVisCols(){
     return this.visCols
   }
+
+
+  getRowChars(rowCharOffset){
+    // get the next row starting at rowCharOffset
+    // and ending with a end-of-line or visCols characters
+    console.log("in getRowChars: "+rowCharOffset+ ' vc:'+this.visCols)
+    console.log(this.string.string)
+    const result = this.string.getChars(rowCharOffset,this.visCols)
+    console.log('chars => ')
+    console.dir(result)
+    return result
+  }
+
+  insertAtPosRemote(char,charOffset){
+    // all we need to do here is to adjust
+    // adjust the values of
+    // this.visCharOffset,
+    // this.visCursor.offset, and
+    // this.numVisChars
+    // and this.visRowData
+
+    if (charOffset <= this.visCursor.offset){
+      this.visCursor.offset++
+    }
+    if (charOffset<this.visCharOffset){
+      this.visCharOffset++
+    } else if (charOffset <this.visCharOffset+this.numVisChars){
+      this.numVisChars ++;
+      updateVisRowData(charOffset)
+    }
+  }
+
+  updateVisRowData(charOffset){
+    // visRowData has an element {offset:K, eol:B}
+    // which gives the offset of the character at the
+    // beginning of the line, and a boolean value B
+    // indicating whether the line ends in a CRLF or not
+    // but we can do this when we draw the screen ...
+  }
+
 
   // deprecated
   getRowOffset(){
@@ -563,7 +647,7 @@ class CanvasEditorWrapping{
 
   constructor(mset,textWindow){
     this.msetCanvas = mset
-    this.state = textWindow
+    this.textWindow = textWindow
 
     this.fontColor = "black"
     this.fonttype = "32pt Courier"
@@ -581,7 +665,7 @@ class CanvasEditorWrapping{
     this.lineDescent = 2
 
 
-    let msetCE = this
+    let msetCE = this    // I can git rid of this using "bind"
 
     this.fontSize = this.getFontSize()
 
@@ -592,7 +676,7 @@ class CanvasEditorWrapping{
     let numVisRows = Math.floor(this.msetCanvas.height/this.lineHeight);
     let numVisCols = Math.floor(this.msetCanvas.width/(this.charWidth))
 
-    this.state.setVisRowsCols(numVisRows,numVisCols);
+    this.textWindow.setVisRowsCols(numVisRows,numVisCols);
 
     // this.state =
     //    {text:[""],
@@ -601,11 +685,14 @@ class CanvasEditorWrapping{
     //     colOffset:0,
     //     VisRows:numVisRows,visCols:numVisCols}
 
-    let theState = this.state
+    let theState = this.state  // again, use "bind" to get rid of the hack
+
+
 
 
     // here is how we can get the key which is pressed
     this.msetCanvas.addEventListener('keydown', function(event) {
+        console.log("handline keydown event")
         msetCE.addKeyPress(event);
         msetCE.redrawmsetCanvas();
             });
@@ -654,7 +741,7 @@ class CanvasEditorWrapping{
       // this.state.VisRows = numVisRows
       //let state = this.state
     //  console.dir(state)
-      this.state.setVisRowsCols(numVisRows,numVisCols)
+      this.textWindow.setVisRowsCols(numVisRows,numVisCols)
 
       return this.ctx.measureText(this.letters);
   }
@@ -668,10 +755,13 @@ class CanvasEditorWrapping{
 
 
 
-
+    /*
+    CURRENTLY WORKING ON THIS METHOD!
+    */
     addKeyPress(event){
       const key = event.key
       let state = this.state
+      console.log('calling addKeyPress '+key)
       if (event.ctrlKey){
         return
         // process ^F ^B ^N ^P to move cursor ...
@@ -743,6 +833,7 @@ class CanvasEditorWrapping{
       }
     }
 
+    // REWRITE THIS FROM SCRATCH
     removePrevChar(){
       const row = this.state.getCurrentRow()
       const col = this.state.getCurrentCol()
@@ -762,7 +853,7 @@ class CanvasEditorWrapping{
       }
     }
 
-
+    // REWRITE FROM SCRATCH
     insertCRLF(){
       const row =this.state.getCurrentRow()
       const pos = this.state.getCurrentCol()
@@ -771,7 +862,31 @@ class CanvasEditorWrapping{
       this.state.setCursor(row+1,0)
     }
 
+    //REWRITE FROM SCRATCH
+    /* insert the character at the cursor
+       use offset of the cursor to updated the
+       DDLL list
+       then update the visCursorPos data
+       If the column goes beyond the width, then
+       the visRowData will need to insert a new row
+       As a first step we'll just insert the char at
+       the current position, update the cursor,
+       and rewrite the redrawmsetCanvas
+       and see if it works on one line!
+    */
     insertKey(key){
+      const cursorPos = this.textWindow.visCursorPos
+      console.log('insertKey. cursorPos=')
+      console.dir(cursorPos)
+      this.textWindow.string.insertAtPos(key,cursorPos.offset)
+      cursorPos.offset++;
+      cursorPos.col++;
+      console.dir(cursorPos)
+
+
+    }
+
+    insertKeyOLD(key){
       const row = this.state.getCurrentRow()
       const col = this.state.getCurrentCol()
 
@@ -786,16 +901,51 @@ class CanvasEditorWrapping{
     and use them to draw the lines on the screen...
     */
 
-    redrawmsetCanvas2(){
-      this.getFontSize()
-      this.clearmsetCanvas()
-      let theState = this.state
-      const ctx = this.msetCanvas.getContext('2d')
-      ctx.fillStyle='black'
-
-    }
 
     redrawmsetCanvas(){
+      this.getFontSize()
+      this.clearmsetCanvas()
+      let textWindow = this.textWindow
+
+
+      // start at the visCharOffset
+      let visRow=0
+      let visCol=0
+      let rowCharOffset = textWindow.visCharOffset
+      console.log("visRows="+textWindow.visRows)
+      while(visRow < textWindow.visRows) {
+
+        let row = textWindow.getRowChars(rowCharOffset)
+
+        textWindow.visRowData[visRow]=
+           {offset:rowCharOffset,eol:row.eol}
+
+        this.drawRow(row.chars,visRow,row.eol)
+        rowCharOffset += row.chars.length
+
+
+        visRow++
+      }
+      textWindow.numVisChars = rowCharOffset - this.textWindow.visCharOffset
+    }
+
+    drawRow(line,visRow,eol){
+      const ctx = this.msetCanvas.getContext('2d')
+      ctx.fillStyle='black'
+      const text = ctx.measureText(line)
+      const start = 0
+      const baseline = (1+visRow)*this.lineHeight+this.lineDescent
+      const topline = this.lineHeight
+      ctx.fillText(line,start,baseline)
+      ctx.fillStyle='red'
+      if (!eol) {
+        ctx.fillRect(this.msetCanvas.width-5,baseline-this.lineHeight,1,this.lineHeight)
+      }
+      console.log('done drawing)')
+    }
+
+    // REWRITE THIS FROM SCRATCH
+    redrawmsetCanvasOLD(){
       this.getFontSize()
       this.clearmsetCanvas()
       let theState = this.state
@@ -848,11 +998,13 @@ class CanvasEditorWrapping{
       this.drawCursor()
     }
 
+    // REMOVE THIS
     printState(){
       console.log(JSON.stringify(this.state))
     }
 
 
+    // REWRITE THIS FROM SCRATCH
     drawCursor(){
 
       const line =this.state.getCurrentLine()
