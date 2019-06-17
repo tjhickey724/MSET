@@ -388,38 +388,18 @@ class CanvasEditorWrapping{
         // process ^F ^B ^N ^P to move cursor ...
         // ^A beginning of line ^E end of line
         // ^D delete next character
-      } /** else if (key=='ArrowLeft'){
-        let ccol = state.getCurrentCol()
-        if (ccol>0){
-          const lineLen = state.getCurrentLineLength() //state.text[state.cursor[0]].length
-          if (ccol>lineLen){
-             state.setCurrentCol(lineLen) //state.cursor[1] = lineLen
-          }
-          state.setCurrentCol(ccol-1)
-          //state.cursor[1]--;
-        } else {
-          let crow = state.getCurrentRow()
-          if (crow>0) {
-            state.setCurrentRow(crow-1)
-            state.setCurrentCol(state.getRowLength(crow-1))
-            // state.cursor[0]--
-            // state.cursor[1] = state.text[state.cursor[0]].length
-          }
-        }
+      }  else if (key=='ArrowLeft'){
+          const cursor = this.textWindow.visCursorPos;
+          cursor.offset = Math.max(0,cursor.offset-1);
+          this.redrawmsetCanvas();
         return
       } else if (key=='ArrowRight'){
-          let ccol = state.getCurrentCol()
-          if (ccol< state.getCurrentLineLength()){
-             state.setCurrentCol(state.getCurrentCol()+1)
-          } else {
-             let crow = state.getCurrentRow()
-             if (crow<state.getLastRow()) {
-                state.setCursor(crow+1,0)
-             }
-          }
-
+          const cursor = this.textWindow.visCursorPos;
+          const stringLength = this.textWindow.string.string.length
+          cursor.offset = Math.min(stringLength,cursor.offset+1);
+          this.redrawmsetCanvas();
         return
-      } else if (key=='ArrowUp'){
+      } /* else if (key=='ArrowUp'){
         let crow = state.getCurrentRow()
         if (crow>0){
           state.setCurrentRow(crow-1)
@@ -479,6 +459,10 @@ class CanvasEditorWrapping{
       console.dir(cursorPos)
 
 
+    }
+
+    insertCRLF() {
+      this.insertKey('\n')
     }
 
 
