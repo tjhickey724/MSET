@@ -6,9 +6,12 @@
 
   6/15/2019 5pm
   I've modified the code so that one user can type a single
-  line with no backspace or newlines and it wraps the text
+  line with no backspace and it wraps the text
   and puts a red line at the far right for wrapped lines.
-  
+  Next we should scroll the window up when they type off the bottom
+  of the screen...
+
+
 
   6/15/2019 noon
   I'm starting with a version in which the users can type at the end
@@ -49,7 +52,7 @@ class DDLLstring{
     // and ending with a end-of-line or visCols characters
     // This needs to return both the string of characters
     // and a boolean indicating if the line is longer that visCols characters
-    console.log("in getChars "+rowCharOffset+" "+visCols)
+    //console.log("in getChars "+rowCharOffset+" "+visCols)
     let nextNewline = this.string.indexOf('\n',rowCharOffset)
     let longLine=false
     if (nextNewline == -1) {
@@ -61,11 +64,8 @@ class DDLLstring{
 
     let lineLength = Math.min(nextNewline,visCols)
 
-    console.log('nextNewline='+nextNewline)
-    console.log('lineLength = '+lineLength)
-    console.log('this.string= "'+this.string+'"')
+
     const result= this.string.substring(rowCharOffset,lineLength+rowCharOffset)
-    console.log("==>"+ result)
     return {chars:result, eol:nextNewline<=visCols}
   }
 
@@ -92,13 +92,8 @@ class DDLLstring{
     // here is where we update the local view
     // this will change in the wrapped-text version
 
+    this.textWin.insertAtPosRemote(char,pos)
 
-    let rc = this.getRowCol(pos)
-    if (char=='\n'){
-      this.textWin.splitRow(rc[0],rc[1],'remote')
-    } else {
-      this.textWin.insertChar(rc[0],rc[1],char,'remote')
-    }
     //console.log(JSON.stringify(['remote',this.string]))
   }
 
@@ -141,22 +136,6 @@ class DDLLstring{
     return this.string
   }
 
-  getRowCol(pos){
-    // this will not be needed in our wrapped-text version
-    let row=0;
-    let col=0;
-    let p = 0;
-    while(p<pos){
-      if (this.string[p]=='\n'){
-        row += 1; col=0;
-      } else{
-        col+=1;
-      }
-      p++;
-    }
-    return [row,col]
-
-  }
 }
 
 /*
@@ -166,7 +145,7 @@ class DDLLstring{
 */
 function editorCallbacks(ddllString,textWin){
   return (op,pos,elt,user,me) => {
-  //console.log('editorCallbacks:'+JSON.stringify([op,pos,elt,user,me]))
+  console.log('editorCallbacks:'+JSON.stringify([op,pos,elt,user,me]))
   switch(op){
     case "init": /* maybe block input on the canvas?? */  break;
     case "insert":
@@ -174,60 +153,16 @@ function editorCallbacks(ddllString,textWin){
       if (user==me) return
       ddllString.insertAtPosRemote(elt,pos)
       // I need to update the cursor position in the textWin ... on remote ops....
-      textWin.canvasEditor.redrawmsetCanvas()
+      textWin.redrawScreen()
       break
     case "delete":
       //console.log("in delete callback\n"+JSON.stringify([ta1.readOnly,'delete',pos,elt,user,me]))
       if (user==me) return
       ddllString.deleteFromPosRemote(pos)
-      textWin.canvasEditor.redrawmsetCanvas()
+      textWin.redrawScreen()
       break
   }
  }
-}
-
-class TextWindowWrappingNEW{
-
-    constructor(){
-      this.string = new DDLLstring(this)
-      this.visRowData=[{offset:0,eol:true}]
-      this.visCharOffset=0
-      this.visCursorPos={offset:0,row:0,col:0}
-      this.visRows = 10
-      this.visCols = 80
-    }
-
-
-    setVisRowsCols(visRows,visCols){
-      this.visRows = visRows
-      this.visCols = visCols
-    }
-
-
-    getDDLLString(){
-      // this returns DDLLstring object
-      return this.string
-    }
-
-    getNumVisRows(){
-      return this.visRows
-    }
-
-    getNumVisCols(){
-      return this.visCols
-    }
-
-    getRowChars(rowCharOffset){
-      // get the next row starting at rowCharOffset
-      // and ending with a end-of-line or visCols characters
-      //console.log("in getRowChars: "+rowCharOffset)
-      return this.string.getChars(rowCharOffset,this.visCols)
-
-    }
-
-
-
-
 }
 
 class TextWindowWrapping{
@@ -248,6 +183,8 @@ class TextWindowWrapping{
 
   constructor(){
     this.string = new DDLLstring(this)
+    this.redrawScreen = () => false;  // we need this to redraw the screen after remote ops
+
     this.visRowData=[{offset:0,eol:true}]
     this.visCharOffset=0
     this.numVisChars=0
@@ -255,18 +192,19 @@ class TextWindowWrapping{
     this.visRows = 10
     this.visCols = 80
 
-    this.text = [""]
-    this.visText = [""]
+  }
 
-    // we keep track of the char offsets
-    // that describe the visible text
-    this.firstCharOffset = 0  // position of 1st visible character
-    this.lastCharOffset = 0 // position of the last visible character
-
-    this.cursor = [0,0]
-    this.visCursor = [0,0]
-    this.rowOffset=0
-    this.colOffset=0
+  printState(){
+    console.log('**************************\n'+
+    'TWW\n')
+    console.dir(
+      {string:this.string.string,
+       cursor:this.visCursorPos,
+       rowData:this.visRowData,
+       visCharOffset:this.visCharOffset,
+       numVisChars:this.numVisChars,
+       visRowsCols:[this.visRows,this.visCols]
+     })
 
   }
 
@@ -293,11 +231,7 @@ class TextWindowWrapping{
   getRowChars(rowCharOffset){
     // get the next row starting at rowCharOffset
     // and ending with a end-of-line or visCols characters
-    console.log("in getRowChars: "+rowCharOffset+ ' vc:'+this.visCols)
-    console.log(this.string.string)
     const result = this.string.getChars(rowCharOffset,this.visCols)
-    console.log('chars => ')
-    console.dir(result)
     return result
   }
 
@@ -309,333 +243,19 @@ class TextWindowWrapping{
     // this.numVisChars
     // and this.visRowData
 
-    if (charOffset <= this.visCursor.offset){
-      this.visCursor.offset++
+    if (charOffset <= this.visCursorPos.offset){
+      this.visCursorPos.offset++
     }
     if (charOffset<this.visCharOffset){
       this.visCharOffset++
     } else if (charOffset <this.visCharOffset+this.numVisChars){
       this.numVisChars ++;
-      updateVisRowData(charOffset)
     }
-  }
-
-  updateVisRowData(charOffset){
-    // visRowData has an element {offset:K, eol:B}
-    // which gives the offset of the character at the
-    // beginning of the line, and a boolean value B
-    // indicating whether the line ends in a CRLF or not
-    // but we can do this when we draw the screen ...
-  }
-
-
-  // deprecated
-  getRowOffset(){
-    return this.rowOffset
-  }
-
-  // deprecated
-  setRowOffset(row){
-    // we need to update the firstCharOffset and lastCharOffset
-    // for the visible window ...
-
-    // but we don't allow setting the row to a negative
-    // or after the end of the text...
-    let lastRow = this.getRowTotal()-1
-    this.rowOffset = Math.max(0,Math.min(row,lastRow))
-
-    this.updateCharOffsetAfterMove(row)
-  }
-
-  // deprecated
-  getColOffset(){
-    return this.colOffset
-  }
-
-  // deprecated
-  setColOffset(col){
-    this.colOffset = col
-  }
-
-  // deprecated
-  getLastRow(){
-    return this.text.length-1
-  }
-
-  // deprecated
-  getRowLength(row){
-    return this.text[row].length
-  }
-
-  // deprecated
-  setCursor(row,col){
-    this.cursor = [row,col]
-  }
-
-  // deprecated
-  getCurrentRow(){
-    return this.cursor[0]
-  }
-
-  // deprecated
-  setCurrentRow(row){
-    this.cursor[0] = row
-  }
-
-  // deprecated
-  getCurrentCol(){
-    return this.cursor[1]
-  }
-
-  // deprecated
-  setCurrentCol(col){
-    this.cursor[1]= col
-  }
-
-  // deprecated
-  setFirstCharOffset(a){
-    this.firstCharOffset = a
-    //console.log('firstCharOffset = '+a)
-  }
-
-  // deprecated
-  setLastCharOffset(a){
-    this.lastCharOffset = a
-    //console.log('lastCharOffset = '+a)
-  }
-
-  // deprecated
-  updateFirstCharOffset(delta){
-    this.setFirstCharOffset(this.firstCharOffset+delta)
-  }
-
-  // deprecated
-  updateLastCharOffset(delta){
-    this.setLastCharOffset(this.lastCharOffset+delta)
-  }
-
-  // deprecated
-  updateCharOffset(row,delta){
-    //console.dir(['updateCharOffset',row,delta,this])
-    // update the charOffset of the visible window
-    // when the length of the specified row has changed by delta
-    if (row<this.getRowOffset()){
-      this.updateFirstCharOffset(delta)
-    } else if (row <= this.getRowOffset()+this.getNumVisRows()){
-      this.updateLastCharOffset(delta)
-    }
-  }
-
-  // deprecated
-  getRowTotal(){
-    return this.text.length
-  }
-
-  // deprecated
-  updateCharOffsetCR(row,delta){
-    //console.dir(['updateCharOffsetCR',row,delta,this])
-    // update the charOffset of the visible window
-    // when the specified row has been changed by
-    // adding a CR in the row (delta=1)
-    // or removing the CR at the end of the row (delta=-1)
-    let rowOffset = this.getRowOffset()
-    let numVisRows = this.getNumVisRows()
-
-    if (delta>0) { // inserting a CR on specified row
-      if (row<rowOffset){
-        this.updateFirstCharOffset(delta)
-      } else {
-        let lastRow = rowOffset+numVisRows-1;
-        let lastRealRow = this.getRowTotal()-1
-        //console.log(JSON.stringify([row,delta,lastRow,rowOffset,numvisRows,lastRealRow,this.getRowTotal()]))
-        if (lastRow > lastRealRow){
-          //console.log(JSON.stringify(['a',lastRow,lastRealRow]))
-          // true when the end of the file is in the buffer
-          this.updateLastCharOffset(1) // add a CR
-        } else if (row < lastRow){
-          let lastLine = this.getLine(lastRow)
-          //console.log(JSON.stringify(['b',row,lastRow,lastLine,-lastLine.length]))
-          this.updateLastCharOffset(-lastLine.length)
-        }
-      }
-    } else { // removing CR at end of the specified row
-
-      if (row<rowOffset-1){
-        this.updateFirstCharOffset(-1)
-      } else if (row == rowOffset-1){
-        // joining first row with previous unseen row
-        let prevLine = this.getLine(rowOffset-1)
-        this.updateFirstCharOffset(-prevLine.length-1)
-      } else if (row <= rowOffset+numVisRows){
-        // adding a new line to end of visible range
-        let firstHiddenRow = rowOffset+numVisRows+1
-        if (firstHiddenRow > this.getRowTotal()){
-          this.updateLastCharOffset(-1)
-        } else {
-          let nextLine = this.getLine(rowOffset+numVisRows+1)
-          this.updateLastCharOffset(nextLine.length-1)
-        }
-      }
-    }
-  }
-
-  // deprecated
-  updateCharOffsetAfterMove(row) {
-    //console.dir(['updateCharOffsetAfterMove',row,this])
-    let rowOffset = this.getRowOffset()
-    let numVisRows = this.getNumVisRows()
-    if (row < rowOffset) {
-      let a = this.getCharPos(row,0)
-      let b = this.getCharPos(row+numVisRows+1,0)
-      this.setFirstCharOffset(a)
-      this.setLastCharOffset(b)
-    }
+    this.redrawScreen();
   }
 
 
 
-  // deprecated
-  insertChar(row,col,key,remote){ // for a non CR key
-    const charPos = this.getCharPos(row,col)
-    const line = this.getLine(row)
-    const first = line.substring(0,col) // first part
-    const rest = line.substring(col)
-    const newline = first+key+rest
-    this.text[row]=newline
-
-    if (!remote){
-      this.string.insertAtPos(key,charPos)
-    } else {
-      this.updateCursor('insertChar',row,col)
-    }
-
-    this.updateCharOffset(row,1)
-
-  }
-
-  // deprecated
-  splitRow(row,pos,remote){ // insert CR
-    const charPos = this.getCharPos(row,pos)
-    const line = this.getLine(row)
-    this.text.splice(row,1,
-      line.substring(0,pos),line.substring(pos))
-    if (!remote){
-      this.string.insertAtPos('\n',charPos)
-    } else {
-      this.updateCursor('splitRow',row,pos)
-    }
-    this.updateCharOffsetCR(row,1)
-  }
-
-  // deprecated
-  removePrevChar(row,col,remote){ // for a non CR key
-    const charPos = this.getCharPos(row,col)
-    const line = this.text[row]
-    this.text.splice(row,1,
-      line.substring(0,col-1)+line.substring(col))
-    if (!remote){
-      this.string.deleteFromPos(charPos-1)
-    } else {
-      this.updateCursor('removePrevChar',row,col)
-    }
-    this.updateCharOffset(row,-1)
-  }
-
-  // deprecated
-  joinWithNextLine(row,remote){ // remove CR
-    const charPos = this.getCharPos(row+1,0)-1
-    const rowLength = this.text[row].length
-    this.text.splice(row,2,
-      this.text[row]+ this.text[row+1])
-    if (!remote){
-      this.string.deleteFromPos(charPos)
-    } else {
-      this.updateCursor('joinWithNextLine',row,rowLength)
-    }
-    this.updateCharOffsetCR(row,-1)
-
-  }
-
-  // deprecated
-  updateCursor(op,row,col){
-    let curRow = this.cursor[0]
-    let curCol = this.cursor[1]
-    if (row>curRow) {return}
-
-    switch(op){
-      case "insertChar":
-          if ((row==curRow) && (col<=curCol)){
-            this.cursor[1]++
-            if (col<this.colOffset){
-              this.colOffset++
-            }
-          }
-          break;
-      case "splitRow":
-          if (row <curRow){
-            this.cursor[0]++
-            if (row<this.rowOffset){
-              this.rowOffset++;
-            }
-          } else if (row==curRow){
-            if (col<=curCol){
-              this.cursor[0]++;
-              this.cursor[1] -= col
-            }
-          }
-          break;
-      case "removePrevChar":
-          if ((row==curRow) && (col<=curCol)){
-            this.cursor[1]--
-            if (col<this.colOffset){
-              this.colOffset--
-            }
-          }
-          break;
-      case "joinWithNextLine":
-          if (row <curRow-1){
-            this.cursor[0]--
-            if (row<this.rowOffset){
-              this.rowOffset--
-            }
-          } else if (row== curRow-1){
-            this.cursor[0]--
-            this.cursor[1]+= col
-          }
-          break;
-        }
-
-  }
-
-
-
-  // deprecated
-  getCharPos(row,col){
-    let sum=0
-
-    for(let i=0; i<row; i++){
-      sum += this.text[i].length+1  // have to add 1 for the CR at the end of the line ...
-    }
-    sum += col
-    return sum
-  }
-
-  // deprecated
-  getLine(row){
-    if (row >=0 && row < this.text.length)
-      return this.text[row]
-    else return ""
-  }
-
-  // deprecated
-  getCurrentLine() {
-    return this.text[this.cursor[0]]
-  }
-
-  // deprecated
-  getCurrentLineLength(){
-    return this.text[this.cursor[0]].length
-  }
 
 }
 //================
@@ -648,6 +268,7 @@ class CanvasEditorWrapping{
   constructor(mset,textWindow){
     this.msetCanvas = mset
     this.textWindow = textWindow
+    this.textWindow.redrawScreen = () => this.redrawmsetCanvas();
 
     this.fontColor = "black"
     this.fonttype = "32pt Courier"
@@ -829,40 +450,14 @@ class CanvasEditorWrapping{
       } else if (this.allLetters.indexOf(key)<0) {
         return
       } else {
+        console.log("PRINT STATE!!")
+        this.textWindow.printState()
         this.insertKey(key)
+        console.log("inserted "+key)
+        this.textWindow.printState()
       }
     }
 
-    // REWRITE THIS FROM SCRATCH
-    removePrevChar(){
-      const row = this.state.getCurrentRow()
-      const col = this.state.getCurrentCol()
-      const line = this.state.getCurrentLine()
-      const lineLen = line.length
-      if (col>lineLen){
-        col = lineLen
-        this.state.setCurrentCol(col)
-      }
-      if (col>0){
-        this.state.removePrevChar(row,col)
-        this.state.setCursor(row,col-1)
-      } else if(row>0){
-        const prevLine = this.state.getLine(row-1)
-        this.state.joinWithNextLine(row-1)
-        this.state.setCursor(row-1,prevLine.length)
-      }
-    }
-
-    // REWRITE FROM SCRATCH
-    insertCRLF(){
-      const row =this.state.getCurrentRow()
-      const pos = this.state.getCurrentCol()
-
-      this.state.splitRow(row,pos)
-      this.state.setCursor(row+1,0)
-    }
-
-    //REWRITE FROM SCRATCH
     /* insert the character at the cursor
        use offset of the cursor to updated the
        DDLL list
@@ -886,13 +481,6 @@ class CanvasEditorWrapping{
 
     }
 
-    insertKeyOLD(key){
-      const row = this.state.getCurrentRow()
-      const col = this.state.getCurrentCol()
-
-      this.state.insertChar(row,col,key)
-      this.state.setCursor(row,col+1)
-    }
 
     //=============
 
@@ -902,6 +490,10 @@ class CanvasEditorWrapping{
     */
 
 
+    /*
+    this should update visRowData and visCursorPos
+    as the row and column may change
+    */
     redrawmsetCanvas(){
       this.getFontSize()
       this.clearmsetCanvas()
@@ -912,21 +504,30 @@ class CanvasEditorWrapping{
       let visRow=0
       let visCol=0
       let rowCharOffset = textWindow.visCharOffset
-      console.log("visRows="+textWindow.visRows)
+      //console.log("visRows="+textWindow.visRows)
       while(visRow < textWindow.visRows) {
 
         let row = textWindow.getRowChars(rowCharOffset)
+        let cursorPos = this.textWindow.visCursorPos;
 
         textWindow.visRowData[visRow]=
            {offset:rowCharOffset,eol:row.eol}
 
         this.drawRow(row.chars,visRow,row.eol)
-        rowCharOffset += row.chars.length
+        if ((rowCharOffset<=cursorPos.offset)
+            &&
+             (cursorPos.offset<= rowCharOffset+row.chars.length))
+          {
+            cursorPos.row = visRow
+            cursorPos.col = cursorPos.offset-rowCharOffset ;
+          }
+        rowCharOffset += row.chars.length +(row.eol?1:0)
 
 
         visRow++
       }
       textWindow.numVisChars = rowCharOffset - this.textWindow.visCharOffset
+      this.drawCursor()
     }
 
     drawRow(line,visRow,eol){
@@ -939,63 +540,9 @@ class CanvasEditorWrapping{
       ctx.fillText(line,start,baseline)
       ctx.fillStyle='red'
       if (!eol) {
-        ctx.fillRect(this.msetCanvas.width-5,baseline-this.lineHeight,1,this.lineHeight)
+        ctx.fillRect(this.msetCanvas.width-5,baseline-this.lineHeight+this.lineDescent,1,this.lineHeight)
       }
-      console.log('done drawing)')
-    }
-
-    // REWRITE THIS FROM SCRATCH
-    redrawmsetCanvasOLD(){
-      this.getFontSize()
-      this.clearmsetCanvas()
-      let theState = this.state
-      const ctx = this.msetCanvas.getContext('2d')
-      //ctx.font = fonttype
-      //===============
-      //context.strokeStyle = 'blue';
-      //context.lineWidth = '5';
-      //context.strokeRect(0, 0, window.innerWidth, window.innerHeight);
-      //===============
-      ctx.fillStyle='black'
-      console.log('firstCharOffset='+theState.firstCharOffset)
-      console.log('visRows = '+theState.visRows)
-      console.log('visCol = '+theState.visCols)
-      console.log('\n*******************\n')
-
-
-      if ((theState.getCurrentRow()<theState.getRowOffset())  ) {
-        theState.setRowOffset(Math.max(0,theState.getCurrentRow()-5))
-      } else if (theState.getCurrentRow() >=
-                   theState.getRowOffset()+theState.getNumVisRows()){
-        theState.setRowOffset(theState.getRowOffset()+5)
-      }
-
-      let col = theState.getCurrentCol()
-      let colOffset = theState.getColOffset()
-      let numVisCols = theState.getNumVisCols()
-      if ((col<colOffset)  ) {
-        theState.setColOffset(Math.max(0,col-5))
-      } else if (col>= colOffset+numVisCols){
-        theState.setColOffset(Math.max(0,colOffset + numVisCols-5));
-      }
-      colOffset = theState.getColOffset()
-
-      let rowOffset = theState.getRowOffset()
-      let numVisRows = theState.getNumVisRows()
-      let rowEnd = Math.min(theState.getLastRow(),numVisRows+rowOffset)
-      numVisCols = theState.getNumVisCols()
-
-
-      for(let i=rowOffset; i<= rowEnd ; i++){
-        const line =theState.getLine(i).substring(colOffset,colOffset+numVisCols+5)
-        const text = ctx.measureText(line)
-        const start = 0
-        const baseline = (1+i-rowOffset)*this.lineHeight+this.lineDescent
-        const topline = this.lineHeight
-        ctx.fillText(line,start,baseline)
-      }
-
-      this.drawCursor()
+      //console.log('done drawing)')
     }
 
     // REMOVE THIS
@@ -1006,14 +553,9 @@ class CanvasEditorWrapping{
 
     // REWRITE THIS FROM SCRATCH
     drawCursor(){
-
-      const line =this.state.getCurrentLine()
-      const col = this.state.getCurrentCol()
-      const row = this.state.getCurrentRow()
-      const colOffset = this.state.getColOffset()
-      const rowOffset = this.state.getRowOffset()
-      const visibleColumn = (col-colOffset)
-      const visibleRow = (row-rowOffset)
+      const cursor = this.textWindow.visCursorPos;
+      const visibleColumn = cursor.col;
+      const visibleRow = cursor.row;
 
       const start = visibleColumn*this.charWidth
       const baseline = visibleRow*this.lineHeight+this.lineSep+this.lineDescent
@@ -1022,6 +564,7 @@ class CanvasEditorWrapping{
       const ctx = this.msetCanvas.getContext('2d')
       ctx.fillStyle='black'
       ctx.fillRect(start,baseline, 1,topline)
+      console.log(JSON.stringify([cursor,start,baseline,topline]))
     }
 
 }
