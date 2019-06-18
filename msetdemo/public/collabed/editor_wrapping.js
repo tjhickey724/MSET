@@ -118,15 +118,7 @@ class DDLLstring{
 
     // here we apply the remote operation locally
     // but this will change in our wrapped-text version
-    const char=this.string[pos]
-    let rc = this.getRowCol(pos)
-    if (char=='\n'){
-      //console.dir(['joinWithNextLine',rc[0]])
-      this.textWin.joinWithNextLine(rc[0],'remote')
-    }else {
-      //console.dir(['removePrevChar',rc[0],rc[1]+1])
-      this.textWin.removePrevChar(rc[0],rc[1]+1,'remote')
-    }
+    this.textWin.deleteFromPosRemote(pos)
     //console.log(JSON.stringify(['remote',this.string]))
   }
 
@@ -250,6 +242,25 @@ class TextWindowWrapping{
       this.visCharOffset++
     } else if (charOffset <this.visCharOffset+this.numVisChars){
       this.numVisChars ++;
+    }
+    this.redrawScreen();
+  }
+
+  deleteFromPosRemote(charOffset){
+    // all we need to do here is to adjust
+    // adjust the values of
+    // this.visCharOffset,
+    // this.visCursor.offset, and
+    // this.numVisChars
+    // and this.visRowData
+
+    if (charOffset <= this.visCursorPos.offset){
+      this.visCursorPos.offset--
+    }
+    if (charOffset<this.visCharOffset){
+      this.visCharOffset--
+    } else if (charOffset <this.visCharOffset+this.numVisChars){
+      this.numVisChars --;
     }
     this.redrawScreen();
   }
@@ -420,21 +431,17 @@ class CanvasEditorWrapping{
         }
 
         return
-      } else if (key=='Backspace'){
+      } **/ else if (key=='Backspace'){
         this.removePrevChar()
         // remove the character at the current position!!!
         return
-      } **/ else if (key=='Enter'){
+      } else if (key=='Enter'){
         this.insertCRLF()
         return
       } else if (this.allLetters.indexOf(key)<0) {
         return
       } else {
-        console.log("PRINT STATE!!")
-        this.textWindow.printState()
-        this.insertKey(key)
-        console.log("inserted "+key)
-        this.textWindow.printState()
+          this.insertKey(key)
       }
     }
 
@@ -455,16 +462,19 @@ class CanvasEditorWrapping{
       console.dir(cursorPos)
       this.textWindow.string.insertAtPos(key,cursorPos.offset)
       cursorPos.offset++;
-      cursorPos.col++;
-      console.dir(cursorPos)
-
-
     }
 
     insertCRLF() {
       this.insertKey('\n')
     }
 
+    removePrevChar(){
+      const cursorPos = this.textWindow.visCursorPos
+      if (cursorPos.offset>0){
+        cursorPos.offset--;
+        this.textWindow.string.deleteFromPos(cursorPos.offset)
+      }
+    }
 
     //=============
 
