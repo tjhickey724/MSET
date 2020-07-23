@@ -43,6 +43,9 @@ app.use('/users', usersRouter);
 app.use('/mset', msetRouter);
 app.use('/mset2', mset2Router);
 app.use('/testing', testingRouter);
+app.use('/testing2', (req,res)=>
+   res.render('testing2', { title: 'Testing2' })
+);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

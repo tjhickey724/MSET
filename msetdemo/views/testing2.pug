@@ -1,0 +1,79 @@
+extends layout
+
+block content
+  h1= title
+  p Version 2!
+  | This is a page for debugging in the console
+  | Press CMD-ALT-J on Mac  <br> or F-12 on windows<br>
+  | to open the Javascript console in Chrome <br>
+  | (and if you aren't using Chrome, then switch!!)
+  br
+  select#test
+      option('selected') numEdits
+      option numClients
+      option initialSize
+      option burstSize
+      option p2p
+  |
+  | log2(k)=
+  input#kTF(type="text",value="1")
+  |
+  | multiplier=
+  input#multTF(type="text", value="1")
+  button#go RUN TESTS
+  hr
+  | log2(totalEdits)=
+  input#totalEditsTF(type="text",value="20")
+  br
+  | numEdits=
+  input#numEditsTF(type="text",value="10")
+  br
+  | numClients=
+  input#numListsTF(type="text",value="2")
+  br
+  |initSize=
+  input#initSizeTF(type="text",value="10")
+  br
+  |burstSize=
+  input#burstSizeTF(type="text",value="1")
+  br
+  |shuffle?=
+  input#shuffleCB(type="checkbox",value="1")
+  br
+  hr
+
+  #results
+  br
+  hr
+  |  E = edits per client
+  br
+  |  C = number of clients collaborating
+  br
+  |  S = final list size -- O(1)
+  br
+  |  N = nodes in edit tree -- O(E)
+  br
+  |  H = height of main avl tree for subNodes -- O(log(E))
+  br
+  |  T = time per client in milliseconds -- O(log(E))
+  br
+  |  N/E = nodes per edit op -- O(1)
+  br
+  |  T/E = Time in ms per Edit operation -- O(log(E))
+  br
+  |  A1 = T/(E*log(E)) -- O(1)
+  br
+  |  E/T = number of edit operations per millisecond
+  br
+  |  T*C = total time in seconds to simulate this edit session
+
+
+
+
+  script(src="https://code.jquery.com/jquery-1.11.1.js")
+  script(src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.0/socket.io.js")
+
+  // script(type="module" src="/testing/testingDLLmset.js")
+  // script(type="module" src="/testing/testDLLwiCorrectness.js")
+  script(type="module" src="/testing/TestSocket.js")
+  script(type="module" src="/testing/testingDDLLmsetLog2.js")
