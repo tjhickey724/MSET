@@ -1,18 +1,23 @@
-/*
-  I need to revise the redraw Canvas to use the FontMetrics
-  and draw all of the lines. This should be pretty easy to do!
-*/
+import {DDLL} from '../mset/DDLL.js'
+export {DDLLstring,TextWindow,CanvasEditor}
+
 console.log("In editor.js!!!!!")
+console.log(`io=${io}`)
+
 let Zthis='zzz'
 
 class DDLLstring{
   constructor(textWin){
+
     this.string = ""
+
     this.textWin = textWin
   }
 
   insertAtPos(char,pos){
+
     this.string = this.string.substring(0,pos)+char+this.string.substring(pos)
+
     console.log(JSON.stringify(['local-pre',this.string,this.textWin.cursorPos,this.textWin.cursor]))
 
     if (pos<=this.textWin.cursorPos) {
@@ -31,6 +36,7 @@ class DDLLstring{
 
 
     this.string = this.string.substring(0,pos)+char+this.string.substring(pos)
+
     console.log(JSON.stringify(this.string))
 
     if (char=='\n'){
@@ -60,7 +66,9 @@ class DDLLstring{
     console.log(JSON.stringify(["in deleteFromPos",pos]))
     console.log(this.string.substring(0,pos))
     console.log(this.string.substring(pos+1))
+
     this.string = this.string.substring(0,pos)+this.string.substring(pos+1)
+
     console.log(JSON.stringify(['local',this.string]))
 
     if (pos<this.textWin.cursorPos) {
@@ -76,7 +84,9 @@ class DDLLstring{
     console.log(JSON.stringify(["in deleteFromPos",pos]))
     console.log(this.string.substring(0,pos))
     console.log(this.string.substring(pos+1))
+
     this.string = this.string.substring(0,pos)+this.string.substring(pos+1)
+
     console.log(JSON.stringify(this.string))
     console.log(rc)
 
