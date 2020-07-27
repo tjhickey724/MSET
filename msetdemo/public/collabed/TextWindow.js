@@ -130,6 +130,7 @@ class TextWindow{
 
     this.windowOffset = 0  // the position of 1st visible character in the windowOffset
     this.lastWindowOffset = 0
+    this.lastRow = 0
     this.cursor = [0,0]
     this.cursorPos = 0 //
     this.rowOffset=0
@@ -138,7 +139,8 @@ class TextWindow{
     this.cols = 80
 
     this.text = [""]
-    this.view = new TextView(this.rows,this.cols,ddll)
+    //this.view = new TextView(this.rows,this.cols,ddll)
+    this.lines=[""] // cached text!
 
     this.editorCallbacks =
       (op,pos,elt,user,me) =>{
@@ -198,6 +200,7 @@ class TextWindow{
   }
 
   setRowOffset(row){
+    this.updateCacheExact(row) //
     this.rowOffset = row
     // here we need to update the CACHE
   }
@@ -211,6 +214,11 @@ class TextWindow{
   }
 
   getLastRow(){
+    if (this.lastRow != this.text.length-1) {
+      console.log("ERROR in getLastRow!!")
+      console.log(`this.lastRow=${this.lastRow}`)
+      console.log(`this.text.length-1=${this.text.length-1}`)
+    }
     return this.text.length-1
     //return this.view.getLastRow()
 
@@ -230,11 +238,14 @@ class TextWindow{
   setCursor(row,col){
     this.cursor = [row,col]
     this.cursorPos = this.getCharPos(this.cursor[0],this.cursor[1])
-    // we may need to update the CACHE when the cursor is moved...
+    if (row < this.rowOffset ||row >= this.rowOffset+this.rows) {
+      this.updateCache(row)
+    }
   }
 
   setCursorRC(rc){
     this.cursor = rc
+    this.updateCache(rc[0])
     // we may need to update the CACHE when the cursor is moved...
   }
 
@@ -243,10 +254,63 @@ class TextWindow{
   }
 
   setCurrentRow(row){
+    // if the row is outside of the cached region
+    // we need to pull in new rows!
+
     this.cursor[0] = row
     this.cursorPos = this.getCharPos(this.cursor[0],this.cursor[1])
-    // we may need to update the CACHE when the cursor is moved...
+    this.updateCache(row)
   }
+
+  updateCache(row){
+    // I think this should only is called if you use the slider
+    // which isn't implemented yet!
+    return
+    console.log(`*******\n*******\nin updateCache row=${row}, this.rows=${this.rows} rowOffset=${this.rowOffset}`)
+
+    const viewOffset = Math.min(5,this.rows-1)
+    const firstRow = Math.max(0,row-viewOffset)
+    const lastRow = Math.min(firstRow+this.rows,this.lastRow+1)
+    console.log('before slice: '+JSON.stringify(this.lines,null,2))
+    console.log(`firstRow=${firstRow} lastRow=${lastRow}`)
+    this.lines = this.lines.slice(firstRow,lastRow)
+    if (this.lines.length==0) {
+      this.lines = [""]
+    }
+    console.log('after slice: '+JSON.stringify(this.lines,null,2))
+    console.log(`lines=\n${this.lines}`)
+
+    if (row<this.rowOffset || row>this.rowOffset+this.rows){
+      console.log("updating!")
+      this.rowOffset = firstRow
+
+
+    }
+  }
+
+  updateCacheExact(row){
+    console.log(`in updateCacheExact row=${row}, this.rows=${this.rows} rowOffset=${this.rowOffset}`)
+    // sets the rowOffset to row exactly
+
+    const firstRow = row
+    const lastRow = Math.min(firstRow+this.rows,this.lastRow+1)
+    console.log('before slice: '+JSON.stringify(this.lines,null,2))
+    this.lines = this.text.slice(firstRow,lastRow)
+    if (this.lines.length==0) {
+      this.lines = [""]
+    }
+    console.log('after slice: '+JSON.stringify(this.lines,null,2))
+
+    if (row<this.rowOffset || row>=this.rowOffset+this.rows){
+      console.log("Updating!")
+      this.rowOffset = firstRow
+    }
+    console.log(`lines=\n${this.lines}`)
+
+  }
+
+
+
 
   getCurrentCol(){
     return this.cursor[1]
@@ -258,12 +322,16 @@ class TextWindow{
   }
 
   insertChar(row,col,key,remote){ // for a non CR key
+    console.log(`insertChar(${row},${col},${key},${remote})`)
     const charPos = this.getCharPos(row,col)
     const line = this.getLine(row)
     const first = line.substring(0,col) // first part
     const rest = line.substring(col)
     const newline = first+key+rest
     this.text[row]=newline
+    console.log(`before insertion: ${JSON.stringify(this.lines,null,2)}`)
+    this.lines[row-this.rowOffset] = newline
+    console.log(` after insertion:${JSON.stringify(this.lines,null,2)}`)
     if (!remote){
       this.string.insertAtPos(key,charPos)
     }
@@ -272,11 +340,14 @@ class TextWindow{
 
   splitRow(row,pos,remote){ // insert CR
     // this.textView.splitRow(row,pos,remote)
+    console.log(`splitRow(${row},${pos},${remote})`)
     const charPos = this.getCharPos(row,pos)
     const line = this.text[row]
     this.text.splice(row,1,
       line.substring(0,pos),line.substring(pos))
-    // this.view.splitRow(row,pos)
+    this.lines.splice(row-this.rowOffset,1,
+        line.substring(0,pos),line.substring(pos))
+    this.lastRow += 1
     if (!remote){
       this.string.insertAtPos('\n',charPos)
     }
@@ -286,11 +357,14 @@ class TextWindow{
 
   removePrevChar(row,col,remote){ // for a non CR key
     // this.textView.removePrevChar(row,col,remote)
+    console.log(`removePrevChar(${row},${col},${remote})`)
     const charPos = this.getCharPos(row,col)
     const line = this.text[row]
     this.text.splice(row,1,
       line.substring(0,col-1)+line.substring(col))
-    // this.view.removePrevChar(row,col)
+    this.lines.splice(row-this.rowOffset,1,
+      line.substring(0,col-1)+line.substring(col))
+      // this.view.removePrevChar(row,col)
     if (!remote){
       this.string.deleteFromPos(charPos-1)
     }
@@ -299,12 +373,16 @@ class TextWindow{
   }
 
   joinWithNextLine(row,remote){ // remove CR
-    //this.textView.joinWithNextLine(row,remote)
+    //<this.textView.joinWithNextLine(row,remote)
+    console.log(`joinWithNextLine(${row},${remote})`)
     const charPos = this.getCharPos(row+1,0)-1
     this.text.splice(row,2,
       this.text[row]+ this.text[row+1])
+    const localRow = row - this.rowOffset
+    this.lines.splice(localRow,2,
+      this.lines[localRow]+ this.lines[localRow+1])
     // this.view.joinWithNextLine(row)
-
+    this.lastRow -= 1
     if (!remote){
       this.string.deleteFromPos(charPos)
     }
@@ -333,7 +411,22 @@ class TextWindow{
   getLine(row){
     // if row is in the cache this is efficient, else it takes linear time
     // we should start searching from the top or bottom of the cache
-    return this.text[row]
+/*
+    console.log("\n\nIN GETLINE")
+    console.log(`row=${row} rowOffset=${this.rowOffset} local=${row-this.rowOffset}`)
+    console.log(`this.lines.length=${this.lines.length}`)
+    console.log(JSON.stringify(this.lines,null,2))
+
+    console.log(this.lines[row-this.rowOffset])
+    console.log(JSON.stringify(this.lines,null,2))
+    console.log(JSON.stringify(this.text,null,2))
+    */
+
+    //return this.text[row]
+
+    return this.lines[row-this.rowOffset]
+
+
   }
 
   getCurrentLine() {

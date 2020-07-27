@@ -23,7 +23,7 @@ class DDLLstring{
 
     this.string = ""
     this.textWin = textWin
-    this.ddll = new DDLL([],this.textWin.editorCallbacks,io(namespace),documentId)
+    this.ddll = null //new DDLL([],this.textWin.editorCallbacks,io(namespace),documentId)
 
 
     this.localInsert =
