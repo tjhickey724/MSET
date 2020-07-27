@@ -270,7 +270,7 @@ class CanvasEditor{
       let numRows = theState.getNumRows()
       let rowEnd = Math.min(theState.getLastRow(),numRows+rowOffset)
       numCols = theState.getNumCols()
-
+      
 
       for(let i=rowOffset; i<= rowEnd ; i++){
         const line =theState.getLine(i).substring(colOffset,colOffset+numCols+5)
