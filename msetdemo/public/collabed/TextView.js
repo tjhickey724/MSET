@@ -5,7 +5,7 @@ console.log("In TextView.js!!!!!")
 console.log(`io=${io}`)
 
 
-f
+
 const namespace="canvasdemo"
 const documentId = "test1"
 
@@ -22,8 +22,9 @@ class DDLLstring{
   constructor(textWin){
 
     this.string = ""
-    this.ddll = new DDLL([],this.textWin.editorCallbacks,io(namespace),documentId)
     this.textWin = textWin
+    this.ddll = new DDLL([],this.textWin.editorCallbacks,io(namespace),documentId)
+
 
     this.localInsert =
       (pos,char) =>

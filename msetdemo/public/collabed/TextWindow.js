@@ -158,7 +158,8 @@ class TextWindow{
         }
       }
 
-    this.string = new DDLLstring(this)
+    this.string =
+      new DDLLstring(this)
 
   }
 
@@ -298,7 +299,7 @@ class TextWindow{
   }
 
   joinWithNextLine(row,remote){ // remove CR
-    this.textView.joinWithNextLine(row,remote)
+    //this.textView.joinWithNextLine(row,remote)
     const charPos = this.getCharPos(row+1,0)-1
     this.text.splice(row,2,
       this.text[row]+ this.text[row+1])
