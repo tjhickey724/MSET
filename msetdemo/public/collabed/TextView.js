@@ -40,6 +40,8 @@ class DDLLstring{
 
   }
 
+
+
   insertAtPos(char,pos){
 
     //this.string = this.string.substring(0,pos)+char+this.string.substring(pos)
@@ -161,6 +163,26 @@ class DDLLstring{
     }
     return [row,col]
 
+  }
+
+  getPos(r,c){
+    let row=0;
+    let col=0;
+    let p = 0;
+    while(row<r || (row==r && col<c)){
+      if (this.string[p]=='\n'){
+        row += 1; col=0;
+      } else{
+        col+=1;
+      }
+      p++;
+    }
+    return p
+  }
+
+  getStringSlice(startLine,endLine){
+    const lines = this.string.split("\n")
+    return lines.slice(startLine,endLine)
   }
 }
 

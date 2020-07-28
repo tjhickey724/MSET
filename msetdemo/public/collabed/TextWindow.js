@@ -1,4 +1,4 @@
-import {DDLLstring, TextView} from "./TextView.js"
+import {DDLLstring} from "./DDLLstring.js"
 export {TextWindow}
 
 
@@ -6,29 +6,6 @@ export {TextWindow}
 // when it processes insert and delete operations on the string
 // either by the user or remotely
 
-
-function OLDeditorCallbacks(op,pos,elt,user,me){
-  /* This is called whenever a local or remote operation is performed
-     on the underlying mset tree
-  */
-
-
-  //console.log(`editorCallbacks(${op},${pos},${elt},${user},${me})`)
-
-  switch(op){
-    case "init":   break;
-    case "insert":
-      //console.log("insert callback\n"+JSON.stringify([ta1.readOnly,'insert',pos,elt,user,me]))
-      if (user==me) return
-
-      break
-    case "delete":
-      //console.log("in delete callback\n"+JSON.stringify([ta1.readOnly,'delete',pos,elt,user,me]))
-      if (user==me) return
-
-      break
-  }
-}
 
 /*
 TextWindow models the state of the document.
@@ -64,10 +41,12 @@ class TextWindow{
     Most of the time, the user will be interacting with only those rows in the window,
     but when they move the arrow above the top line or below the bottom line,
     the system will pull in some number of new rows and the offsets will be
-    recalculated.  Eventually, we will add a slider which can affect the cursor
+    recalculated. This is the only time it needs to get data from the DDLL server.
+
+    Eventually, we will add a slider which can affect the cursor
     position globally, but not in this iteration.
 
-    This method calls methods in the DDLLstring class to update the underlying
+    This class calls methods in the DDLLstring class to update the underlying
     document by the following two actions
       insertAtPos(char,pos)
       deleteFromPos(pos)
@@ -76,7 +55,7 @@ class TextWindow{
     String.  We can then have DDLLstring implement the methods to pull in new lines,
     e.g.
       getLineInfo(pos) ==> [startOfLine,chars]
-    this method find the beginning of the line containing the character
+    this method finds the beginning of the line containing the character
     at the specified position and it returns the string of all characters in that line
     The newline character is considered to be the character at the end of the line.
 
@@ -90,39 +69,8 @@ class TextWindow{
     cursor position simply by its offset position in the entire document
     and rapidly calculate the row/col as needed...
 
-    Also, I need to replace all operations on this.text with a method call
-    to this.textView this will allow us to maintain the list of strings
-    in the window without having to worry about all of the other lines.
-    As it is we need a an array whose length is up to the size of the document
-    which can be inefficient...
 
-    The assumption is that this.textView will only operate on text which is in
-    the window.  If we need to move the window, then we will update the textView
-    Perhaps the textView needs to have access to the DDLLstring
-    (or maybe we can push the entire DDLLstring code and the editorCallbacks
-    into TextView....)
 
-    Also the ddll parameter of the constructor should be used to connect
-    the TextView to a particular document on a particular DDLL server.
-
-    So the TextWindow class serves as a link between the CanvasEditor class
-    and the TextView class, the latter maintains a cache of data from the
-    DDLL server which is accessed from the DDLLstring class.
-
-    Lets first just have TextView store all of the rows of data!
-    Then we can optimize it to hold only a cached subset.
-    Then we can switch DDLLstring to a mode using the DDLL itself.
-
-    Maybe I should just create new a variable:
-    localRow  = row-rowOffset
-    and always index into that ...
-    Then I don't need the TextView at all...
-
-    I think I'll try that and I'll go one step
-    by letting localText[] be the array of cached text!
-    So I can just git rid of TextWindow entirely...
-
-    I will do this this afternoon.
   **/
 
   constructor(ddll){
@@ -138,7 +86,7 @@ class TextWindow{
     this.rows = 10
     this.cols = 80
 
-    this.text = [""]
+    //this.text = [""]
     //this.view = new TextView(this.rows,this.cols,ddll)
     this.lines=[""] // cached text!
 
@@ -214,11 +162,6 @@ class TextWindow{
   }
 
   getLastRow(){
-    if (this.lastRow != this.text.length-1) {
-      //console.log("ERROR in getLastRow!!")
-      //console.log(`this.lastRow=${this.lastRow}`)
-      //console.log(`this.text.length-1=${this.text.length-1}`)
-    }
     return this.lastRow
     //return this.view.getLastRow()
 
@@ -299,7 +242,16 @@ class TextWindow{
   }
 
   getStringSlice(start, end){
+    return this.string.getStringSlice(start,end)
+    /*
+    const a = this.string.getStringSlice(start,end)
+    const b = this.text.slice(start,end)
+    console.log(`a: ${JSON.stringify(a,null,2)}`)
+    console.log(`b: ${JSON.stringify(b,null,2)}`)
+    console.log(`a==b: ${JSON.stringify(a)== JSON.stringify(b)}`)
+
     return this.text.slice(start,end)
+    */
   }
 
   updateCacheExact(row){
@@ -342,7 +294,7 @@ class TextWindow{
     const first = line.substring(0,col) // first part
     const rest = line.substring(col)
     const newline = first+key+rest
-    this.text[row]=newline
+    //this.text[row]=newline
     //console.log(`before insertion: ${JSON.stringify(this.lines,null,2)}`)
     this.lines[row-this.rowOffset] = newline
     //console.log(` after insertion:${JSON.stringify(this.lines,null,2)}`)
@@ -356,11 +308,11 @@ class TextWindow{
     // this.textView.splitRow(row,pos,remote)
     //console.log(`splitRow(${row},${pos},${remote})`)
     const charPos = this.getCharPos(row,pos)
-    let line = this.text[row]
-    this.text.splice(row,1,
-      line.substring(0,pos),line.substring(pos))
+    //let line = this.text[row]
+    //this.text.splice(row,1,
+    //  line.substring(0,pos),line.substring(pos))
 
-    line = this.lines[row-this.rowOffset]
+    let line = this.lines[row-this.rowOffset]
     this.lines.splice(row-this.rowOffset,1,
         line.substring(0,pos),line.substring(pos))
     this.lastRow += 1
@@ -375,11 +327,11 @@ class TextWindow{
     // this.textView.removePrevChar(row,col,remote)
     //console.log(`removePrevChar(${row},${col},${remote})`)
     const charPos = this.getCharPos(row,col)
-    let line = this.text[row]
-    this.text.splice(row,1,
-      line.substring(0,col-1)+line.substring(col))
+    //let line = this.text[row]
+    //this.text.splice(row,1,
+    //  line.substring(0,col-1)+line.substring(col))
 
-    line = this.lines[row-this.rowOffset]
+    let line = this.lines[row-this.rowOffset]
     this.lines.splice(row-this.rowOffset,1,
       line.substring(0,col-1)+line.substring(col))
       // this.view.removePrevChar(row,col)
@@ -394,8 +346,8 @@ class TextWindow{
     //<this.textView.joinWithNextLine(row,remote)
     //console.log(`joinWithNextLine(${row},${remote})`)
     const charPos = this.getCharPos(row+1,0)-1
-    this.text.splice(row,2,
-      this.text[row]+ this.text[row+1])
+    //this.text.splice(row,2,
+    //  this.text[row]+ this.text[row+1])
     const localRow = row - this.rowOffset
     this.lines.splice(localRow,2,
       this.lines[localRow]+ this.lines[localRow+1])
@@ -417,6 +369,8 @@ class TextWindow{
       if row is within the cache it is very efficient
       if row is above or below the cache it requires linear time
     */
+    return this.string.getPos(row,col)
+    /*
     let sum=0
 
     for(let i=0; i<row; i++){
@@ -424,6 +378,7 @@ class TextWindow{
     }
     sum += col
     return sum
+    */
   }
 
   getLine(row){
