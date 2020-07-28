@@ -1,6 +1,7 @@
 import {DDLLstring} from "./DDLLstring.js"
 export {TextWindow}
 
+console.log("loading TextWindow.js")
 
 // here is the function which is called by the DDLL server
 // when it processes insert and delete operations on the string
@@ -26,7 +27,18 @@ class TextWindow{
     Its methods are called by the CanvasEditor class which responds to user input
     It maintain the state of the underlying document (a string) as well as the
     cursor.  The user interactions (arrow keys, inserting, deleting, mouse clicks)
-    introduce changes in the cursor position which are handled in CanvasEditor
+    introduce changes in the cursor position which are handled in CanvasEditor.
+
+    The CanvasEditor updates the document using the following four methods:
+    * inserChar(row,col,key,remote) // key != CR
+    * splitRow(row,pos,remote) // inserting a CR
+    * removePrevChar(row,col,remote) // not a CR
+    * joinWithNextLine(row,remote) // remove CR at end of line
+    Remote operations are processed using the
+    editorCallbacks function which also uses these methods for
+    updating remote operations update the TextWindow
+    cached view of the document.
+
     Remote operations however can also change the row/col/position of the cursor
     and are handled here.
 
@@ -50,19 +62,13 @@ class TextWindow{
     document by the following two actions
       insertAtPos(char,pos)
       deleteFromPos(pos)
-    I think we should also define the remote editor callback here in this package
-    and have it passed into the DDLLstring which can either use DDLL or a simple
-    String.  We can then have DDLLstring implement the methods to pull in new lines,
-    e.g.
-      getLineInfo(pos) ==> [startOfLine,chars]
-    this method finds the beginning of the line containing the character
-    at the specified position and it returns the string of all characters in that line
-    The newline character is considered to be the character at the end of the line.
+
+
 
     The remote operations are all insertCharAtPos or removeCharFromPos
     and these are handled by the usual DDLLstring operations but they
     also affect the cursor, charOffset, lastCharOffset, and rowOffset if they appear
-    before the window, and the effets on the cursor can be subtle.
+    before the window, and the effects on the cursor can be subtle.
     When we refactor, we will move the cursor change code into TextWindow
     and have the CanvasEditor call methods to move the cursor. Perhaps if
     we keep track of the charOffset of each line, then we can represent the
@@ -85,6 +91,7 @@ class TextWindow{
     this.colOffset=0
     this.rows = 10
     this.cols = 80
+    this.scrollOffset = 2
 
     //this.text = [""]
     //this.view = new TextView(this.rows,this.cols,ddll)
@@ -92,6 +99,7 @@ class TextWindow{
 
     this.editorCallbacks =
       (op,pos,elt,user,me) =>{
+        //console.log(`\nZZZ editorCallback(${op},${pos},${elt},${user},${me})`)
         switch(op){
           case "init":
             break
@@ -108,9 +116,32 @@ class TextWindow{
         }
       }
 
+    this.redrawCanvas = ()=> {console.log("redrawing not initialized yet")}
+
     this.string =
       new DDLLstring(this)
+    console.log(`this.string=${this.string}`)
 
+    this.debugging=true
+  }
+
+  printState(){
+    if (!this.debugging){
+      return
+    }
+    // print the current state of the editor
+    console.log(`\n********************
+EDITOR STATE: "+new Date()
+rows=${this.rows} cols=${this.cols}
+rowOffset=${this.rowOffset} numRows=${this.lines.length}
+colOffset = ${this.colOffset}
+windowOffset=${this.windowOffset} lastWindowOffset=${this.lastWindowOffset}
+lastWindowOffsetCalc = ${this.windowOffset+this.lines.join('\n').length}
+lastRow = ${this.lastRow}
+lines = ${JSON.stringify(this.lines,null,2)}
+ddl_lines = ${JSON.stringify(this.string.ddll_lines(),null,2)}
+cursor=${JSON.stringify(this.cursor,null,2)}
+**********************\n`)
   }
 
   setRedrawCanvas(redraw){
@@ -121,7 +152,7 @@ class TextWindow{
     this.cursor = getRowCol(this.cursorPos)
   }
 
-  redraw(operation,char,rowCol){
+  redraw(){
     this.redrawCanvas()
   }
 
@@ -150,6 +181,7 @@ class TextWindow{
   setRowOffset(row){
     this.updateCacheExact(row) //
     this.rowOffset = row
+    this.windowOffset = this.string.getPos(row,0)
     // here we need to update the CACHE
   }
 
@@ -182,7 +214,7 @@ class TextWindow{
 
   setCursor(row,col){
     this.cursor = [row,col]
-    this.cursorPos = this.getCharPos(this.cursor[0],this.cursor[1])
+    this.cursorPos = this.string.getPos(this.cursor[0],this.cursor[1])
     if (row < this.rowOffset ||row >= this.rowOffset+this.rows) {
       this.updateCache(row)
     }
@@ -216,7 +248,7 @@ class TextWindow{
       return
     } else {
       //console.log("RESHAPING WINDOW ********")
-      const viewOffset = Math.min(5,this.rows-1)
+      const viewOffset = Math.min(this.scrollOffset,this.rows-1)
       const firstRow = Math.max(0,row-viewOffset)
       const lastRow = Math.min(firstRow+this.rows,this.lastRow+1)
       //console.log('before slice: '+JSON.stringify(this.lines,null,2))
@@ -231,9 +263,11 @@ class TextWindow{
       //console.log('after slice: '+JSON.stringify(this.lines,null,2))
       //console.log(`lines=\n${this.lines}`)
       this.rowOffset = firstRow
+      this.windowOffset = this.string.getPos(firstRow,0)
+      this.lastWindowOffset = this.windowOffset + this.lines.join("\n").length
 
       if (row<this.rowOffset || row>=this.rowOffset+this.rows){
-        //console.log("updating!")
+        console.log("\n RRRRRR\nupdating???")
         //this.rowOffset = firstRow
       }
     }
@@ -255,13 +289,17 @@ class TextWindow{
   }
 
   updateCacheExact(row){
-    //console.log(`in updateCacheExact row=${row}, this.rows=${this.rows} rowOffset=${this.rowOffset}`)
+    // this will only be called when we add a slider to jump to an arbitrary pos
+    // in the file. It is not called when the window is moved by key presses and
+    // mouse clicks
+    console.log(`\nQQQQQ  in updateCacheExact row=${row}, this.rows=${this.rows} rowOffset=${this.rowOffset}`)
     // sets the rowOffset to row exactly
 
     const firstRow = row
     const lastRow = Math.min(firstRow+this.rows,this.lastRow+1)
     //console.log('before slice: '+JSON.stringify(this.lines,null,2))
-    this.lines = this.lines.slice(firstRow-this.rowOffset,lastRow-this.rowOffset)
+    this.lines = this.string.getStringSlice(firstRow,lastRow)
+      //this.lines.slice(firstRow-this.rowOffset,lastRow-this.rowOffset)
     if (this.lines.length==0) {
       this.lines = [""]
     }
@@ -270,6 +308,7 @@ class TextWindow{
     if (row<this.rowOffset || row>=this.rowOffset+this.rows){
       //console.log("Updating!")
       this.rowOffset = firstRow
+      this.windowOffset = this.string.getPos(firstRow,0)
     }
     //console.log(`lines=\n${this.lines}`)
 
@@ -297,11 +336,13 @@ class TextWindow{
     //this.text[row]=newline
     //console.log(`before insertion: ${JSON.stringify(this.lines,null,2)}`)
     this.lines[row-this.rowOffset] = newline
+    this.lastWindowOffset += 1
     //console.log(` after insertion:${JSON.stringify(this.lines,null,2)}`)
     if (!remote){
       this.string.insertAtPos(key,charPos)
     }
     // this changes one character in one line of the CACHE
+    this.printState()
   }
 
   splitRow(row,pos,remote){ // insert CR
@@ -315,12 +356,16 @@ class TextWindow{
     let line = this.lines[row-this.rowOffset]
     this.lines.splice(row-this.rowOffset,1,
         line.substring(0,pos),line.substring(pos))
+    const removedText = this.lines.slice(this.rows)
+    this.lines = this.lines.slice(0,this.rows)
+    this.lastWindowOffset  += 1-(removedText.length>0?removedText[0].length:0)
     this.lastRow += 1
     if (!remote){
       this.string.insertAtPos('\n',charPos)
     }
     // this replace one line of the cache with two new ones
     // and removes the last line of the cache
+    this.printState()
   }
 
   removePrevChar(row,col,remote){ // for a non CR key
@@ -338,12 +383,12 @@ class TextWindow{
     if (!remote){
       this.string.deleteFromPos(charPos-1)
     }
+    this.lastWindowOffset -= 1
     // this changes one line in the cache
-
+    this.printState()
   }
 
-  joinWithNextLine(row,remote){ // remove CR
-    //<this.textView.joinWithNextLine(row,remote)
+  joinWithNextLine(row,remote){ // remove CR and pull another line into buffer
     //console.log(`joinWithNextLine(${row},${remote})`)
     const charPos = this.getCharPos(row+1,0)-1
     //this.text.splice(row,2,
@@ -351,17 +396,30 @@ class TextWindow{
     const localRow = row - this.rowOffset
     this.lines.splice(localRow,2,
       this.lines[localRow]+ this.lines[localRow+1])
+
     // this.view.joinWithNextLine(row)
     this.lastRow -= 1
+    console.log(`r=${this.rows} o=${this.rowOffset} lr=${this.lastRow}`)
+    if (this.rowOffset+this.rows <= this.lastRow) {
+      const nextRow = this.getLine(this.rowOffset+this.rows)
+      console.log(`nextRow=${nextRow}`)
+      this.lines[this.rows-1] = nextRow
+      this.lastWindowOffset += nextRow.length
+    } else {
+      this.lastWindowOffset -= 1
+    }
     if (!remote){
       this.string.deleteFromPos(charPos)
     }
     //this replaces two lines of the cache with a new joined one
     // and potentially pulls in a new line into the cache
-
+    this.printState()
   }
 
 
+  getPos(cursor){
+    return this.getCharPos(cursor[0],cursor[1])
+  }
 
   getCharPos(row,col){
     /*
@@ -398,14 +456,23 @@ class TextWindow{
     //return this.text[row]
     //console.log(`getLine(${row})=> ${JSON.stringify(this.lines[row-this.rowOffset])}`)
     //console.log(`row-this.rowOffset=${row-this.rowOffset}`)
-    const line = this.lines[row-this.rowOffset]
-    if (typeof(line)=='string') {
-      return this.lines[row-this.rowOffset]
-    }
-    else {
+    console.log("in getLine "+row)
+    const theLines = this.string.getStringSlice(row,row+1)
+    //console.log(`getLine(${row}) = ${JSON.stringify(theLines,null,2)}`)
+    return theLines.length>0?theLines[0]:""
+
+    if (row<this.rowOffset || row >= this.rowOffset + this.lines.length) {
+      return this.string.getStringSlice(row,row+1)
+    } else {
+      const line = this.lines[row-this.rowOffset]
+      if (typeof(line)=='string') {
+        return this.lines[row-this.rowOffset]
+      }
+      else {
       //console.log(`ERROR row=${row} lines=${JSON.stringify(this.lines,null,2)} rowOffset=${this.rowOffset}`)
       //console.log(`line=${JSON.stringify(line,null,2)}`)
-      return ""
+        return ""
+      }
     }
 
   }

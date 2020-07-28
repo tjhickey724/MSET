@@ -6,8 +6,8 @@ console.log(`io=${io}`)
 
 
 
-const namespace="canvasdemo"
-const documentId = "test1"
+const namespace="/demo2"
+const documentId = "default"
 
 //this.mset.msetTree.insert(offset+i,text[i])
 
@@ -17,26 +17,71 @@ const documentId = "test1"
   For now it represents the document as a single string.
 
   Next I will replace the underlying string with the DDLL object.
-  
+
 */
 class DDLLstring{
   constructor(textWin){
 
     this.string = ""
     this.textWin = textWin
-    this.ddll = null //new DDLL([],this.textWin.editorCallbacks,io(namespace),documentId)
 
 
     this.localInsert =
       (pos,char) =>
-          {this.string = this.string.substring(0,pos)+char+this.string.substring(pos)}
+          {//console.log(`in localInsert(${char},${pos})`)
+           this.string = this.string.substring(0,pos)+char+this.string.substring(pos)
+           this.ddll.msetTree.insert(pos,char)
+           /*
+           console.dir(this.ddll.msetTree)
+           console.log(this.ddll.msetTree.toString('','std'))
+           console.log(this.ddll.msetTree.toString())
+           console.log(this.ddll.msetTree.toList('std'))
+           console.log(this.ddll.msetTree.toList2('std'))
+           console.log(this.ddll.msetTree.toList2('std').join(''))
+           */
+           //console.log(JSON.stringify(this.ddll_lines(),null,2))
+
+          }
           //{this.ddll.msetTree.insert(offset,char)}
 
     this.localDelete =
       (pos) =>
-          {this.string = this.string.substring(0,pos)+this.string.substring(pos+1)}
-          //{this.ddll.msetTree.delete(offset)}
+          {console.log(`in localDelete(${pos})`)
+           this.string = this.string.substring(0,pos)+this.string.substring(pos+1)
+           this.ddll.msetTree.delete(pos)}
+          //{}
 
+    this.editorCallbacks =
+      (op,pos,elt,user,me) =>{
+        // first we do some local processing
+        console.log(`\nZZZ editorCallback(${op},${pos},${elt},${user},${me})`)
+        const theLines = this.ddll.toString('','std')
+        console.log(`theLines=${JSON.stringify(theLines,null,2)}`)
+        switch(op){
+          case "init":
+            break
+          case "insert":
+            //console.log("insert callback\n"+JSON.stringify([ta1.readOnly,'insert',pos,elt,user,me]))
+            if (user==me) return
+            console.log(`calling this.insertAtPosRemote(${elt},${pos})`)
+            this.insertAtPosRemote(elt,pos)
+            break
+          case "delete":
+            //console.log("in delete callback\n"+JSON.stringify([ta1.readOnly,'delete',pos,elt,user,me]))
+            if (user==me) return
+            console.log(`calling this.deleteFromPosRemote(${pos})`)
+            this.deleteFromPosRemote(pos)
+            break
+        }
+      }
+
+      this.ddll = new DDLL([],this.editorCallbacks,io(namespace),documentId)
+
+      console.log(`this.ddll=${this.ddll}`)
+      console.dir(this.ddll)
+
+      this.ddll_lines =
+         () => this.ddll.msetTree.toList2('std').join('').split("\n")
 
 
   }
@@ -63,30 +108,38 @@ class DDLLstring{
   insertAtPosRemote(char,pos){
     let rc = this.getRowCol(pos)
 
-
+    if (pos < this.textWin.windowOffset) {
+        this.textWin.windowOffset += 1
+        if (char=='\n'){
+          this.textWin.rowOffset++
+          this.textWin.lastRow++
+        }
+        return
+    } else if (pos > this.textWin.lastWindowOffset){
+        if (char=='\n'){
+          this.textWin.lastRow++
+        }
+        return
+    } // from here on we know that the edit was with the lines in the cache ...
     //this.string = this.string.substring(0,pos)+char+this.string.substring(pos)
 
     //console.log(JSON.stringify(this.string))
 
     if (char=='\n'){
       this.textWin.splitRow(rc[0],rc[1],'remote')
-      if (rc[0] < this.textWin.rowOffset){
-        this.textWin.rowOffset++
-      }
     } else {
       this.textWin.insertChar(rc[0],rc[1],char,'remote')
     }
     //console.log(JSON.stringify(['remote',this.string]))
 
 
-    if (pos<this.textWin.cursorPos) {
-      this.textWin.cursorPos++
-      this.textWin.setCursorRC(this.getRowCol(this.textWin.cursorPos))
+    const cursorPos = this.textWin.getPos(this.textWin.cursor)
+    if (pos<this.textWin.getPos(this.textWin.cursor)) {
+      this.textWin.cursorPos = cursorPos+1
+      // optimize this!!
+      this.textWin.cursor = this.getRowCol(this.textWin.cursorPos)
     }
-    if (pos<=this.textWin.windowOffset){
-      this.textWin.windowOffset += 1
-    }
-
+    console.log("redrawing the screen")
     this.textWin.redraw()  // modify so that it only redraws if rc is in visible range
 
   }
@@ -110,6 +163,21 @@ class DDLLstring{
     const char=this.string[pos]
     let rc = this.getRowCol(pos)
 
+    if (pos < this.textWin.windowOffset){
+      this.textWin.windowOffset -=1
+      if (char=='\n') {
+        this.rowOffset --
+        this.lastRow --
+        this.lastWindowOffset --
+      }
+      return
+    } else if (pos > this.textWin.lastWindowOffset){
+      if (char=='\n'){
+        this.lastRow --
+      }
+      return
+    }
+
     //console.log(JSON.stringify(["in deleteFromPos",pos]))
     //console.log(this.string.substring(0,pos))
     //console.log(this.string.substring(pos+1))
@@ -122,9 +190,6 @@ class DDLLstring{
     if (char=='\n'){
       //console.dir(['joinWithNextLine',rc[0]])
       this.textWin.joinWithNextLine(rc[0],'remote')
-      if (rc[0] < this.textWin.rowOffset){
-        this.textWin.rowOffset--
-      }
     }else {
       //console.dir(['removePrevChar',rc[0],rc[1]+1])
       this.textWin.removePrevChar(rc[0],rc[1]+1,'remote')
@@ -135,9 +200,7 @@ class DDLLstring{
       this.textWin.cursorPos--
       this.textWin.setCursorRC(this.getRowCol(this.textWin.cursorPos))
     }
-    if (pos<=this.textWin.windowOffset){
-      this.textWin.windowOffset -= 1
-    }
+    console.log("redrawing the screen")
     this.textWin.redraw()
 
   }
@@ -182,7 +245,9 @@ class DDLLstring{
   }
 
   getStringSlice(startLine,endLine){
-    const lines = this.string.split("\n")
+    console.log(`getStringSlice(${startLine},${endLine})`)
+
+    const lines = this.ddll_lines()
     return lines.slice(startLine,endLine)
   }
 }
