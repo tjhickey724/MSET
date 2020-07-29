@@ -29,98 +29,29 @@ class TextWindow{
     cursor.  The user interactions (arrow keys, inserting, deleting, mouse clicks)
     introduce changes in the cursor position which are handled in CanvasEditor.
 
-    The CanvasEditor updates the document using the following four methods:
-    * inserChar(row,col,key,remote) // key != CR
-    * splitRow(row,pos,remote) // inserting a CR
-    * removePrevChar(row,col,remote) // not a CR
-    * joinWithNextLine(row,remote) // remove CR at end of line
-    Remote operations are processed using the
-    editorCallbacks function which also uses these methods for
-    updating remote operations update the TextWindow
-    cached view of the document.
-
-    Remote operations however can also change the row/col/position of the cursor
-    and are handled here.
-
-    The viewing window is represented by
-    * its size in rows and cols
-    * its upper left corner (in rowOffset and charOffset and colOffset)
-    We also keep track of the lastCharOffset for the window which
-    is the number of characters before the first line not in the window.
-    Note, we store the entire lines with the interval [rowOffset, rowOffset+rows]
-    The cursor is represented by [row,col]
-
-    Most of the time, the user will be interacting with only those rows in the window,
-    but when they move the arrow above the top line or below the bottom line,
-    the system will pull in some number of new rows and the offsets will be
-    recalculated. This is the only time it needs to get data from the DDLL server.
-
-    Eventually, we will add a slider which can affect the cursor
-    position globally, but not in this iteration.
-
-    This class calls methods in the DDLLstring class to update the underlying
-    document by the following two actions
-      insertAtPos(char,pos)
-      deleteFromPos(pos)
-
-
-
-    The remote operations are all insertCharAtPos or removeCharFromPos
-    and these are handled by the usual DDLLstring operations but they
-    also affect the cursor, charOffset, lastCharOffset, and rowOffset if they appear
-    before the window, and the effects on the cursor can be subtle.
-    When we refactor, we will move the cursor change code into TextWindow
-    and have the CanvasEditor call methods to move the cursor. Perhaps if
-    we keep track of the charOffset of each line, then we can represent the
-    cursor position simply by its offset position in the entire document
-    and rapidly calculate the row/col as needed...
-
-
-
   **/
 
   constructor(ddll){
 
-
+    // these are the necessary state variables
     this.windowOffset = 0  // the position of 1st visible character in the windowOffset
-    this.lastWindowOffset = 0
-    this.lastRow = 0
-    this.cursor = [0,0]
     this.cursorPos = 0 //
-    this.rowOffset=0
-    this.colOffset=0
     this.rows = 10
     this.cols = 80
-    this.scrollOffset = 2
+    this.colOffset=0
+    this.string =  new DDLLstring(this)
+    this.docSize=0
 
-    //this.text = [""]
-    //this.view = new TextView(this.rows,this.cols,ddll)
+    // these are all computed state variables
     this.lines=[""] // cached text!
 
-    this.editorCallbacks =
-      (op,pos,elt,user,me) =>{
-        //console.log(`\nZZZ editorCallback(${op},${pos},${elt},${user},${me})`)
-        switch(op){
-          case "init":
-            break
-          case "insert":
-            //console.log("insert callback\n"+JSON.stringify([ta1.readOnly,'insert',pos,elt,user,me]))
-            if (user==me) return
-            this.string.insertAtPosRemote(elt,pos)
-            break
-          case "delete":
-            //console.log("in delete callback\n"+JSON.stringify([ta1.readOnly,'delete',pos,elt,user,me]))
-            if (user==me) return
-            this.string.deleteFromPosRemote(pos)
-            break
-        }
-      }
+    this.lastRow = 0
+    this.cursor = [0,0]
+    this.rowOffset=0
+
+    this.scrollOffset = 2 // this is for how much you want to scroll when recentering...
 
     this.redrawCanvas = ()=> {console.log("redrawing not initialized yet")}
-
-    this.string =
-      new DDLLstring(this)
-    //console.log(`this.string=${this.string}`)
 
     this.debugging=true
   }
@@ -129,28 +60,153 @@ class TextWindow{
     if (!this.debugging){
       return
     }
+
     // print the current state of the editor
     console.log(`\n********************
 EDITOR STATE: "+new Date()
 rows=${this.rows} cols=${this.cols}
 rowOffset=${this.rowOffset} numRows=${this.lines.length}
 colOffset = ${this.colOffset}
-windowOffset=${this.windowOffset} lastWindowOffset=${this.lastWindowOffset}
-lastWindowOffsetCalc = ${this.windowOffset+this.lines.join('\n').length}
+windowOffset=${this.windowOffset} lastWindowOffset=${this.lastWindowOffset()} this=${this}
 lastRow = ${this.lastRow}
 lines = ${JSON.stringify(this.lines,null,2)}
 ddl_lines = ${JSON.stringify(this.string.ddll_lines(),null,2)}
 cursor=${JSON.stringify(this.cursor,null,2)}
+cursorPos = ${this.cursorPos}
+docSize = ${this.docSize}
 **********************\n`)
+  }
+
+  moveCursor(k){
+    // this advances the cursor forward or backward in the viewing region
+    this.cursorPos += k
+    this.cursorPos = Math.max(0,Math.min(this.cursorPos,this.docSize))
+    this.centerView()
+  }
+
+  lastWindowOffset(){
+    //console.log(`lastWindowOffset`)
+    let pos = this.windowOffset
+    for (let line of this.lines) {
+      pos += line.length + 1
+    }
+    //console.log("="+pos)
+    return pos
+  }
+
+  getCursorRowCol(){
+    // we assume this is only called when the cursor is in the view
+
+    if (this.cursorPos < this.windowOffset || this.cursorPos > this.lastWindowOffset()){
+      console.log(`ERROR: in getCursorRowCol(${this.cursorPos})`)
+      throw new Error("in getCursorRowCol")
+    }
+    let p=this.windowOffset
+    let prevOffset=0
+    let row = 0
+    console.log(`this.lines = ${JSON.stringify(this.lines,null,2)} row=${row}`)
+    while (p <= this.cursorPos && row<this.lines.length){
+      prevOffset = p
+      p+= this.lines[row].length+1
+      row += 1
+    }
+    if (row>this.lines.length){
+      //at end of last line with a CR
+      row++
+      prevOffset=p
+    }
+    let cursorRow = row-1
+    let cursorCol = this.cursorPos - prevOffset
+    this.cursor = [cursorRow,cursorCol]
+    return this.cursor
+  }
+
+  updateLinesAroundCursorPos(){
+    // this will set the cursor pos to the first line of the window
+    console.log("updateLinesAroundCursorPos")
+    this.printState()
+    console.log("after printState")
+    /*
+    if (this.windowOffset <= this.cursorPos
+        &&
+        this.cursorPos <= this.lastWindowOffset()){
+      console.log("reloading lines in the window")
+      this.reloadLines()
+      return
+    }
+    */
+    console.log("shifting the window")
+    let allLines = this.string.ddll_lines()
+    if (this.windowOffset <= this.cursorPos && this.cursorPos<=this.lastWindowOffset()){
+      this.reloadLines()
+      return
+    }
+    console.log("find the new rowOffset")
+    let p=0
+    let lastp=0
+    let i=0
+    while (p <= this.cursorPos && i < allLines.length) {
+      lastp = p
+      p += allLines[i].length+1
+      i=i+1
+    }
+    console.log(`p=${p}  lastp=${lastp} i=${i}`)
+    let cursorRowOffset = lastp
+    let cursorRow = i-1
+    let cursorCol = this.cursorPos - cursorRowOffset
+    this.cursor = [cursorRow,cursorCol]
+    this.rowOffset = cursorRow
+    this.windowOffset = cursorRowOffset
+    this.reloadLines()
+  }
+
+  reloadLines(){
+    //console.log("in reloadlines")
+    let allLines = this.string.ddll_lines()
+    this.lines = allLines.slice(this.rowOffset,this.rowOffset+this.rows)
+    //console.log(`realoadLines() => ${JSON.stringify(this.lines,null,2)}`)
+  }
+
+
+
+
+  centerView(){
+    // first we make sure the row containing the cursor is visible
+    if (this.cursorPos < this.windowOffset ||
+        this.cursorPos > this.lastWindowOffset()) {
+      this.updateLinesAroundCursorPos()
+    }
+    this.cursor = this.getCursorRowCol()
+    if (this.cursor[1]<this.colOffset) {
+      this.colOffset = Math.max(0,this.cursor[1]-this.scrollOffset)
+    } else if (this.cursor[1]>=this.colOffset+this.cols){
+      this.colOffset = Math.max(0,this.cursor[1]-this.scrollOffset)
+    }
+  }
+
+  insertCharAtCursorPos(char){
+    console.log(`insertCharAtCursorPos(${JSON.stringify(char,null,2)})`)
+    this.string.ddll.msetTree.insert(this.cursorPos,char)
+    this.reloadLines()
+    this.docSize+=1
+    this.moveCursor(1)
+  }
+
+  removeCharBeforeCursorPos(){
+    if (this.cursorPos>=1){
+      this.string.ddll.msetTree.delete(this.cursorPos-1)
+      this.reloadLines()
+      this.docSize-=1
+      this.cursorPos -= 1
+
+    }
   }
 
   setRedrawCanvas(redraw){
     this.redrawCanvas = redraw
   }
 
-  updateCursorPos(){
-    this.cursor = getRowCol(this.cursorPos)
-  }
+
 
   redraw(){
     this.redrawCanvas()
@@ -204,7 +260,15 @@ cursor=${JSON.stringify(this.cursor,null,2)}
 
   getRowLength(row){
     //return this.text[row].length
-    //console.log(`grl(${row})  lines=${JSON.stringify(this.lines,null,2)} offset=${this.rowOffset}`)
+    console.log(`grl(${row})  lines=${JSON.stringify(this.lines,null,2)} offset=${this.rowOffset}`)
+    let localRow = row-this.rowOffset
+    if (localRow<0 || localRow>=this.lines.length){
+      const allLines = this.string.ddll_lines()
+      if (row<0 || row>=allLines.length){
+        throw("Error in grl")
+      }
+      return allLines[row].length
+    }
     return this.lines[row-this.rowOffset].length
     // return this.view.getRowLength(row)
     // this is efficient if row is in the current CACHE
@@ -264,7 +328,7 @@ cursor=${JSON.stringify(this.cursor,null,2)}
       //console.log(`lines=\n${this.lines}`)
       this.rowOffset = firstRow
       this.windowOffset = this.string.getPos(firstRow,0)
-      this.lastWindowOffset = this.windowOffset + this.lines.join("\n").length
+
 
       if (row<this.rowOffset || row>=this.rowOffset+this.rows){
         console.log("\n RRRRRR\nupdating???")
@@ -326,24 +390,8 @@ cursor=${JSON.stringify(this.cursor,null,2)}
     this.cursorPos = this.getCharPos(this.cursor[0],this.cursor[1])
   }
 
-  insertChar(row,col,key,remote){ // for a non CR key
-    //console.log(`insertChar(${row},${col},${key},${remote})`)
-    const charPos = this.getCharPos(row,col)
-    const line = this.getLocalLine(row)
-    const first = line.substring(0,col) // first part
-    const rest = line.substring(col)
-    const newline = first+key+rest
-    //this.text[row]=newline
-    //console.log(`before insertion: ${JSON.stringify(this.lines,null,2)}`)
-    this.lines[row-this.rowOffset] = newline
-    this.lastWindowOffset += 1
-    //console.log(` after insertion:${JSON.stringify(this.lines,null,2)}`)
-    if (!remote){
-      this.string.insertAtPos(key,charPos)
-    }
-    // this changes one character in one line of the CACHE
-    this.printState()
-  }
+
+
 
   splitRow(row,pos,remote){ // insert CR
     // this.textView.splitRow(row,pos,remote)
@@ -358,7 +406,7 @@ cursor=${JSON.stringify(this.cursor,null,2)}
         line.substring(0,pos),line.substring(pos))
     const removedText = this.lines.slice(this.rows)
     this.lines = this.lines.slice(0,this.rows)
-    this.lastWindowOffset  += 1-(removedText.length>0?removedText[0].length:0)
+
     this.lastRow += 1
     if (!remote){
       this.string.insertAtPos('\n',charPos)
@@ -383,7 +431,7 @@ cursor=${JSON.stringify(this.cursor,null,2)}
     if (!remote){
       this.string.deleteFromPos(charPos-1)
     }
-    this.lastWindowOffset -= 1
+
     // this changes one line in the cache
     this.printState()
   }
@@ -404,9 +452,9 @@ cursor=${JSON.stringify(this.cursor,null,2)}
       const nextRow = this.getLine(this.rowOffset+this.rows)
       //console.log(`nextRow=${nextRow}`)
       this.lines[this.rows-1] = nextRow
-      this.lastWindowOffset += nextRow.length
+
     } else {
-      this.lastWindowOffset -= 1
+
     }
     if (!remote){
       this.string.deleteFromPos(charPos)

@@ -127,169 +127,74 @@ class CanvasEditor{
       let state = this.state
       if (event.ctrlKey){
         return
-        // process ^F ^B ^N ^P to move cursor ...
-        // ^A beginning of line ^E end of line
-        // ^D delete next character
       } else if (key=='ArrowLeft'){
-        let ccol = state.getCurrentCol()
-        if (ccol>0){
-          const lineLen = state.getCurrentLineLength() //state.text[state.cursor[0]].length
-          if (ccol>lineLen){
-             state.setCurrentCol(lineLen) //state.cursor[1] = lineLen
-          }
-          state.setCurrentCol(ccol-1)
-          //state.cursor[1]--;
-        } else {
-          let crow = state.getCurrentRow()
-          if (crow>0) {
-            state.setCurrentRow(crow-1)
-            state.setCurrentCol(state.getRowLength(crow-1))
-            // state.cursor[0]--
-            // state.cursor[1] = state.text[state.cursor[0]].length
-          }
-        }
+        this.state.moveCursor(-1)
         return
       } else if (key=='ArrowRight'){
-          let ccol = state.getCurrentCol()
-          if (ccol< state.getCurrentLineLength()){
-             state.setCurrentCol(state.getCurrentCol()+1)
-          } else {
-             let crow = state.getCurrentRow()
-             if (crow<state.getLastRow()) {
-                state.setCursor(crow+1,0)
-             }
-          }
-
+        this.state.moveCursor(1)
         return
       } else if (key=='ArrowUp'){
-        let crow = state.getCurrentRow()
-        if (crow>0){
-          state.setCurrentRow(crow-1)
-          let ccol = state.getCurrentCol()
-          let linelen = state.getRowLength(crow-1)
-          state.setCurrentCol(Math.min(ccol,linelen))
-        }
+
         return
       } else if (key=='ArrowDown'){
-        let crow = state.getCurrentRow()
-        let lastRow = state.getLastRow()
-
-        if (crow<lastRow){
-          state.setCurrentRow(crow+1)
-          let ccol = state.getCurrentCol()
-          let linelen = state.getRowLength(crow+1)
-          state.setCurrentCol(Math.min(ccol,linelen))
-        }
 
         return
       } else if (key=='Backspace'){
-        this.removePrevChar()
-        // remove the character at the current position!!!
+        this.state.removeCharBeforeCursorPos()
         return
       } else if (key=='Enter'){
-        this.insertCRLF()
+        this.state.insertCharAtCursorPos('\n')
+        console.log("**** state after hitting enter")
+        this.state.printState()
         return
       } else if (this.allLetters.indexOf(key)<0) {
+        // don't handle anything but printable characters, backspace, arrows, and enter
         return
       } else {
-
-      this.insertKey(key)
+        this.state.insertCharAtCursorPos(key)
+        console.log("**** state after inserting")
+        this.state.printState()
       }
     }
 
-    removePrevChar(){
-      const row = this.state.getCurrentRow()
-      const col = this.state.getCurrentCol()
-      const line = this.state.getCurrentLine()
-      const lineLen = line.length
-      if (col>lineLen){
-        col = lineLen
-        this.state.setCurrentCol(col)
-      }
-      if (col>0){
-        this.state.removePrevChar(row,col)
-        this.state.setCursor(row,col-1)
-      } else if(row>0){
-        const prevLine = this.state.getLine(row-1)
-        this.state.joinWithNextLine(row-1)
-        this.state.setCursor(row-1,prevLine.length)
-      }
-    }
-
-
-    insertCRLF(){
-      const row =this.state.getCurrentRow()
-      const pos = this.state.getCurrentCol()
-
-      this.state.splitRow(row,pos)
-      this.state.setCursor(row+1,0)
-    }
-
-    insertKey(key){
-      const row = this.state.getCurrentRow()
-      const col = this.state.getCurrentCol()
-
-      this.state.insertChar(row,col,key)
-      this.state.setCursor(row,col+1)
-    }
 
     //=============
 
 
     redrawmsetCanvas(){
-      //console.log("about to redraw the canvas")
-      //console.log('this=')
-      //console.dir(this)
-
+      /*
+        This method simply draws theState.lines on the screen skipping over
+        the first colOffset columns. We assume that this.state.lines is an
+        accurate representation of our viewing window...
+        When cursor movement drop above or below the view window, we will
+        update this.state.lines accordingly
+      */
+      //console.log("\n****\nredrawmsetCanvas")
+      this.state.updateLinesAroundCursorPos()
+      //console.log("ready to draw")
       this.getFontSize()
       this.clearmsetCanvas()
       let theState = this.state
       const ctx = this.msetCanvas.getContext('2d')
-      //ctx.font = fonttype
-      //===============
-      //context.strokeStyle = 'blue';
-      //context.lineWidth = '5';
-      //context.strokeRect(0, 0, window.innerWidth, window.innerHeight);
-      //===============
       ctx.fillStyle='black'
+      //console.log("getColOffset")
+      let colOffset = this.state.getColOffset()
+      //console.log('before loop ')
+      //console.log(`len = ${this.state.lines.length}`)
 
-      if ((theState.getCurrentRow()<theState.getRowOffset())  ) {
-        theState.setRowOffset(Math.max(0,theState.getCurrentRow()-5))
-      } else if (theState.getCurrentRow() >=
-                   theState.getRowOffset()+theState.getNumRows()){
-        theState.setRowOffset(theState.getRowOffset()+5)
-      }
-
-      let col = theState.getCurrentCol()
-      let colOffset = theState.getColOffset()
-      let numCols = theState.getNumCols()
-      if ((col<colOffset)  ) {
-        theState.setColOffset(Math.max(0,col-5))
-      } else if (col>= colOffset+numCols){
-        theState.setColOffset(Math.max(0,colOffset + numCols-5));
-      }
-      colOffset = theState.getColOffset()
-
-      let rowOffset = theState.getRowOffset()
-      let numRows = theState.getNumRows()
-      let rowEnd = Math.min(theState.getLastRow(),numRows+rowOffset)
-      numCols = theState.getNumCols()
-
-      //console.log(`redrawing the lines from ${rowOffset} to ${rowEnd}`)
-      theState.printState()
-      for(let i=rowOffset; i<= rowEnd ; i++){
-        //console.log(`${i} ${colOffset} ${numCols}`)
-        const theLine = theState.getLine(i)
-        //console.log(`${theLine}`)
-        const line =theLine.substring(colOffset,colOffset+numCols+5)
-        const text = ctx.measureText(line)
+      for (let i =0; i<this.state.lines.length; i++){
+        //console.log("in loop over i")
+        //console.log(`i=${i} len = ${this.state.lines.length}`)
+        let line =this.state.lines[i].substring(colOffset,colOffset+this.state.cols+5)
+        //console.log(`fullline = ${this.state.lines[i]} colOffset = ${colOffset} numCols=${this.state.cols}`)
+        //console.log(`line= ${line}`)
+        //const text = ctx.measureText(line)
         const start = 0
-        const baseline = (1+i-rowOffset)*this.lineHeight+this.lineDescent
-        const topline = this.lineHeight
-        //console.log(`${JSON.stringify([line,start,baseline],null,2)}`)
-        //console.dir(ctx)
+        const baseline = (1+i)*this.lineHeight+this.lineDescent
+        //console.log(`fillText(${JSON.stringify(line,null,2)},${start},${baseline})`)
         ctx.fillText(line,start,baseline)
       }
+      //console.log("done drawing")
 
       this.drawCursor()
     }
@@ -301,15 +206,11 @@ class CanvasEditor{
 
     drawCursor(){
 
-      const line =this.state.getCurrentLine()
-      const col = this.state.getCurrentCol()
-      const row = this.state.getCurrentRow()
-      const colOffset = this.state.getColOffset()
-      const rowOffset = this.state.getRowOffset()
-      const visibleColumn = (col-colOffset)
-      const visibleRow = (row-rowOffset)
+      const [row,col] = this.state.getCursorRowCol()
+      const visibleRow = row
+      const visibleCol = col-this.state.colOffset
 
-      const start = visibleColumn*this.charWidth
+      const start = visibleCol*this.charWidth
       const baseline = visibleRow*this.lineHeight+this.lineSep+this.lineDescent
       const topline = this.lineHeight-this.lineSep+this.lineDescent+1
 
