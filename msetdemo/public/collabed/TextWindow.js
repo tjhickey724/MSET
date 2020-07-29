@@ -1,5 +1,9 @@
-import {DDLLstring} from "./DDLLstring.js"
+//import {DDLLstring} from "./DDLLstring.js"
+import {DDLL} from '../mset/DDLL.js'
 export {TextWindow}
+
+const namespace = "/demo2"
+const documentId = "default"
 
 //console.log("loading TextWindow.js")
 
@@ -8,19 +12,7 @@ export {TextWindow}
 // either by the user or remotely
 
 
-/*
-TextWindow models the state of the document.
-It receives calls from the Editor using row/col coordinates
-for inserting and deleting characters. It translates these into
-position based calls and in turn makes calls to the DDLLstring object
-which updates the MSET representation of the document and sends MSET
-transformations corresponding to the inserts or deletes to the network.
 
-Likewise, when the DDLLstring object receives an insert or delete operation
-from the network, it makes calls to this TextWindow object to update the
-state and to redraw the canvas.  Note that the DDLLstring object and the
-TextWindow object both have links to each other.
-*/
 class TextWindow{
   /**
     This class will represent a text object and a window onto that text object.
@@ -31,7 +23,7 @@ class TextWindow{
 
   **/
 
-  constructor(ddll){
+  constructor(ddllSpec){
 
     // these are the necessary state variables
     this.windowOffset = 0  // the position of 1st visible character in the windowOffset
@@ -39,7 +31,6 @@ class TextWindow{
     this.rows = 10
     this.cols = 80
     this.colOffset=0
-    this.string =  new DDLLstring(this)
     this.docSize=0
 
     // these are all computed state variables
@@ -54,7 +45,72 @@ class TextWindow{
     this.redrawCanvas = ()=> {console.log("redrawing not initialized yet")}
 
     this.debugging=true
+
+    this.editorCallbacks =
+      (op,pos,elt,user,me) =>{
+        // first we do some local processing
+        console.log(`\nZZZ editorCallback(${op},${pos},${elt},${user},${me})`)
+        const theLines = this.ddll.toString('','std')
+        //console.log(`theLines=${JSON.stringify(theLines,null,2)}`)
+        this.printState()
+        switch(op){
+          case "init":
+            break
+          case "insert":
+            //console.log("insert callback\n"+JSON.stringify([ta1.readOnly,'insert',pos,elt,user,me]))
+            if (user==me) return
+            // adjust the windowOffset and cursorPos and docSize
+            this.docSize++
+            if (pos<this.windowOffset){
+              this.windowOffset++
+              this.cursorPos++
+            } else if (pos <= this.cursorPos){
+              this.cursorPos++
+              this.reloadLines()
+              this.redraw()
+            }else if (pos <= this.lastWindowOffset()){
+              this.reloadLines()
+              this.redraw()
+            }
+            break
+          case "delete":
+            //console.log("in delete callback\n"+JSON.stringify([ta1.readOnly,'delete',pos,elt,user,me]))
+            if (user==me) return
+            // adjust the windowOffset and cursorPos and docSize
+            this.docSize--
+            if (pos<this.windowOffset){
+              this.windowOffset--
+              this.cursorPos--
+            } else if (pos <= this.cursorPos){
+              this.cursorPos--
+              this.reloadLines()
+              this.redraw()
+            }else if (pos <= this.lastWindowOffset()){
+              this.reloadLines()
+              this.redraw()
+            }
+
+            break
+        }
+        console.log("Just processed a remote operation "+op+" "+pos)
+        this.printState()
+      }
+
+      this.ddll =
+          new DDLL([],
+                   this.editorCallbacks,
+                   io(ddllSpec.namespace),
+                   ddllSpec.documentId)
+
+      //console.log(`this.ddll=${this.ddll}`)
+      //console.dir(this.ddll)
+
+      this.ddll_lines =
+         () => this.ddll.msetTree.toList2('std').join('').split("\n")
+
   }
+
+
 
   printState(){
     if (!this.debugging){
@@ -70,7 +126,7 @@ colOffset = ${this.colOffset}
 windowOffset=${this.windowOffset} lastWindowOffset=${this.lastWindowOffset()} this=${this}
 lastRow = ${this.lastRow}
 lines = ${JSON.stringify(this.lines,null,2)}
-ddl_lines = ${JSON.stringify(this.string.ddll_lines(),null,2)}
+ddl_lines = ${JSON.stringify(this.ddll_lines(),null,2)}
 cursor=${JSON.stringify(this.cursor,null,2)}
 cursorPos = ${this.cursorPos}
 docSize = ${this.docSize}
@@ -85,31 +141,31 @@ docSize = ${this.docSize}
   }
 
   moveCursorUp(){
-    console.log("moveCursorUp")
-    console.log(`cursorPos=${this.cursorPos}`)
+    //console.log("moveCursorUp")
+    //console.log(`cursorPos=${this.cursorPos}`)
     const [row,col] = this.getCursorRowColSLOW()
-    console.log(`rc = [${row},${col}]`)
+    //console.log(`rc = [${row},${col}]`)
     if (row==0) {
       return
     }
     const newPos = this.getPosSLOW(row-1,col)
-    console.log('newCursorPos = '+newPos)
+    //console.log('newCursorPos = '+newPos)
     this.cursorPos = newPos
   }
 
   moveCursorDown(){
-    console.log(`moveCursorDown`)
+    //console.log(`moveCursorDown`)
     const [row,col] = this.getCursorRowColSLOW()
-    console.log(`rc=[${row},${col}]`)
+    //console.log(`rc=[${row},${col}]`)
     const newPos = this.getPosSLOW(row+1,col)
-    console.log(`pos=${newPos}`)
+    //console.log(`pos=${newPos}`)
     this.cursorPos = newPos
   }
 
   getPosSLOW(row,col) {
-    const lines = this.string.ddll_lines()
-    console.log(`getPosSLOW(${row},${col})`)
-    console.log(`lines=${JSON.stringify(lines,null,2)}`)
+    const lines = this.ddll_lines()
+    //console.log(`getPosSLOW(${row},${col})`)
+    //console.log(`lines=${JSON.stringify(lines,null,2)}`)
     let pos = 0
     for(let i=0; i<Math.min(row,lines.length); i++){
       pos += lines[i].length+1
@@ -131,13 +187,13 @@ docSize = ${this.docSize}
     // we assume this is only called when the cursor is in the view
 
     if (this.cursorPos < this.windowOffset || this.cursorPos > this.lastWindowOffset()){
-      console.log(`ERROR: in getCursorRowCol(${this.cursorPos})`)
+      //console.log(`ERROR: in getCursorRowCol(${this.cursorPos})`)
       return this.getCursorRowColSLOW()
     }
     let p=this.windowOffset
     let prevOffset=0
     let row = 0
-    console.log(`this.lines = ${JSON.stringify(this.lines,null,2)} row=${row}`)
+    //console.log(`this.lines = ${JSON.stringify(this.lines,null,2)} row=${row}`)
     while (p <= this.cursorPos && row<this.lines.length){
       prevOffset = p
       p+= this.lines[row].length+1
@@ -163,10 +219,10 @@ docSize = ${this.docSize}
   getRowColSLOW(pos){
     // this returns the row and col for a general cursorPos
     if (pos < 0 || pos > this.docSize){
-      console.log(`ERROR: in getCursorRowCol(${this.cursorPos})`)
+      //console.log(`ERROR: in getCursorRowCol(${this.cursorPos})`)
       throw new Error("gcrSLOW")
     }
-    let lines = this.string.ddll_lines()
+    let lines = this.ddll_lines()
     let p=0
     let prevOffset=0
     let row = 0
@@ -198,25 +254,25 @@ docSize = ${this.docSize}
 
   updateLinesAroundCursorPos(){
     // this will set the cursor pos to the first line of the window
-    console.log("updateLinesAroundCursorPos")
+    //console.log("updateLinesAroundCursorPos")
     this.printState()
-    console.log("after printState")
+    //console.log("after printState")
     /*
     if (this.windowOffset <= this.cursorPos
         &&
         this.cursorPos <= this.lastWindowOffset()){
-      console.log("reloading lines in the window")
+      //console.log("reloading lines in the window")
       this.reloadLines()
       return
     }
     */
-    console.log("shifting the window")
-    let allLines = this.string.ddll_lines()
+    //console.log("shifting the window")
+    let allLines = this.ddll_lines()
     if (this.windowOffset <= this.cursorPos && this.cursorPos<=this.lastWindowOffset()){
       this.reloadLines()
       return
     }
-    console.log("find the new rowOffset")
+    //console.log("find the new rowOffset")
     let p=0
     let lastp=0
     let i=0
@@ -225,7 +281,7 @@ docSize = ${this.docSize}
       p += allLines[i].length+1
       i=i+1
     }
-    console.log(`p=${p}  lastp=${lastp} i=${i}`)
+    //console.log(`p=${p}  lastp=${lastp} i=${i}`)
     let cursorRowOffset = lastp
     let cursorRow = i-1
     let cursorCol = this.cursorPos - cursorRowOffset
@@ -237,7 +293,7 @@ docSize = ${this.docSize}
 
   reloadLines(){
     //console.log("in reloadlines")
-    let allLines = this.string.ddll_lines()
+    let allLines = this.ddll_lines()
     this.lines = allLines.slice(this.rowOffset,this.rowOffset+this.rows)
     //console.log(`realoadLines() => ${JSON.stringify(this.lines,null,2)}`)
   }
@@ -260,8 +316,8 @@ docSize = ${this.docSize}
   }
 
   insertCharAtCursorPos(char){
-    console.log(`insertCharAtCursorPos(${JSON.stringify(char,null,2)})`)
-    this.string.ddll.msetTree.insert(this.cursorPos,char)
+    //console.log(`insertCharAtCursorPos(${JSON.stringify(char,null,2)})`)
+    this.ddll.msetTree.insert(this.cursorPos,char)
     this.reloadLines()
     this.docSize+=1
     this.moveCursor(1)
@@ -269,7 +325,7 @@ docSize = ${this.docSize}
 
   removeCharBeforeCursorPos(){
     if (this.cursorPos>=1){
-      this.string.ddll.msetTree.delete(this.cursorPos-1)
+      this.ddll.msetTree.delete(this.cursorPos-1)
       this.reloadLines()
       this.docSize-=1
       this.cursorPos -= 1
@@ -282,7 +338,6 @@ docSize = ${this.docSize}
   }
 
 
-
   redraw(){
     this.redrawCanvas()
   }
@@ -293,321 +348,5 @@ docSize = ${this.docSize}
     //this.view.setRowsCols(rows,cols)
   }
 
-
-  getNumRows(){
-    // returns the height of the viewing window in rows
-    // whether or not all rows are full
-    return this.rows
-  }
-
-  getNumCols(){
-    // gets the width of the viewing window
-    return this.cols
-  }
-
-  getRowOffset(){
-    return this.rowOffset
-  }
-
-  setRowOffset(row){
-    this.updateCacheExact(row) //
-    this.rowOffset = row
-    this.windowOffset = this.string.getPos(row,0)
-    // here we need to update the CACHE
-  }
-
-  getColOffset(){
-    return this.colOffset
-  }
-
-  setColOffset(col){
-    this.colOffset = col
-  }
-
-  getLastRow(){
-    return this.lastRow
-    //return this.view.getLastRow()
-
-    // we need to keep track of this dynamically by
-    // counting the number of newlines inserted and deleted in the text
-    // the first time through will require a scan of the entire document
-  }
-
-  getRowLength(row){
-    //return this.text[row].length
-    console.log(`grl(${row})  lines=${JSON.stringify(this.lines,null,2)} offset=${this.rowOffset}`)
-    let localRow = row-this.rowOffset
-    if (localRow<0 || localRow>=this.lines.length){
-      const allLines = this.string.ddll_lines()
-      if (row<0 || row>=allLines.length){
-        throw("Error in grl")
-      }
-      return allLines[row].length
-    }
-    return this.lines[row-this.rowOffset].length
-    // return this.view.getRowLength(row)
-    // this is efficient if row is in the current CACHE
-  }
-
-  /* Cursor manipulation */
-
-  setCursor(row,col){
-    this.cursor = [row,col]
-    this.cursorPos = this.getPosSLOW(this.cursor[0],this.cursor[1])
-
-  }
-
-  setCursorRC(rc){
-    this.cursor = rc
-    this.cursorPos = this.getPosSLOW(this.cursor[0],this.cursor[1])
-    // we may need to update the CACHE when the cursor is moved...
-  }
-
-  getCurrentRow(){
-    return this.cursor[0]
-  }
-
-  setCurrentRow(row){
-    // if the row is outside of the cached region
-    // we need to pull in new rows!
-    this.cursor = this.getCursorRowColSLOW()
-    this.cursor[0] = row
-    this.cursorPos = the.getPosSLOW(row,this.cursor[1])
-  }
-
-  updateCacheOLD(row){
-    // I think this should only is called if you use the slider
-    // which isn't implemented yet!
-    //return
-    //console.log(`*******\n*******\nin updateCache row=${row}, this.rows=${this.rows} rowOffset=${this.rowOffset}`)
-    if (row >= this.rowOffset && row < this.rowOffset+this.rows) {
-      return
-    } else {
-      //console.log("RESHAPING WINDOW ********")
-      const viewOffset = Math.min(this.scrollOffset,this.rows-1)
-      const firstRow = Math.max(0,row-viewOffset)
-      const lastRow = Math.min(firstRow+this.rows,this.lastRow+1)
-      //console.log('before slice: '+JSON.stringify(this.lines,null,2))
-      //console.log(`firstRow=${firstRow} lastRow=${lastRow}`)
-      //console.log(`this.text=${JSON.stringify(this.text,null,2)}`)
-
-      this.lines = this.getStringSlice(firstRow,lastRow) // replace with call to DLL
-
-      if (this.lines.length==0) {
-        this.lines = [""]
-      }
-      //console.log('after slice: '+JSON.stringify(this.lines,null,2))
-      //console.log(`lines=\n${this.lines}`)
-      this.rowOffset = firstRow
-      this.windowOffset = this.string.getPos(firstRow,0)
-
-
-      if (row<this.rowOffset || row>=this.rowOffset+this.rows){
-        console.log("\n RRRRRR\nupdating???")
-        //this.rowOffset = firstRow
-      }
-    }
-
-
-  }
-
-  getStringSliceOLD(start, end){
-    return this.string.getStringSlice(start,end)
-    /*
-    const a = this.string.getStringSlice(start,end)
-    const b = this.text.slice(start,end)
-    console.log(`a: ${JSON.stringify(a,null,2)}`)
-    console.log(`b: ${JSON.stringify(b,null,2)}`)
-    console.log(`a==b: ${JSON.stringify(a)== JSON.stringify(b)}`)
-
-    return this.text.slice(start,end)
-    */
-  }
-
-  updateCacheExactOLD(row){
-    // this will only be called when we add a slider to jump to an arbitrary pos
-    // in the file. It is not called when the window is moved by key presses and
-    // mouse clicks
-    console.log(`\nQQQQQ  in updateCacheExact row=${row}, this.rows=${this.rows} rowOffset=${this.rowOffset}`)
-    // sets the rowOffset to row exactly
-
-    const firstRow = row
-    const lastRow = Math.min(firstRow+this.rows,this.lastRow+1)
-    //console.log('before slice: '+JSON.stringify(this.lines,null,2))
-    this.lines = this.string.getStringSlice(firstRow,lastRow)
-      //this.lines.slice(firstRow-this.rowOffset,lastRow-this.rowOffset)
-    if (this.lines.length==0) {
-      this.lines = [""]
-    }
-    //console.log('after slice: '+JSON.stringify(this.lines,null,2))
-
-    if (row<this.rowOffset || row>=this.rowOffset+this.rows){
-      console.log("QQQQQ Updating!")
-      this.rowOffset = firstRow
-      this.windowOffset = this.string.getPos(firstRow,0)
-    }
-    //console.log(`lines=\n${this.lines}`)
-
-  }
-
-
-
-
-  getCurrentCol(){
-    return this.cursor[1]
-  }
-
-  setCurrentCol(col){
-    this.cursor[1]= col
-    this.cursorPos = this.getCharPos(this.cursor[0],this.cursor[1])
-  }
-
-
-
-
-  splitRow(row,pos,remote){ // insert CR
-    // this.textView.splitRow(row,pos,remote)
-    //console.log(`splitRow(${row},${pos},${remote})`)
-    const charPos = this.getCharPos(row,pos)
-    //let line = this.text[row]
-    //this.text.splice(row,1,
-    //  line.substring(0,pos),line.substring(pos))
-
-    let line = this.lines[row-this.rowOffset]
-    this.lines.splice(row-this.rowOffset,1,
-        line.substring(0,pos),line.substring(pos))
-    const removedText = this.lines.slice(this.rows)
-    this.lines = this.lines.slice(0,this.rows)
-
-    this.lastRow += 1
-    if (!remote){
-      this.string.insertAtPos('\n',charPos)
-    }
-    // this replace one line of the cache with two new ones
-    // and removes the last line of the cache
-    this.printState()
-  }
-
-  removePrevChar(row,col,remote){ // for a non CR key
-    // this.textView.removePrevChar(row,col,remote)
-    //console.log(`removePrevChar(${row},${col},${remote})`)
-    const charPos = this.getCharPos(row,col)
-    //let line = this.text[row]
-    //this.text.splice(row,1,
-    //  line.substring(0,col-1)+line.substring(col))
-
-    let line = this.lines[row-this.rowOffset]
-    this.lines.splice(row-this.rowOffset,1,
-      line.substring(0,col-1)+line.substring(col))
-      // this.view.removePrevChar(row,col)
-    if (!remote){
-      this.string.deleteFromPos(charPos-1)
-    }
-
-    // this changes one line in the cache
-    this.printState()
-  }
-
-  joinWithNextLine(row,remote){ // remove CR and pull another line into buffer
-    //console.log(`joinWithNextLine(${row},${remote})`)
-    const charPos = this.getCharPos(row+1,0)-1
-    //this.text.splice(row,2,
-    //  this.text[row]+ this.text[row+1])
-    const localRow = row - this.rowOffset
-    this.lines.splice(localRow,2,
-      this.lines[localRow]+ this.lines[localRow+1])
-
-    // this.view.joinWithNextLine(row)
-    this.lastRow -= 1
-    //console.log(`r=${this.rows} o=${this.rowOffset} lr=${this.lastRow}`)
-    if (this.rowOffset+this.rows <= this.lastRow) {
-      const nextRow = this.getLine(this.rowOffset+this.rows)
-      //console.log(`nextRow=${nextRow}`)
-      this.lines[this.rows-1] = nextRow
-
-    } else {
-
-    }
-    if (!remote){
-      this.string.deleteFromPos(charPos)
-    }
-    //this replaces two lines of the cache with a new joined one
-    // and potentially pulls in a new line into the cache
-    this.printState()
-  }
-
-
-  getPos(cursor){
-    return this.getCharPos(cursor[0],cursor[1])
-  }
-
-  getCharPos(row,col){
-    return this.string.getPos(row,col)
-  }
-
-  getLine(row){
-    const theLines = this.string.getStringSlice(row,row+1)
-    console.log(`getLine(${row}) = ${JSON.stringify(theLines,null,2)}`)
-    return theLines.length>0?theLines[0]:""
-  }
-
-  getLocalLine(row){
-    // this is only called with the row is in the cache
-    theLine = this.lines[row-this.rowOffset]
-    console.log(`getLocalLine(${row}) = ${JSON.stringify(theLine,null,2)}`)
-    return theLine
-  }
-
-  oldGetLine(row){
-    // this is junk!
-
-    // if row is in the cache this is efficient, else it takes linear time
-    // we should start searching from the top or bottom of the cache
-/*
-    console.log("\n\nIN GETLINE")
-    console.log(`row=${row} rowOffset=${this.rowOffset} local=${row-this.rowOffset}`)
-    console.log(`this.lines.length=${this.lines.length}`)
-    console.log(JSON.stringify(this.lines,null,2))
-
-    console.log(this.lines[row-this.rowOffset])
-    console.log(JSON.stringify(this.lines,null,2))
-    console.log(JSON.stringify(this.text,null,2))
-    */
-
-    //return this.text[row]
-    //console.log(`getLine(${row})=> ${JSON.stringify(this.lines[row-this.rowOffset])}`)
-    //console.log(`row-this.rowOffset=${row-this.rowOffset}`)
-    //console.log("in getLine "+row)
-    const theLines = this.string.getStringSlice(row,row+1)
-    //console.log(`getLine(${row}) = ${JSON.stringify(theLines,null,2)}`)
-    return theLines.length>0?theLines[0]:""
-
-    if (row<this.rowOffset || row >= this.rowOffset + this.lines.length) {
-      return this.string.getStringSlice(row,row+1)
-    } else {
-      const line = this.lines[row-this.rowOffset]
-      if (typeof(line)=='string') {
-        return this.lines[row-this.rowOffset]
-      }
-      else {
-      //console.log(`ERROR row=${row} lines=${JSON.stringify(this.lines,null,2)} rowOffset=${this.rowOffset}`)
-      //console.log(`line=${JSON.stringify(line,null,2)}`)
-        return ""
-      }
-    }
-
-  }
-
-  getCurrentLine() {
-    // this is very efficient as long as we update the cache when setting the cursor
-    //return this.text[this.cursor[0]]
-    return this.lines[this.cursor[0]-this.rowOffset]
-  }
-
-  getCurrentLineLength(){
-    // very efficient
-    //return this.text[this.cursor[0]].length
-    return this.lines[this.cursor[0]-this.rowOffset].length
-  }
 
 }

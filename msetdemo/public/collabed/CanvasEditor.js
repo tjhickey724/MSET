@@ -65,17 +65,13 @@ class CanvasEditor{
     // here is how we can get the position of the mouseclick
     this.msetCanvas.addEventListener('mousedown', function(event){
         let row = Math.floor(event.offsetY/msetCE.lineHeight)+
-                            msetCE.state.getRowOffset()
+                             msetCE.state.rowOffset
         let col = Math.round(event.offsetX/(msetCE.charWidth)) +
-                msetCE.state.getColOffset()
-        console.log(`mousedown row=${row} col=${col}`)
+                             msetCE.state.colOffset
+        //console.log(`mousedown row=${row} col=${col}`)
         const pos = msetCE.state.getPosSLOW(row,col)
         msetCE.state.cursorPos = pos
-        /*
-        row = Math.min(row,msetCE.state.getLastRow())
-        col = Math.min(col,msetCE.state.getRowLength(row))
-        msetCE.state.setCursor(row,col)
-        */
+
         msetCE.redrawmsetCanvas()
     });
 
@@ -108,10 +104,6 @@ class CanvasEditor{
       let numRows = Math.floor(this.msetCanvas.height/this.lineHeight);
       let numCols = Math.floor(this.msetCanvas.width/(this.charWidth))
 
-      // this.state.cols = numCols
-      // this.state.rows = numRows
-      //let state = this.state
-    //  console.dir(state)
       this.state.setRowsCols(numRows,numCols)
 
       return this.ctx.measureText(this.letters);
@@ -149,7 +141,7 @@ class CanvasEditor{
         return
       } else if (key=='Enter'){
         this.state.insertCharAtCursorPos('\n')
-        console.log("**** state after hitting enter")
+        //console.log("**** state after hitting enter")
         //this.state.printState()
         return
       } else if (this.allLetters.indexOf(key)<0) {
@@ -157,7 +149,7 @@ class CanvasEditor{
         return
       } else {
         this.state.insertCharAtCursorPos(key)
-        console.log("**** state after inserting")
+        //console.log("**** state after inserting")
         //this.state.printState()
       }
     }
@@ -183,7 +175,7 @@ class CanvasEditor{
       const ctx = this.msetCanvas.getContext('2d')
       ctx.fillStyle='black'
       //console.log("getColOffset")
-      let colOffset = this.state.getColOffset()
+      let colOffset = this.state.colOffset
       //console.log('before loop ')
       //console.log(`len = ${this.state.lines.length}`)
 
@@ -205,7 +197,7 @@ class CanvasEditor{
     }
 
     printState(){
-      console.log(JSON.stringify(this.state))
+      //console.log(JSON.stringify(this.state))
     }
 
 
@@ -226,5 +218,6 @@ class CanvasEditor{
 
 }
 
-const tw = new TextWindow("dummy DDLL")
+const ddllSpec= {namespace:"/demo2", documentId:"default"}
+const tw = new TextWindow(ddllSpec)
 const ed1 = new CanvasEditor(mset,tw)
