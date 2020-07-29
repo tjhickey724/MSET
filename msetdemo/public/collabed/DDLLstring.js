@@ -1,8 +1,8 @@
 import {DDLL} from '../mset/DDLL.js'
 export {DDLLstring}
 
-console.log("In DDLLstring.js!!!!!")
-console.log(`io=${io}`)
+//console.log("In DDLLstring.js!!!!!")
+//console.log(`io=${io}`)
 
 
 
@@ -46,7 +46,7 @@ class DDLLstring{
 
     this.localDelete =
       (pos) =>
-          {console.log(`in localDelete(${pos})`)
+          {//console.log(`in localDelete(${pos})`)
            this.string = this.string.substring(0,pos)+this.string.substring(pos+1)
            this.ddll.msetTree.delete(pos)}
           //{}
@@ -56,7 +56,8 @@ class DDLLstring{
         // first we do some local processing
         console.log(`\nZZZ editorCallback(${op},${pos},${elt},${user},${me})`)
         const theLines = this.ddll.toString('','std')
-        console.log(`theLines=${JSON.stringify(theLines,null,2)}`)
+        //console.log(`theLines=${JSON.stringify(theLines,null,2)}`)
+        this.textWin.printState()
         switch(op){
           case "init":
             break
@@ -73,12 +74,13 @@ class DDLLstring{
             this.deleteFromPosRemote(pos)
             break
         }
+        this.textWin.printState()
       }
 
       this.ddll = new DDLL([],this.editorCallbacks,io(namespace),documentId)
 
-      console.log(`this.ddll=${this.ddll}`)
-      console.dir(this.ddll)
+      //console.log(`this.ddll=${this.ddll}`)
+      //console.dir(this.ddll)
 
       this.ddll_lines =
          () => this.ddll.msetTree.toList2('std').join('').split("\n")
@@ -139,7 +141,7 @@ class DDLLstring{
       // optimize this!!
       this.textWin.cursor = this.getRowCol(this.textWin.cursorPos)
     }
-    console.log("redrawing the screen")
+    //console.log("redrawing the screen")
     this.textWin.redraw()  // modify so that it only redraws if rc is in visible range
 
   }
@@ -200,7 +202,7 @@ class DDLLstring{
       this.textWin.cursorPos--
       this.textWin.setCursorRC(this.getRowCol(this.textWin.cursorPos))
     }
-    console.log("redrawing the screen")
+    //console.log("redrawing the screen")
     this.textWin.redraw()
 
   }
@@ -245,7 +247,7 @@ class DDLLstring{
   }
 
   getStringSlice(startLine,endLine){
-    console.log(`getStringSlice(${startLine},${endLine})`)
+    //console.log(`getStringSlice(${startLine},${endLine})`)
 
     const lines = this.ddll_lines()
     return lines.slice(startLine,endLine)

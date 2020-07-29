@@ -237,9 +237,9 @@ class CanvasEditor{
 
 
     redrawmsetCanvas(){
-      console.log("about to redraw the canvas")
-      console.log('this=')
-      console.dir(this)
+      //console.log("about to redraw the canvas")
+      //console.log('this=')
+      //console.dir(this)
 
       this.getFontSize()
       this.clearmsetCanvas()
@@ -275,19 +275,19 @@ class CanvasEditor{
       let rowEnd = Math.min(theState.getLastRow(),numRows+rowOffset)
       numCols = theState.getNumCols()
 
-      console.log(`redrawing the lines from ${rowOffset} to ${rowEnd}`)
+      //console.log(`redrawing the lines from ${rowOffset} to ${rowEnd}`)
       theState.printState()
       for(let i=rowOffset; i<= rowEnd ; i++){
-        console.log(`${i} ${colOffset} ${numCols}`)
+        //console.log(`${i} ${colOffset} ${numCols}`)
         const theLine = theState.getLine(i)
-        console.log(`${theLine}`)
+        //console.log(`${theLine}`)
         const line =theLine.substring(colOffset,colOffset+numCols+5)
         const text = ctx.measureText(line)
         const start = 0
         const baseline = (1+i-rowOffset)*this.lineHeight+this.lineDescent
         const topline = this.lineHeight
-        console.log(`${JSON.stringify([line,start,baseline],null,2)}`)
-        console.dir(ctx)
+        //console.log(`${JSON.stringify([line,start,baseline],null,2)}`)
+        //console.dir(ctx)
         ctx.fillText(line,start,baseline)
       }
 

@@ -1,7 +1,7 @@
 import {DDLLstring} from "./DDLLstring.js"
 export {TextWindow}
 
-console.log("loading TextWindow.js")
+//console.log("loading TextWindow.js")
 
 // here is the function which is called by the DDLL server
 // when it processes insert and delete operations on the string
@@ -120,7 +120,7 @@ class TextWindow{
 
     this.string =
       new DDLLstring(this)
-    console.log(`this.string=${this.string}`)
+    //console.log(`this.string=${this.string}`)
 
     this.debugging=true
   }
@@ -306,7 +306,7 @@ cursor=${JSON.stringify(this.cursor,null,2)}
     //console.log('after slice: '+JSON.stringify(this.lines,null,2))
 
     if (row<this.rowOffset || row>=this.rowOffset+this.rows){
-      //console.log("Updating!")
+      console.log("QQQQQ Updating!")
       this.rowOffset = firstRow
       this.windowOffset = this.string.getPos(firstRow,0)
     }
@@ -329,7 +329,7 @@ cursor=${JSON.stringify(this.cursor,null,2)}
   insertChar(row,col,key,remote){ // for a non CR key
     //console.log(`insertChar(${row},${col},${key},${remote})`)
     const charPos = this.getCharPos(row,col)
-    const line = this.getLine(row)
+    const line = this.getLocalLine(row)
     const first = line.substring(0,col) // first part
     const rest = line.substring(col)
     const newline = first+key+rest
@@ -399,10 +399,10 @@ cursor=${JSON.stringify(this.cursor,null,2)}
 
     // this.view.joinWithNextLine(row)
     this.lastRow -= 1
-    console.log(`r=${this.rows} o=${this.rowOffset} lr=${this.lastRow}`)
+    //console.log(`r=${this.rows} o=${this.rowOffset} lr=${this.lastRow}`)
     if (this.rowOffset+this.rows <= this.lastRow) {
       const nextRow = this.getLine(this.rowOffset+this.rows)
-      console.log(`nextRow=${nextRow}`)
+      //console.log(`nextRow=${nextRow}`)
       this.lines[this.rows-1] = nextRow
       this.lastWindowOffset += nextRow.length
     } else {
@@ -440,6 +440,21 @@ cursor=${JSON.stringify(this.cursor,null,2)}
   }
 
   getLine(row){
+    const theLines = this.string.getStringSlice(row,row+1)
+    console.log(`getLine(${row}) = ${JSON.stringify(theLines,null,2)}`)
+    return theLines.length>0?theLines[0]:""
+  }
+
+  getLocalLine(row){
+    // this is only called with the row is in the cache
+    theLine = this.lines[row-this.rowOffset]
+    console.log(`getLocalLine(${row}) = ${JSON.stringify(theLine,null,2)}`)
+    return theLine
+  }
+
+  oldGetLine(row){
+    // this is junk!
+
     // if row is in the cache this is efficient, else it takes linear time
     // we should start searching from the top or bottom of the cache
 /*
@@ -456,7 +471,7 @@ cursor=${JSON.stringify(this.cursor,null,2)}
     //return this.text[row]
     //console.log(`getLine(${row})=> ${JSON.stringify(this.lines[row-this.rowOffset])}`)
     //console.log(`row-this.rowOffset=${row-this.rowOffset}`)
-    console.log("in getLine "+row)
+    //console.log("in getLine "+row)
     const theLines = this.string.getStringSlice(row,row+1)
     //console.log(`getLine(${row}) = ${JSON.stringify(theLines,null,2)}`)
     return theLines.length>0?theLines[0]:""
