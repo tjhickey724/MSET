@@ -68,9 +68,14 @@ class CanvasEditor{
                             msetCE.state.getRowOffset()
         let col = Math.round(event.offsetX/(msetCE.charWidth)) +
                 msetCE.state.getColOffset()
+        console.log(`mousedown row=${row} col=${col}`)
+        const pos = msetCE.state.getPosSLOW(row,col)
+        msetCE.state.cursorPos = pos
+        /*
         row = Math.min(row,msetCE.state.getLastRow())
         col = Math.min(col,msetCE.state.getRowLength(row))
         msetCE.state.setCursor(row,col)
+        */
         msetCE.redrawmsetCanvas()
     });
 
@@ -134,10 +139,10 @@ class CanvasEditor{
         this.state.moveCursor(1)
         return
       } else if (key=='ArrowUp'){
-
+        this.state.moveCursorUp()
         return
       } else if (key=='ArrowDown'){
-
+        this.state.moveCursorDown()
         return
       } else if (key=='Backspace'){
         this.state.removeCharBeforeCursorPos()
@@ -145,7 +150,7 @@ class CanvasEditor{
       } else if (key=='Enter'){
         this.state.insertCharAtCursorPos('\n')
         console.log("**** state after hitting enter")
-        this.state.printState()
+        //this.state.printState()
         return
       } else if (this.allLetters.indexOf(key)<0) {
         // don't handle anything but printable characters, backspace, arrows, and enter
@@ -153,7 +158,7 @@ class CanvasEditor{
       } else {
         this.state.insertCharAtCursorPos(key)
         console.log("**** state after inserting")
-        this.state.printState()
+        //this.state.printState()
       }
     }
 

@@ -114,11 +114,30 @@ class DDLLstring{
   }
 
   getPos(r,c){
+    return this.getPosSLOW(r,c)
+  }
+
+  getPosSLOW(r,c){
+    console.log(`getPosSLOW(${r},${c})`)
+    const lines = this.ddll_lines()
+    const string = lines.join("\n")
+    if (r>= lines.length) {
+      const pos = string.length
+      console.log(`return ${pos}`)
+      return pos
+    }
+    if (r < 0) {
+      const pos = Math.max(c,0)
+      console.log(`return ${pos}`)
+      return prevOffset
+    }
+
+
     let row=0;
     let col=0;
     let p = 0;
-    while(row<r || (row==r && col<c)){
-      if (this.string[p]=='\n'){
+    while(p<string.length && (row<r || (row==r && col<c))){
+      if (string[p]=='\n'){
         row += 1; col=0;
       } else{
         col+=1;

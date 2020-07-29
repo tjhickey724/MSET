@@ -84,22 +84,55 @@ docSize = ${this.docSize}
     this.centerView()
   }
 
-  lastWindowOffset(){
-    //console.log(`lastWindowOffset`)
-    let pos = this.windowOffset
-    for (let line of this.lines) {
-      pos += line.length + 1
+  moveCursorUp(){
+    console.log("moveCursorUp")
+    console.log(`cursorPos=${this.cursorPos}`)
+    const [row,col] = this.getCursorRowColSLOW()
+    console.log(`rc = [${row},${col}]`)
+    if (row==0) {
+      return
     }
-    //console.log("="+pos)
-    return pos
+    const newPos = this.getPosSLOW(row-1,col)
+    console.log('newCursorPos = '+newPos)
+    this.cursorPos = newPos
   }
+
+  moveCursorDown(){
+    console.log(`moveCursorDown`)
+    const [row,col] = this.getCursorRowColSLOW()
+    console.log(`rc=[${row},${col}]`)
+    const newPos = this.getPosSLOW(row+1,col)
+    console.log(`pos=${newPos}`)
+    this.cursorPos = newPos
+  }
+
+  getPosSLOW(row,col) {
+    const lines = this.string.ddll_lines()
+    console.log(`getPosSLOW(${row},${col})`)
+    console.log(`lines=${JSON.stringify(lines,null,2)}`)
+    let pos = 0
+    for(let i=0; i<Math.min(row,lines.length); i++){
+      pos += lines[i].length+1
+    }
+    if (row>=lines.length){
+      return pos-1
+    } else if (row<0){
+      return 0
+    } else {
+      pos += Math.min(lines[row].length,col)
+      return pos
+    }
+
+  }
+
+
 
   getCursorRowCol(){
     // we assume this is only called when the cursor is in the view
 
     if (this.cursorPos < this.windowOffset || this.cursorPos > this.lastWindowOffset()){
       console.log(`ERROR: in getCursorRowCol(${this.cursorPos})`)
-      throw new Error("in getCursorRowCol")
+      return this.getCursorRowColSLOW()
     }
     let p=this.windowOffset
     let prevOffset=0
@@ -119,6 +152,48 @@ docSize = ${this.docSize}
     let cursorCol = this.cursorPos - prevOffset
     this.cursor = [cursorRow,cursorCol]
     return this.cursor
+  }
+
+
+  getCursorRowColSLOW(){
+    return this.getRowColSLOW(this.cursorPos)
+  }
+
+
+  getRowColSLOW(pos){
+    // this returns the row and col for a general cursorPos
+    if (pos < 0 || pos > this.docSize){
+      console.log(`ERROR: in getCursorRowCol(${this.cursorPos})`)
+      throw new Error("gcrSLOW")
+    }
+    let lines = this.string.ddll_lines()
+    let p=0
+    let prevOffset=0
+    let row = 0
+
+    while (p <= pos && row<lines.length){
+      prevOffset = p
+      p+= lines[row].length+1
+      row += 1
+    }
+    if (row>lines.length){
+      //at end of last line with a CR
+      row++
+      prevOffset=p
+    }
+    let cursorRow = row-1
+    let cursorCol = pos - prevOffset
+    return [cursorRow,cursorCol]
+  }
+
+  lastWindowOffset(){
+    //console.log(`lastWindowOffset`)
+    let pos = this.windowOffset
+    for (let line of this.lines) {
+      pos += line.length + 1
+    }
+    //console.log("="+pos)
+    return pos
   }
 
   updateLinesAroundCursorPos(){
@@ -278,15 +353,13 @@ docSize = ${this.docSize}
 
   setCursor(row,col){
     this.cursor = [row,col]
-    this.cursorPos = this.string.getPos(this.cursor[0],this.cursor[1])
-    if (row < this.rowOffset ||row >= this.rowOffset+this.rows) {
-      this.updateCache(row)
-    }
+    this.cursorPos = this.getPosSLOW(this.cursor[0],this.cursor[1])
+
   }
 
   setCursorRC(rc){
     this.cursor = rc
-    this.updateCache(rc[0])
+    this.cursorPos = this.getPosSLOW(this.cursor[0],this.cursor[1])
     // we may need to update the CACHE when the cursor is moved...
   }
 
@@ -297,13 +370,12 @@ docSize = ${this.docSize}
   setCurrentRow(row){
     // if the row is outside of the cached region
     // we need to pull in new rows!
-
+    this.cursor = this.getCursorRowColSLOW()
     this.cursor[0] = row
-    this.cursorPos = this.getCharPos(this.cursor[0],this.cursor[1])
-    this.updateCache(row)
+    this.cursorPos = the.getPosSLOW(row,this.cursor[1])
   }
 
-  updateCache(row){
+  updateCacheOLD(row){
     // I think this should only is called if you use the slider
     // which isn't implemented yet!
     //return
@@ -339,7 +411,7 @@ docSize = ${this.docSize}
 
   }
 
-  getStringSlice(start, end){
+  getStringSliceOLD(start, end){
     return this.string.getStringSlice(start,end)
     /*
     const a = this.string.getStringSlice(start,end)
@@ -352,7 +424,7 @@ docSize = ${this.docSize}
     */
   }
 
-  updateCacheExact(row){
+  updateCacheExactOLD(row){
     // this will only be called when we add a slider to jump to an arbitrary pos
     // in the file. It is not called when the window is moved by key presses and
     // mouse clicks
@@ -470,21 +542,7 @@ docSize = ${this.docSize}
   }
 
   getCharPos(row,col){
-    /*
-      this is only called from inside this class
-      if row is within the cache it is very efficient
-      if row is above or below the cache it requires linear time
-    */
     return this.string.getPos(row,col)
-    /*
-    let sum=0
-
-    for(let i=0; i<row; i++){
-      sum += this.text[i].length+1  // have to add 1 for the CR at the end of the line ...
-    }
-    sum += col
-    return sum
-    */
   }
 
   getLine(row){
