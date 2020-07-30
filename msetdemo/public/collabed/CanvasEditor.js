@@ -150,8 +150,10 @@ class CanvasEditor{
       } else {
         this.state.insertCharAtCursorPos(key)
         //console.log("**** state after inserting")
-        //this.state.printState()
+
       }
+      console.log(`addKeyPress{${key},${state}}`)
+      this.state.printState()
     }
 
 
@@ -167,7 +169,7 @@ class CanvasEditor{
         update this.state.lines accordingly
       */
       //console.log("\n****\nredrawmsetCanvas")
-      this.state.updateLinesAroundCursorPos()
+      this.state.updateLinesAroundCursorPosSLOW()
       //console.log("ready to draw")
       this.getFontSize()
       this.clearmsetCanvas()
