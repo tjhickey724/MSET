@@ -172,7 +172,7 @@ ds=${this.docSize} rows=${this.rows} cols=${this.cols} rowOffset=${this.rowOffse
       console.log("can't move up from first line")
       return
     }
-    if (this.cursorPos>this.lines[0].length){
+    if (this.cursorPos-this.windowOffset>this.lines[0].length){
       console.log("moving within the window)")
       // here we move up without changing the windowOffset
       const [row,col] = this.getRowColFAST(this.cursorPos)
@@ -192,13 +192,13 @@ ds=${this.docSize} rows=${this.rows} cols=${this.cols} rowOffset=${this.rowOffse
       console.log("pulling in a new line")
       const [row,col] = this.getRowColFAST(this.cursorPos)
       console.log(`row col = ${row} ${col}`)
-      if (row==0){
+      if (this.windowOffset==0){
         console.log("can't move up from first line")
         return
       }
       // here we change the window offset
       // pull in the previous line
-      const line = this.getLineContainingPosFAST(this.windowOffset-1)
+      const [line] = this.getLineContainingPosFAST(this.windowOffset-2)
       console.log(`new line is ${JSON.stringify(line,null,2)}`)
       // move the windowOffset to the beginning of the previous line
       this.windowOffset -= line.length + 1
@@ -210,15 +210,17 @@ ds=${this.docSize} rows=${this.rows} cols=${this.cols} rowOffset=${this.rowOffse
       }
       console.log(`wo=${this.windowOffset} lwo=${this.lastWindowOffsetPos}`)
       // add the new line to the front
-      this.lines = [line].concat(this.lines)
+      this.lines = line.concat(this.lines)
       // possibly remove the last line
       this.lines = this.lines.slice(0,this.rows)
       // adjust the cursor position
       const firstLineLen = line.length+1
+      console.log(`lines=${JSON.stringify(this.lines,null,2)}`)
 
       this.cursorPos =
-          this.cursorPos - col - line.length+1
+          this.cursorPos - col - (line.length+1)
           + Math.min(col,line.length)
+      console.log(`cp=${this.cursorPos}`)
     }
     this.printOffsetData()
     this.reloadLinesFAST()
