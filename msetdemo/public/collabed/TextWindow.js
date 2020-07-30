@@ -246,6 +246,73 @@ ds=${this.docSize} rows=${this.rows} cols=${this.cols} rowOffset=${this.rowOffse
 */
 
   moveCursorDown(){
+    /*
+      This is an optimally efficient implementation of the moveCursorUp
+      operation. It only goes back to the document if it has to.
+      moveCursorDown is very similar...
+    */
+    console.log(`moveCursorDown()`)
+    this.printOffsetData()
+    console.log("moveCursorDown")
+    console.log(JSON.stringify(this.lines,null,2))
+    const lastLine = this.lines[this.lines.length-1]
+    if (this.lastWindowOffsetPos==this.docSize
+        &&
+        this.docSize - this.cursorPos< lastLine.length) {
+      console.log("can't move below the last line")
+      return
+    }
+    const [row,col] = this.getRowColFAST(this.cursorPos)
+    console.log(`grcFast => row col = ${row} ${col}`)
+    if (row<this.lines.length-1){
+      console.log("moving within the window)")
+      // here we move up without changing the windowOffset
+      const nextLineLen = this.lines[row+1].length
+      console.log(`next line length = ${nextLineLen}`)
+      const newRow = row+1 + this.rowOffset
+      const newCol = Math.min(col,nextLineLen)
+      this.cursorPos =
+           this.cursorPos - col + (this.lines[row].length+1)
+           + newCol
+      console.log(`new cursorPos=${this.cursorPos}`)
+      console.log(`new cursor = ${newRow} ${newCol}`)
+      this.cursor = [newRow,newCol]
+      return
+    } else {
+      console.log("pulling in a new line from last line")
+
+      const [line] = this.getLineContainingPosFAST(this.lastWindowOffsetPos+1)
+      console.log(`new line is ${JSON.stringify(line,null,2)}`)
+      // move the windowOffset to the beginning of the previous line
+      this.windowOffset += line.length + 1
+
+      if (this.lines.length==this.rows){
+        // if the view is full, then move the lastWindowOffsetPos up
+        // to the end of the 2nd to the last line
+        this.windowOffset += this.lines[0].length+1
+        this.lastWindowOffsetPos += line.length+1
+        this.lines = this.lines.slice(1)
+      }
+      console.log(`wo=${this.windowOffset} lwo=${this.lastWindowOffsetPos}`)
+      // add the new line to the front
+      this.lines = this.lines.concat(line)
+
+      // adjust the cursor position
+      const lastLineLen = line.length+1
+      console.log(`lines=${JSON.stringify(this.lines,null,2)}`)
+
+      this.cursorPos =
+          this.cursorPos - col + (this.lines[row].length+1)
+          + Math.min(col,line.length)
+      console.log(`cp=${this.cursorPos}`)
+    }
+    this.printOffsetData()
+    this.reloadLinesFAST()
+    this.printOffsetData()
+  }
+
+/*
+  moveCursorDown(){
     console.log(`moveCursorDown()`)
     this.printOffsetData()
     //console.log(`moveCursorDown`)
@@ -256,6 +323,8 @@ ds=${this.docSize} rows=${this.rows} cols=${this.cols} rowOffset=${this.rowOffse
     this.cursorPos = newPos
     this.printOffsetData()
   }
+  */
+
 
   getPosSLOW(row,col) {
     const lines = this.ddll_lines()
