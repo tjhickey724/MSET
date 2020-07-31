@@ -276,15 +276,21 @@ ds=${this.docSize} rows=${this.rows} cols=${this.cols} rowOffset=${this.rowOffse
            + newCol
       console.log(`new cursorPos=${this.cursorPos}`)
       console.log(`new cursor = ${newRow} ${newCol}`)
+      if (this.cursorPos<this.windowOffset
+          ||
+          this.cursorPos > this.lastWindowOffsetPos)
+      {
+            alert("ERROR in move cursor down")
+      }
       this.cursor = [newRow,newCol]
-      return
+
     } else {
       console.log("pulling in a new line from last line")
-
+      const curLine = this.lines[row]
       const [line] = this.getLineContainingPosFAST(this.lastWindowOffsetPos+1)
       console.log(`new line is ${JSON.stringify(line,null,2)}`)
       // move the windowOffset to the beginning of the previous line
-      this.windowOffset += line.length + 1
+      //this.windowOffset += this.lines[0].length + 1
 
       if (this.lines.length==this.rows){
         // if the view is full, then move the lastWindowOffsetPos up
@@ -302,13 +308,21 @@ ds=${this.docSize} rows=${this.rows} cols=${this.cols} rowOffset=${this.rowOffse
       console.log(`lines=${JSON.stringify(this.lines,null,2)}`)
 
       this.cursorPos =
-          this.cursorPos - col + (this.lines[row].length+1)
+          this.cursorPos - col + (curLine.length+1)
           + Math.min(col,line.length)
       console.log(`cp=${this.cursorPos}`)
+
+      if (this.cursorPos<this.windowOffset
+          ||
+          this.cursorPos > this.lastWindowOffsetPos)
+      {
+            alert("ERROR in move cursor down")
+      }
+
     }
-    this.printOffsetData()
+    //this.printOffsetData()
     this.reloadLinesFAST()
-    this.printOffsetData()
+    //this.printOffsetData()
   }
 
 /*
@@ -384,7 +398,8 @@ ds=${this.docSize} rows=${this.rows} cols=${this.cols} rowOffset=${this.rowOffse
       throw new Error("gcrSLOW")
     }
     if (pos<this.windowOffset || pos>this.lastWindowOffsetPos){
-      return getRowColSLOW(pow)
+      console.log(`calling grcSLOW(${pos}) wo=${this.windowOffset} lwo=${this.lastWindowOffsetPos}`)
+      return this.getRowColSLOW(pos)
     }
     pos = pos - this.windowOffset
     let lines = this.lines
@@ -416,6 +431,8 @@ ds=${this.docSize} rows=${this.rows} cols=${this.cols} rowOffset=${this.rowOffse
 
 
   getRowColSLOW(pos){
+    console.log(`grcSLOW(${pos})`)
+    alert("We shouldn't be calling this!!")
     // this returns the row and col for a general cursorPos
     if (pos < 0 || pos > this.docSize){
       //console.log(`ERROR: in getCursorRowCol(${this.cursorPos})`)
@@ -438,7 +455,9 @@ ds=${this.docSize} rows=${this.rows} cols=${this.cols} rowOffset=${this.rowOffse
     }
     let cursorRow = row-1
     let cursorCol = pos - prevOffset
-    return [cursorRow,cursorCol]
+    let cursor = [cursorRow-this.rowOffset,cursorCol]
+    console.log(`=>${JSON.stringify(cursor,null,2)}`)
+    return cursor
   }
 
   lastWindowOffset(){
@@ -506,7 +525,7 @@ ds=${this.docSize} rows=${this.rows} cols=${this.cols} rowOffset=${this.rowOffse
     let p = startPos
 
     while (p<Math.min(endPos,this.docSize)){
-      console.log(`accessing nth(${p})`)
+      //console.log(`accessing nth(${p})`)
       const listNode = this.ddll.msetTree.strings.nth(p,'std')
       const eltsBeforeNode = listNode.indexOf("std")
       const subNode = listNode.data
@@ -515,7 +534,7 @@ ds=${this.docSize} rows=${this.rows} cols=${this.cols} rowOffset=${this.rowOffse
       const offset = (p - eltsBeforeNode + subNode.first)
       const pos = p-eltsBeforeNode
       const char = userData[pos]
-      console.log(JSON.stringify([p,userData,first,offset,pos,char]))
+      //console.log(JSON.stringify([p,userData,first,offset,pos,char]))
 
       for (let q=pos; q<userData.length; q++){
         let c = userData[q]
@@ -532,26 +551,14 @@ ds=${this.docSize} rows=${this.rows} cols=${this.cols} rowOffset=${this.rowOffse
     lines = lines.concat(line)
     line=[]
     lines = lines.slice(0,this.rows)
-    let slowLines = this.getReloadLinesSLOW()
 
-    console.log(`linesFAST=${JSON.stringify(lines,null,2)}`)
-    console.log(`this.lines=${JSON.stringify(slowLines,null,2)}`)
-    this.printOffsetData()
-    console.log(`doc=${JSON.stringify(this.ddll_lines(),null,2)}`)
-    //throw new Error('stop this')
-    //this.lines = lines
-
-    if (this.getReloadLinesSLOW().join('\n') != lines.join('\n')){
-      console.log('***** not the same!! *****')
-      //alert("bug in reloadLinesFAST???")
-      this.lines = lines //slowLines
-    } else {
-      this.lines = lines
-    }
+    this.lines=lines
     return this.lines
   }
 
   getNthElement(p){
+    // THIS HAS A BUG AT THE END...
+    // when called for p beyond the end ..
     console.log(`getNthElement(${p})`)
     const listNode = this.ddll.msetTree.strings.nth(p,'std')
     const eltsBeforeNode = listNode.indexOf("std")
@@ -571,9 +578,12 @@ ds=${this.docSize} rows=${this.rows} cols=${this.cols} rowOffset=${this.rowOffse
     if (this.docSize==0) {
       return ["",0,0]
     }
+    if (pos >= this.docSize || pos<0){
+      return ["",pos,pos]
+    }
     let char = this.getNthElement(pos)
     if (char=='\n'){
-      return ""
+      return ["",pos,pos]
     }
     let line = [char]
 
