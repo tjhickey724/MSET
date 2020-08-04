@@ -121,15 +121,17 @@ class CanvasEditor{
 
 
     addKeyPress(event){
+      console.log('in addKeyPress')
+      this.state.printState()
       const key = event.key
       let state = this.state
       if (event.ctrlKey){
         return
       } else if (key=='ArrowLeft'){
-        this.state.moveCursor(-1)
+        this.state.moveCursorLeft()
         return
       } else if (key=='ArrowRight'){
-        this.state.moveCursor(1)
+        this.state.moveCursorRight()
         return
       } else if (key=='ArrowUp'){
         this.state.moveCursorUp()
@@ -149,11 +151,13 @@ class CanvasEditor{
         // don't handle anything but printable characters, backspace, arrows, and enter
         return
       } else {
+        console.log("about to insert char")
+        this.state.printState()
         this.state.insertCharAtCursorPos(key)
         //console.log("**** state after inserting")
 
       }
-      console.log(`addKeyPress{${key},${state}}`)
+      console.log(`addKeyPress{${key},${state}} is complete`)
       this.state.printState()
     }
 
@@ -169,8 +173,9 @@ class CanvasEditor{
         When cursor movement drop above or below the view window, we will
         update this.state.lines accordingly
       */
-      //console.log("\n****\nredrawmsetCanvas")
-      this.state.updateLinesAroundCursorPosSLOW()
+      console.log("\n****\nredrawmsetCanvas")
+      //this.state.updateLinesAroundCursorPosSLOW()
+      this.lines = this.state.reloadLinesFAST()
       //console.log("ready to draw")
       this.getFontSize()
       this.clearmsetCanvas()
@@ -206,7 +211,7 @@ class CanvasEditor{
 
     drawCursor(){
 
-      const [row,col] = this.state.getCursorRowCol()
+      const [row,col] = this.state.getVisRowColFAST(this.state.cursorPos)
       const visibleRow = row
       const visibleCol = col-this.state.colOffset
 
@@ -223,4 +228,5 @@ class CanvasEditor{
 
 const ddllSpec= {namespace:"/demo2", documentId:"default"}
 const tw = new TextWindow(ddllSpec)
+
 const ed1 = new CanvasEditor(mset,tw)
