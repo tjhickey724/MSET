@@ -384,7 +384,7 @@ rowOffset=${this.rowOffset} colOffset=${this.colOffset}`)
     const lastLine = this.lines[this.lines.length-1]
     if (this.lastWindowOffsetPos==this.docSize
         &&
-        this.docSize - this.cursorPos< lastLine.length) {
+        this.docSize <= this.cursorPos + lastLine.length) {
       console.log("can't move below the last line")
       return
     }
@@ -490,6 +490,25 @@ rowOffset=${this.rowOffset} colOffset=${this.colOffset}`)
 
 */
 
+getPosFAST(row,col) {
+  const lines = this.lines
+  //console.log(`getPosSLOW(${row},${col})`)
+  //console.log(`lines=${JSON.stringify(lines,null,2)}`)
+  let pos = this.windowOffset
+  row = Math.min(row,lines.length)
+  for(let i=0; i<row; i++){
+    pos += lines[i].length+1
+  }
+  if (row==lines.length){
+    return pos
+  } else {
+    pos += Math.min(lines[row].length,col)
+    return pos
+  }
+
+
+}
+
   getCursorRowCol(){
     // we assume this is only called when the cursor is in the view
 
@@ -522,9 +541,12 @@ rowOffset=${this.rowOffset} colOffset=${this.colOffset}`)
     // so anything in the first row of the window has row=0
     console.log(`grcF(${pos})`)
     this.printOffsetData()
-    if (pos < 0 || pos > this.docSize){
+    if (pos < 0) {
+      pos=0
+    } else if (pos > this.docSize){
+      pos=this.docSize
       //console.log(`ERROR: in getCursorRowCol(${this.cursorPos})`)
-      throw new Error("gcrSLOW")
+      //throw new Error("gcrSLOW")
     }
     if (pos<this.windowOffset || pos>this.lastWindowOffsetPos){
       console.log(`calling grcSLOW(${pos}) wo=${this.windowOffset} lwo=${this.lastWindowOffsetPos}`)
@@ -537,14 +559,14 @@ rowOffset=${this.rowOffset} colOffset=${this.colOffset}`)
     let row = 0
 
     while (p <= pos && row<lines.length){
-      console.log(`p=${p} prev=${prevOffset} row=${row}`)
+      //console.log(`p=${p} prev=${prevOffset} row=${row}`)
       prevOffset = p
       p+= lines[row].length+1
       row += 1
     }
-    console.log(`p=${p} prev=${prevOffset} row=${row}`)
+    //console.log(`p=${p} prev=${prevOffset} row=${row}`)
     if (row==lines.length){
-      console.log('lastline')
+      //console.log('lastline')
       return [row-1,pos-prevOffset] // this shouldn't happen!!
     }
 

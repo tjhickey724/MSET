@@ -68,10 +68,10 @@ class CanvasEditor{
                              msetCE.state.rowOffset
         let col = Math.round(event.offsetX/(msetCE.charWidth)) +
                              msetCE.state.colOffset
-        //console.log(`mousedown row=${row} col=${col}`)
-        return
-        const pos = msetCE.state.getPosSLOW(row,col)
+        console.log(`mousedown row=${row} col=${col} cursorPos=${msetCE.state.cursorPos}`)
+        const pos = msetCE.state.getPosFAST(row,col)
         msetCE.state.cursorPos = pos
+        console.log(`new cursorPos is ${pos}`)
 
         msetCE.redrawmsetCanvas()
     });
